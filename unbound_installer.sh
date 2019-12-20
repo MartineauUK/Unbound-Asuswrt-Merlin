@@ -811,7 +811,7 @@ welcome_message() {
 				fi
 				printf '%b2 %b = Remove Existing unbound Installation\n' "${cBYEL}" "${cRESET}"
 				printf "%b3 %b = Reload unbound Configuration (doesn't halt unbound)\n" "${cBYEL}" "${cRESET}"		# v1.08
-				printf "\n%bqo%b = Query unbound Configuration option e.g 'verbosity'\n" "${cBYEL}" "${cRESET}"		# v1.08
+				[ -n "$(which unbound-control)" ] && printf "\n%bqo%b = Query unbound Configuration option e.g 'verbosity'\n" "${cBYEL}" "${cRESET}"		# v1.08
 
 				if [ "$localmd5" != "$remotemd5" ]; then
 					if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then
