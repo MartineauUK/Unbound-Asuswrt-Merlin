@@ -538,7 +538,7 @@ update_installer() {
 		download_file /jffs/scripts unbound_installer.sh
 		printf '\n%bUpdate Complete! %s\n' "$cBGRE" "$remotemd5"
 	else
-		printf '\n%bunbound_installer.sh is already the latest version. %s\n' "$cBYEL" "$localmd5"
+		printf '\n%bunbound_installer.sh is already the latest version. %s\n' "$cBMAG" "$localmd5"
 	fi
 	echo -e $cRESET
 	exit_message
