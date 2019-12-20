@@ -538,7 +538,7 @@ update_installer() {
 		download_file /jffs/scripts unbound_installer.sh
 		printf '\n%bUpdate Complete! %s\n' "$cBGRE" "$remotemd5"
 	else
-		printf '\n%bunbound_installer.sh is already the latest version. %s\n' "$cBMAG" "$localmd5"
+		printf '\n%bunbound_installer.sh is already the latest version. %s\n' "$cBYEL" "$localmd5"
 	fi
 	echo -e $cRESET
 	exit_message
@@ -851,12 +851,8 @@ welcome_message() {
 					#break
 				;;
 				u|uf)															# v1.07
-					if [ "$menu1" == "uf" ];then
-						echo -e $cRED_"\n"Forced Update"\n"$cRESET				# v1.07
-						update_installer $menu1
-					else
-						[ "$localmd5" != "$remotemd5" ] && update_installer || echo $cRED"\aNo update available.!"	# V1.07 ignore request when menu hidden!
-					fi
+					[ "$menu1" == "uf" ] && echo -e $cRED_"\n"Forced Update"\n"$cRESET				# v1.07
+					update_installer $menu1
 					break
 				;;
 				rs|rsnouser)													# v1.07
