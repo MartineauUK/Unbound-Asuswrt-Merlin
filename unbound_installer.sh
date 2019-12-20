@@ -501,7 +501,7 @@ Query_unbound_control() {
 	  # echo "Unbound not running properly!"
 	# fi
 	
-	[ -z "" ] && echo -e $cBRED"\a***ERROR unbound not installed!" 2>&1; return 1; } 
+	[ -z "" ] && { echo -e $cBRED"\a***ERROR unbound not installed!" 2>&1; return 1; } 
 
 	local RESET="_noreset"					# v1.08
 
