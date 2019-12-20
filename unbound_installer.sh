@@ -11,7 +11,7 @@
 #
 # Acknowledgement:
 #  Chk_Entware function provided by Martineau.
-#  Test team:
+#  Test team: rngldo
 #  Contributors: rgnldo (Xentrk for this script template, thelonelycoder)
 #
 #
@@ -776,7 +776,6 @@ welcome_message() {
 			printf '|   2. Override how the firmware manages DNS                           |\n'
 			printf '|   3. Optionally Integrate with Stubby                                |\n'
 			printf '|   4. Optionally Install Ad and Tracker Blocking                      |\n'
-			printf '|   5. Optionally Adjust unbound CPU/Threads/Memory usage              |\n'
 			printf '|                                                                      |\n'
 			printf '| You can also use this script to uninstall unbound to back out the    |\n'
 			printf '| changes made during the installation. See the project repository at  |\n'
