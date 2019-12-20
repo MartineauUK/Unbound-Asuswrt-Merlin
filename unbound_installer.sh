@@ -534,6 +534,7 @@ Check_SWAP() {
 }
 update_installer() {
 	if [ "$localmd5" != "$remotemd5" ]; then
+		echo
 		download_file /jffs/scripts unbound_installer.sh
 		printf '\n\n%bUpdate Complete! %s\n' "$cBGRE" "$remotemd5"
 	else
