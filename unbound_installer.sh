@@ -500,8 +500,8 @@ Query_unbound_control() {
 	# if [ "$?" != 0 ]; then
 	  # echo "Unbound not running properly!"
 	# fi
-	
-	[ -z "" ] && { echo -e $cBRED"\a***ERROR unbound not installed!" 2>&1; return 1; } 
+
+	[ -z "" ] && { echo -e $cBRED"\a***ERROR unbound not installed!" 2>&1; return 1; }
 
 	local RESET="_noreset"					# v1.08
 
@@ -852,9 +852,9 @@ welcome_message() {
 				u|uf)															# v1.07
 					if [ "$menu1" == "uf" ];then
 						echo -e $cRED_"\n"Forced Update"\n"$cRESET				# v1.07
-						update_installer
+						update_installer $menu1
 					else
-						[ "$localmd5" != "$remotemd5" ] && update_installer		# V1.07 ignore request when menu hidden!
+						[ "$localmd5" != "$remotemd5" ] && update_installer || echo $cRED"\aNo update available.!"	# V1.07 ignore request when menu hidden!
 					fi
 					break
 				;;
