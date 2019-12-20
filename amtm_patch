@@ -1,0 +1,38 @@
+	# ud Unbound-Installer-Asuswrt-Merlin menu
+	scriptloc=/jffs/scripts/unbound_installer.sh
+	if [ -f "$scriptloc" ] && [ -f /opt/etc/unbound/unbound.conf ]; then
+		scriptname='Unbound DNS'
+		localVother="v$(grep "^VERSION=" "$scriptloc" | sed -e 's/VERSION=//;s/"//g')"
+		remoteurl="https://raw.githubusercontent.com/MartineauUK/Unbound-Asuswrt-Merlin/master/unbound_installer.sh"
+		remoteVother="v$(curl -fsLN --retry 3 "$remoteurl" | grep "^VERSION=" | sed -e 's/VERSION=//;s/"//g')"
+		grepcheck=MartineauUK
+		script_check
+		localVother=
+		remoteVother=
+		printf "${GREEN_BG} ud${NC} %-9s%-21s%${ACORR}s\\n" "open" "Unbound DNS    $localver" " $upd"
+
+		case_ud(){
+			/jffs/scripts/unbound_installer.sh
+			sleep 2
+			show_amtm menu
+		}
+	else
+		[ "$ss" ] && printf "${ERR_BG} ud${NC} %-9s%s\\n" "install" "Unbound - DNS Privacy Daemon"
+		case_ud(){
+			print_end_line
+			echo " This installs Unbound DNS Privacy Daemon"
+			echo " on your router."
+			echo
+			echo " Authors: Martineau,rgnldo"
+			echo " https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ Unbound - Authoritative Recursive Caching DNS Server"
+			continue_dialog
+
+			curl --retry 3 "https://raw.githubusercontent.com/MartineauUK/Unbound-Asuswrt-Merlin/master/unbound_installer.sh" -o "/jffs/scripts/unbound_installer.sh" && chmod 755 /jffs/scripts/unbound_installer.sh && sh /jffs/scripts/unbound_installer.sh
+			sleep 2
+			if [ -f /jffs/scripts/unbound_installer.sh ];then
+				show_amtm " Unbound DNS installed"
+			else
+				show_amtm " Unbound DNS installation failed"
+			fi
+		}
+	fi
