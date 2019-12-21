@@ -1,13 +1,13 @@
 # Unbound installation script for ASUS Router running RMerlin firmware.
 
-Installation
+##Installation##
 
 Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm, PuTTY etc. to copy'n'paste:
 
 	curl --retry 3 "https://raw.githubusercontent.com/MartineauUK/Unbound-Asuswrt-Merlin/master/unbound_installer.sh" -o "/jffs/scripts/unbound_installer.sh" && chmod 755 "/jffs/scripts/unbound_installer.sh" && /jffs/scripts/unbound_installer.sh
 
 
-To execute the utility, you may then use the alias
+## To execute the utility, you may then use the _alias_ ##
 
 	unbound_installer
 
