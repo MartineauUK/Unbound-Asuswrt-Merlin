@@ -26,34 +26,47 @@ GITHUB_DIR=$GITHUB_MARTINEAU								# v1.08 default for script
 CONFIG_DIR="/opt/var/lib/unbound/"
 ENTWARE_UNBOUND="unbound-control-setup unbound-control unbound-anchor unbound-daemon"
 SILENT="s"													# Default is no progress messages for file downloads # v1.08
+ALLOWUPGRADE="Y"											# Default is allow script download from Github		# v1.09
 
 # Uncomment the line below for debugging
 #set -x
 welcome_message() {
 		while true; do
-			printf '\n+======================================================================+\n'
-			printf '|  Welcome to the %bunbound-Installer-Asuswrt-Merlin%b installation script |\n' "$cBGRE" "$cRESET"
-			printf '|  Version %s by Martineau                                           |\n' "$VERSION"
-			printf '|                                                                      |\n'
-			printf '| Requirements: USB drive with Entware installed                       |\n'
-			printf '|                                                                      |\n'
-			printf '| The install script will:                                             |\n'
-			printf '|   1. Install the unbound Entware package                             |\n'
-			printf '|   2. Override how the firmware manages DNS                           |\n'
-			printf '|   3. Optionally Integrate with Stubby                                |\n'
-			printf '|   4. Optionally Install Ad and Tracker Blocking                      |\n'
-			printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"
-			printf '|                                                                      |\n'
-			printf '| You can also use this script to uninstall unbound to back out the    |\n'
-			printf '| changes made during the installation. See the project repository at  |\n'
-			printf '|         %bhttps://github.com/rgnldo/Unbound-Asuswrt-Merlin%b             |\n' "$cBGRE" "$cRESET"
-			printf '|     for helpful user tips on unbound usage/configuration.            |\n'
-			printf '+======================================================================+\n'
+
+			# No need to display the Header box every tim....
+			if [ -z "$HDR" ];then							# v1.09
+
+				printf '\n+======================================================================+\n'
+				printf '|  Welcome to the %bunbound-Installer-Asuswrt-Merlin%b installation script |\n' "$cBGRE" "$cRESET"
+				printf '|  Version %s by Martineau                                           |\n' "$VERSION"
+				printf '|                                                                      |\n'
+				printf '| Requirements: USB drive with Entware installed                       |\n'
+				printf '|                                                                      |\n'
+				printf '| The install script will:                                             |\n'
+				printf '|   1. Install the unbound Entware package                             |\n'
+				printf '|   2. Override how the firmware manages DNS                           |\n'
+				printf '|   3. Optionally Integrate with Stubby                                |\n'
+				printf '|   4. Optionally Install Ad and Tracker Blocking                      |\n'
+				printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"
+				printf '|                                                                      |\n'
+				printf '| You can also use this script to uninstall unbound to back out the    |\n'
+				printf '| changes made during the installation. See the project repository at  |\n'
+				printf '|         %bhttps://github.com/rgnldo/Unbound-Asuswrt-Merlin%b             |\n' "$cBGRE" "$cRESET"
+				printf '|     for helpful user tips on unbound usage/configuration.            |\n'
+				printf '+======================================================================+\n'
+
+				HDR="N"										# v1.09
+			else
+			    echo -e $cGRE_"\n"$cRESET
+			fi
 			if [ "$1" = "uninstall" ]; then
 				menu1="2"
 			else
 				localmd5="$(md5sum "$0" | awk '{print $1}')"
 				remotemd5="$(curl -fsL --retry 3 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"
+
+				# As I'm the developer, need to differentiate between the GitHub md5sum has'nt changed, which means I've tweaked it locally
+				[ ! -f /jffs/scripts/unbound_installer.md5 ] && echo $remotemd5 > /jffs/scripts/unbound_installer.md5	# v1.09
 
 				REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 "${GITHUB_DIR}/unbound_installer.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"	# v1.05
 
@@ -73,10 +86,21 @@ welcome_message() {
 					if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then
 						printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %s\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
 					else
-						if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then		# v1.07
-							printf '%bu  = Downgrade %b%s%b %s <- %s\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+						if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then		# v1.09
+							ALLOWUPGRADE="N"												# v1.09
+							printf '%bu  = Push to Github PENDING for %b%s%b %s >>>> %s\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
 						else
-							printf '%bu  = %bUpdate (Minor) %b%s %b%s\n\n' "${cYEL}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.07
+							# MD5 Mismatch due to local development?
+							if [ "$(awk '{print $1}' /jffs/scripts/unbound_installer.md5)" != "$remotemd5" ];then
+								printf '%bu  = %bUpdate (Minor) %b%s %b%s\n\n' "${cYEL}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.07
+							else
+								if [ $REMOTE_VERSION_NUM -le $LOCAL_VERSION_NUM ];then
+									ALLOWUPGRADE="N"												# v1.09
+									printf '%bu  = %bPush to Github PENDING for %b(Minor) %b%s %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.09
+								else
+									printf '%bu  =  %b%s%b %s <- %s\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+								fi
+							fi
 						fi
 					fi
 				fi
@@ -110,6 +134,10 @@ welcome_message() {
 			fi
 
 			case "$menu1" in
+				0)
+					HDR=											# v1.09
+				;;
+
 				1|1v)
 					[ "$menu1" == "1v" ] && { echo -e $cRED_"\nVerbose Download progress messages ENABLED"$cRESET; SILENT=; }				# v1.08
 					install_unbound "$@"
@@ -136,13 +164,14 @@ welcome_message() {
 					#break
 				;;
 				s|sa|"q?"|fs|qo|qo*)											# v1.08
+					echo
 					Query_unbound_control "$menu1"
 					#break
 				;;
 				u|uf)															# v1.07
 					[ "$menu1" == "uf" ] && echo -e $cRED_"\n"Forced Update"\n"$cRESET				# v1.07
 					update_installer $menu1
-					break
+					#break
 				;;
 				rs|rsnouser)													# v1.07
 					echo
@@ -787,14 +816,17 @@ Check_SWAP() {
 update_installer() {
 
 	if [ "$1" == "uf" ] || [ "$localmd5" != "$remotemd5" ]; then
-		echo
-		download_file /jffs/scripts unbound_installer.sh martineau
-		printf '\n%bUpdate Complete! %s\n' "$cBGRE" "$remotemd5"
+		if [ "$ALLOWUPGRADE" == "Y" ];then										# v1.09
+			echo
+			#download_file /jffs/scripts unbound_installer.sh martineau
+			printf '\n%bUpdate Complete! %s\n' "$cBGRE" "$remotemd5"
+		else
+			echo -e $cRED_"\nupdate_installer() DISABLED pending Push request to Github\n"$cRESET
+		fi
 	else
 		printf '\n%bunbound_installer.sh is already the latest version. %s\n' "$cBMAG" "$localmd5"
 	fi
 	echo -e $cRESET
-	exit_message
 }
 remove_existing_installation() {
 
