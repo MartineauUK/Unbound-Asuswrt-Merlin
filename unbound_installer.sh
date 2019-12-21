@@ -818,7 +818,7 @@ update_installer() {
 	if [ "$1" == "uf" ] || [ "$localmd5" != "$remotemd5" ]; then
 		if [ "$ALLOWUPGRADE" == "Y" ];then										# v1.09
 			echo
-			#download_file /jffs/scripts unbound_installer.sh martineau
+			download_file /jffs/scripts unbound_installer.sh martineau
 			printf '\n%bUpdate Complete! %s\n' "$cBGRE" "$remotemd5"
 		else
 			echo -e $cRED_"\nupdate_installer() DISABLED pending Push request to Github\n"$cRESET
