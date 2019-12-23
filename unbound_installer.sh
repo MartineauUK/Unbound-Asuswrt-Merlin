@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.08"
+VERSION="1.09"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -835,7 +835,7 @@ remove_existing_installation() {
 		# Remove firewall rules
 		echo -e $cBCYA"Removing firewall rules"$cRESET
 		sed -i '/unbound_installer.sh/d' "/jffs/scripts/firewall-start" >/dev/null
-		Redirect_outbound_DNS_requests "del"
+		#Redirect_outbound_DNS_requests "del"								# v1.09
 
 		# Kill unbound process
 		pidof unbound | while read -r "spid" && [ -n "$spid" ]; do
@@ -964,7 +964,7 @@ install_unbound() {
 
 		S61unbound_update
 		Customise_config
-		Redirect_outbound_DNS_requests						# v1.07
+		#Redirect_outbound_DNS_requests						# v1.09 Removed v1.07
 
 		Option_Stubby_Integration
 
@@ -1029,7 +1029,7 @@ Check_Lock "$1"
 
 Script_alias "create"				# v1.08
 
-[ "$1" == "firewall" ] && { Redirect_outbound_DNS_requests; exit 0; }		# Called from firewall-start?
+# [ "$1" == "firewall" ] && { Redirect_outbound_DNS_requests; exit 0; }		# v1.09 Removed - Called from firewall-start?
 
 ANSIColours
 
