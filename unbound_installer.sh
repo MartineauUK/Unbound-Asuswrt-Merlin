@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.09"
+VERSION="1.10"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -301,6 +301,50 @@ Convert_SECS_to_HHMMSS () {
 		echo $(printf "%s %02d:%02d:%02d" "$DAYS_TXT" $HH $MM $SS)		# Return in "x days hh:mm:ss" format
 	fi
 }
+LastLine_LF() {
+
+# Used by SmartInsertLine()
+
+	case $2 in
+		QueryLF)				# Does last line of file end with 'LF'?; if so return 'LF' otherwise return NULL
+				[ $(wc -l < $1) -eq $(awk 'END{print NR}' $1 ) ] && echo "\n" || echo ""
+				return 0
+				;;
+		Count)
+				echo "$(awk 'END{print NR}' $1)"		# Return number of lines in file
+				return 0
+				;;
+		*)
+				echo "$(tail -n 1 $FN)"					# Return the last line of file
+				return 0
+				;;
+	esac
+
+}
+Smart_LineInsert() {
+
+# Requires LastLine_LF()
+
+	local FN=$1
+	local ARGS=$@
+	local TEXT="$(printf "%s" "$ARGS" | cut -d' ' -f2-)"					# Drop the first word
+	local TEXT=$(printf "%s" "$TEXT" | sed 's/^[ \t]*//;s/[ \t]*$//')		# Old-skool strip leading/trailing spaces
+
+	sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' $FN							# Delete all trailing blank lines from file
+	
+	# If last line doesn't end with '\n' then add one '\n'
+	#[ -n "$(LastLine_LF "$FN" "QueryLF")" ] && echo -e "\n" >> "$FN"
+	
+	# If LAST line begins with 'exit' then insert TEXT line BEFORE it.
+	if [ -z "$(grep -E "^##@Insert##" "$FN")" ];then
+		FIRSTWORD=$(grep "." "$FN" | tail -n 1)
+		[ "$FIRSTWORD == "exit")" ] && POS=$(awk 'END{print NR}' $FN) || POS=
+	else
+		POS="$(awk ' /^##@Insert##/ {print NR}' "$FN")";POS=$((POS + 1))
+	fi
+	[ -n "$POS" ] && { awk -v here="$POS" -v newline="$TEXT" 'NR==here{print newline}1' "$FN" > ${FN}a; rm $FN; mv ${FN}a $FN; } || printf "%s\n" "$TEXT" >> "$FN" 
+	
+}
 Check_Lock() {
 		if [ -f "/tmp/unbound.lock" ] && [ -d "/proc/$(sed -n '2p' /tmp/unbound.lock)" ] && [ "$(sed -n '2p' /tmp/unbound.lock)" != "$$" ]; then
 			if [ "$(($(date +%s)-$(sed -n '3p' /tmp/unbound.lock)))" -gt "1800" ]; then
@@ -393,15 +437,14 @@ Check_dnsmasq_postconf() {
 
 	local FN="/jffs/scripts/dnsmasq.postconf"
 
-
-	if [ -s "/jffs/scripts/dnsmasq.postconf" ]; then  # dnsmasq.postconf file exists		# v1.05
+	if [ -f "$FN" ]; then  # dnsmasq.postconf file exists		# v1.05
 		if [ "$1" != "del" ];then
 			echo -e $cBCYA"Customising 'dnsmasq.postconf'"$cRESET			# v1.08
-			[ -z "$(grep -E "^pc_delete.*servers\-file" $FN)" ] && echo -e "pc_delete \"servers-file\" \$CONFIG\t\t\t# unbound_installer" >> $FN
-			[ -z "$(grep -E "^pc_delete.*no\-negcache"  $FN)" ] && echo -e "pc_delete \"no-negcache\" \$CONFIG\t\t\t# unbound_installer" >> $FN
-			[ -z "$(grep -E "^pc_delete.*domain\-needed" $FN)" ] && echo -e "pc_delete \"domain-needed\" \$CONFIG\t\t\t# unbound_installer" >> $FN
-			[ -z "$(grep -E "^pc_delete.*bogus-priv"    $FN)" ] && echo -e "pc_delete \"bogus-priv\" \$CONFIG\t\t\t# unbound_installer" >> $FN
-			echo -e "pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG\t\t\t# unbound_installer" >> $FN
+			[ -z "$(grep -E "^pc_delete.*servers\-file"    $FN)" ] && $(Smart_LineInsert "$FN" "$(echo -e "pc_delete \"servers-file\" \$CONFIG\t\t\t# unbound_installer")" )
+			[ -z "$(grep -E "^pc_delete.*no\-negcache"     $FN)" ] && $(Smart_LineInsert "$FN" "$(echo -e "pc_delete \"no-negcache\" \$CONFIG\t\t\t# unbound_installer")" )
+			[ -z "$(grep -E "^pc_delete.*domain\-needed"   $FN)" ] && $(Smart_LineInsert "$FN" "$(echo -e "pc_delete \"domain-needed\" \$CONFIG\t\t\t# unbound_installer")" )
+			[ -z "$(grep -E "^pc_delete.*bogus-priv"       $FN)" ] && $(Smart_LineInsert "$FN" "$(echo -e "pc_delete \"bogus-priv\" \$CONFIG\t\t\t# unbound_installer")" )
+			[ -z "$(grep -E "^pc_replace.*cache-size=1500" $FN)" ] && $(Smart_LineInsert "$FN" "$(echo -e "pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG\t\t\t# unbound_installer")" )	# v1.10
 		else
 			echo -e $cBCYA"Removing unbound installer directives from 'dnsmasq.postconf'"$cRESET			# v1.08
 			sed -i '/#.*unbound_installer/d' $FN
@@ -620,7 +663,7 @@ Ad_Tracker_blocking() {
 	cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh
 	[ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > /jffs/scripts/services-start; chmod +x /jffs/scripts/services-start; }
 	if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
-		echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh          # unbound" >> /jffs/scripts/services-start
+		$(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t\t\t# unbound")" )	# v1.10
 	fi
 
 	echo -e $cRESET
@@ -636,13 +679,21 @@ Stubby_Integration() {
 	opkg install stubby ca-bundle
 
 	download_file /opt/etc/stubby/ stubby.yml rgnldo		# v1.08
-	download_file /opt/etc/init.d S62stubby rgnldo			# v1.08
-	chmod +x /opt/etc/init.d/S62stubby
+	download_file /opt/etc/init.d S62stubby rgnldo			# v1.10
+	chmod +x /opt/etc/init.d/S62stubby						# v1.10
 
 	echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
 	if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
 		sed -i '/forward\-zone:/,/forward\-first: yes/s/^#//' ${CONFIG_DIR}unbound.conf		# v1.04
 	fi
+	
+	if [ "$(nvram get ipv6_service)" != "disabled" ];then						# v1.10
+		echo -e $cBCYA"Customising Unbound IPv6 Stubby configuration....."$cRESET	
+		# Options for integration with TCP/TLS Stubby
+		#udp-upstream-without-downstream: yes
+		sed -i '/udp\-upstream\-without\-downstream: yes/s/^#//g' ${CONFIG_DIR}unbound.conf
+	fi
+	
 }
 Customise_config() {
 
@@ -659,6 +710,21 @@ Customise_config() {
 	 # Entware creates a traditional '/opt/etc/unbound' directory structure so spoof it 		# v1.07
 	 mv /opt/etc/unbound/unbound.conf /opt/etc/unbound/unbound.conf.Example
 	 ln -s /opt/var/lib/unbound/unbound.conf /opt/etc/unbound/unbound.conf
+	 
+	 chown nobody /opt/var/lib/unbound											# v1.10
+	 
+	 echo -e $cBCYA"Checking IPv6....."$cRESET									# v1.10
+	 if [ "$(nvram get ipv6_service)" != "disabled" ];then
+		 echo -e $cBCYA"Customising Unbound IPv6 configuration....."$cRESET
+		 # integration IPV6
+		 # do-ip6: yes
+		 # interface: ::0
+		 # iaccess-control: ::0/0 refuse
+		 # access-control: ::1 allow
+		 # private-address: fd00::/8
+		 # private-address: fe80::/10
+		 sed -i '/do\-ip6: yes/,/private\-address: fe80::\/10/s/^#//g' ${CONFIG_DIR}unbound.conf	# v1.10
+	 fi
 
 	 echo -e $cBCYA"Customising Unbound configuration Options:"$cRESET
 
@@ -1000,7 +1066,7 @@ install_unbound() {
 
 		#	DNSFilter: ON - mode Router
 		if [ $(nvram get dnsfilter_enable_x) -eq 0 ];then
-			echo -e $cBRED"\a\[✖] ***ERROR DNS Filter is OFF! - $cRESET see http://$(nvram get lan_ipaddr)/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering"
+			echo -e $cBRED"\a[✖] ***ERROR DNS Filter is OFF! - $cRESET see http://$(nvram get lan_ipaddr)/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering"
 		else
 			echo -e $cBGRE"[✔] DNS Filter=ON"
 			#	DNSFilter: ON - Mode Router ?
