@@ -20,7 +20,7 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
 VERSION="1.09"
 GIT_REPO="unbound-Asuswrt-Merlin"
-GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
+GITHUB_RGNLDO="https://raw.githubusercontent.com/delusion2019/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
 GITHUB_DIR=$GITHUB_MARTINEAU								# v1.08 default for script
 CONFIG_DIR="/opt/var/lib/unbound/"
