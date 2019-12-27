@@ -57,7 +57,7 @@ welcome_message() {
 
 				HDR="N"										# v1.09
 			else
-			    echo -e $cGRE_"\n"$cRESET
+			    echo -e $cGRE_"\n"$cRESET 2>&1
 			fi
 			if [ "$1" = "uninstall" ]; then
 				menu1="2"
