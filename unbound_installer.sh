@@ -21,7 +21,7 @@ logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; 
 VERSION="1.09"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/delusion2019/$GIT_REPO/master"
-GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
+GITHUB_MARTINEAU="https://raw.githubusercontent.com/delusion2019/$GIT_REPO/master"
 GITHUB_DIR=$GITHUB_MARTINEAU								# v1.08 default for script
 CONFIG_DIR="/opt/var/lib/unbound/"
 ENTWARE_UNBOUND="unbound-control-setup unbound-control unbound-anchor unbound-daemon"
