@@ -14,7 +14,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 ```
 +======================================================================+
 |  Welcome to the unbound-Installer-Asuswrt-Merlin installation script |
-|  Version 1.10 by Martineau                                           |
+|  Version 1.11 by Martineau                                           |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
@@ -33,11 +33,13 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 
 unbound (pid 27874) is running... uptime: 0 Days, 01:10:04 version: 1.9.3
 
-1  = Update ('/opt/var/lib/unbound/') unbound Configuration     l  = Show unbound log entries
-2  = Remove Existing unbound Installation                       rl = Reload unbound Configuration (Doesn't interrupt/halt unbound)
-                                                                qo = Query unbound Configuration option e.g 'qo verbosity' or 'qo logfile'
+1  = Update ('/opt/var/lib/unbound/') unbound Configuration		l  = Show unbound log entries
+2  = Remove Existing unbound Installation				v  = View ('/opt/var/lib/unbound/') unbound Configuration (vx=Edit) 
+									rl = Reload unbound Configuration (Doesn't interrupt/halt unbound)
 
-rs = Restart (or Start) unbound                                 s  = Display unbound statistics (s=Summary Totals; sa=All)
+rs = Restart (or Start) unbound						s  = Display unbound statistics (s=Summary Totals; sa=All)
+
+e  = Exit Script
 
 e  = Exit Script
 
