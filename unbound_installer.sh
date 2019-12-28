@@ -1000,7 +1000,7 @@ install_unbound() {
 
 		S02haveged_update
 
-		check_dnsmasq_parms
+		#check_dnsmasq_parms
 		Check_dnsmasq_postconf
 
 		create_required_directories
