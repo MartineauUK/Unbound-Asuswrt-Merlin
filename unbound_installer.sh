@@ -630,7 +630,7 @@ Ad_Tracker_blocking() {
 	chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
 	sh ${CONFIG_DIR}adblock/gen_adblock.sh				# Apparently requests '/opt/etc/init.d/S61unbound start'
 
-	echo -e $cBCYA"Removing '${CONFIG_DIR}adblock/' temporary files '*.tmp tpm.*'....."$cRESET
+	echo -e $cBCYA"Removing '${CONFIG_DIR}adblock/' temporary files '*.tmp tmp.*'....."$cRESET
 	rm ${CONFIG_DIR}adblock/*.tmp ${CONFIG_DIR}adblock/tmp.*			# v1.12
 
 	if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then				# v1.07
