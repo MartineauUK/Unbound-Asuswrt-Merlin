@@ -3,7 +3,7 @@
 # Script: unbound_installer.sh
 # Original Author: Martineau
 # Maintainer:
-# Last Updated Date: 28-Dec-2019
+# Last Updated Date: 29-Dec-2019
 #
 # Description:
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.11"
+VERSION="1.12"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -64,7 +64,7 @@ welcome_message() {
 				menu1="2"
 			else
 				localmd5="$(md5sum "$0" | awk '{print $1}')"
-				
+
 				[ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"	# v1.11
 
 				# As the developer, I need to differentiate between the GitHub md5sum has'nt changed, which means I've tweaked it locally
@@ -131,7 +131,7 @@ welcome_message() {
 					printf "%s\t\t\t\t%s\n"         "$MENU_2" "$MENU_VX"		# v1.11
 					printf "\t\t\t\t\t\t\t\t\t%s\n" 		  "$MENU_RL"
 					#printf "\t\t\t\t\t\t\t\t\t%s\n" 		  "$MENU_QO"
-					
+
 					echo
 					printf "%s\t\t\t\t\t\t%s\n"     "$MENU_RS" "$MENU_S"
 
@@ -162,7 +162,7 @@ welcome_message() {
 						vx) ACCESS="--unix"								# Edit in Unix format
 						;;
 					esac
-					nano $ACCESS ${CONFIG_DIR}unbound.conf 
+					nano $ACCESS ${CONFIG_DIR}unbound.conf
 					#SUPPRESSMENU="Y"
 					#break
 				;;
@@ -460,32 +460,39 @@ check_dnsmasq_parms() {
 Check_dnsmasq_postconf() {
 
 	local FN="/jffs/scripts/dnsmasq.postconf"
-	
+	local TAB="\t"
+
 	[ ! -f $FN ] && echo -e "#!/bin/sh" > $FN						# v1.11
-	
+
 	if [ "$1" != "del" ];then
 		echo -e $cBCYA"Customising 'dnsmasq.postconf'"$cRESET		# v1.08
-		[ -z "$(grep -F "unbound.postconf" $FN)" ] && $(Smart_LineInsert "$FN" "$(echo -e "sh /jffs/scripts/unbound.postconf \"\$1\"\t\t\t\t\t\t\t# unbound_installer")" )	# v1.10
-	
+		if [ -z "$(grep -E "sh \/jffs\/scripts\/unbound\.postconf" $FN)" ];then
+			$(Smart_LineInsert "$FN" "$(echo -e "sh /jffs/scripts/unbound.postconf \"\$1\"\t\t# unbound_installer")" )	# v1.10
+		fi
+
 		if [ ! -f /jffs/scripts/unbound.postconf ];then
 			 echo -e "#!/bin/sh"																			>  /jffs/scripts/unbound.postconf	# v1.11
 			 echo -e "CONFIG=\$1"																			>> /jffs/scripts/unbound.postconf	# v1.11
 			 echo -e "source /usr/sbin/helper.sh"															>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "pc_delete \"servers-file\" \$CONFIG\t\t\t\t\t# unbound_installer"						>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "pc_delete \"no-negcache\" \$CONFIG\t\t\t\t\t\t# unbound_installer"					>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "pc_delete \"domain-needed\" \$CONFIG\t\t\t\t\t# unbound_installer"					>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "pc_delete \"bogus-priv\" \$CONFIG\t\t\t\t\t\t# unbound_installer"						>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG\t# unbound_installer"		>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "pc_append \"server=127.0.0.1#53535\" \$CONFIG\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "#if [ -n \"\$(pidof unbound)\" ]; then\t\t\t\t\t\t# unbound_installer"						>> /jffs/scripts/unbound.postconf	# v1.12
+			 echo -e "${TAB}pc_delete \"servers-file\" \$CONFIG\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}pc_delete \"no-negcache\" \$CONFIG\t\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}pc_delete \"domain-needed\" \$CONFIG\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}pc_delete \"bogus-priv\" \$CONFIG\t\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG\t# unbound_installer"	>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}UNBOUNDLISTENADDR=\"127.0.0.1#53535\"\t\t\t\t\t# unbound_installer"   			>> /jffs/scripts/unbound.postconf	# v1.12
+			 echo -e "#${TAB}UNBOUNDLISTENADDR=\"\$(netstat -nlup | awk '/unbound/ { print \$4 } ' | tr ':' '#')\"\t# unbound_installer"   >> /jffs/scripts/unbound.postconf	# v1.12
+			 echo -e "${TAB}pc_append \"server=\$UNBOUNDLISTENADDR\" \$CONFIG\t\t# unbound_installer"		>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "#fi\t\t\t\t\t\t\t\t\t\t\t\t\t\t# unbound_installer"   								>> /jffs/scripts/unbound.postconf	# v1.12
 		fi
 	else
 		echo -e $cBCYA"Removing unbound installer directives from 'dnsmasq.postconf'"$cRESET		# v1.08
 		sed -i '/#.*unbound_installer/d' $FN
-		[ -f /jffs/scripts/unbound.postconf ] && rm /jffs/scripts/unbound.postconf					# v1.11 
+		[ -f /jffs/scripts/unbound.postconf ] && rm /jffs/scripts/unbound.postconf					# v1.11
 	fi
 
-	[ -f $FN ] && chmod +x $FN			# v1.06	
-	[ -f /jffs/scripts/unbound.postconf ] && chmod +x /jffs/scripts/unbound.postconf				# v1.11 
+	[ -f $FN ] && chmod +x $FN			# v1.06
+	[ -f /jffs/scripts/unbound.postconf ] && chmod +x /jffs/scripts/unbound.postconf				# v1.11
 }
 create_required_directories() {
 		for DIR in  "/opt/etc/unbound" "/opt/var/lib/unbound" "/opt/var/log"; do
@@ -593,7 +600,7 @@ Redirect_outbound_DNS_requests() {
 		#echo -e $cBGRE"Deleted unbound firewall rules from 'firewall-start'"$cRESET
 		sed -i '/# unbound Firewall Addition/d' $FN
 	fi
-	
+
 	chmod +x $FN										# v1.11 Hack???
 }
 Option_Ad_Tracker_Blocker() {
@@ -623,6 +630,9 @@ Ad_Tracker_blocking() {
 	chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
 	sh ${CONFIG_DIR}adblock/gen_adblock.sh				# Apparently requests '/opt/etc/init.d/S61unbound start'
 
+	echo -e $cBCYA"Removing '${CONFIG_DIR}adblock/' temporary files '*.tmp tpm.*'....."$cRESET
+	rm ${CONFIG_DIR}adblock/*.tmp ${CONFIG_DIR}adblock/tmp.*			# v1.12
+
 	if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then				# v1.07
 		echo -e $cBCYA"Adding Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
 		sed -i "/adblock\/adservers/s/^#//" ${CONFIG_DIR}unbound.conf										# v1.11
@@ -638,7 +648,7 @@ Ad_Tracker_blocking() {
 	fi
 
 	chmod +x $FN											# v1.11 Hack????
-	
+
 	echo -e $cRESET
 }
 Option_Stubby_Integration() {
@@ -700,6 +710,9 @@ Customise_config() {
 		 # private-address: fd00::/8
 		 # private-address: fe80::/10
 		 sed -i '/do\-ip6: yes/,/private\-address: fe80::\/10/s/^#//g' ${CONFIG_DIR}unbound.conf	# v1.10
+
+		 sed -i '/do-ip4: yes/d' ${CONFIG_DIR}unbound.conf	# v1.12 Remove conflicting IPv4
+		 sed -i '/do-ip6: no/d' ${CONFIG_DIR}unbound.conf	# v1.12 Remove conflicting IPv6
 	 fi
 
 	 echo -e $cBCYA"Customising Unbound configuration Options:"$cRESET
@@ -708,9 +721,9 @@ Customise_config() {
 		read -r "ANS"
 		[ "$ANS" == "y"  ] && Enable_Logging											# v1.07
 
-	 echo -e "\nDo you want to optimise Performance/Memory parameters? (Advanced Users)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
-	 read -r "ANS"
-	 [ "$ANS" == "youmustbeverystupid"  ] && Optimise_Performance_Memory
+	 #echo -e "\nDo you want to optimise Performance/Memory parameters? (Advanced Users)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
+	 #read -r "ANS"
+	 #[ "$ANS" == "youmustbeverystupid"  ] && Optimise_Performance_Memory
 }
 Optimise_Performance_Memory() {
 
