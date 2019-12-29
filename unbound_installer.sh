@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.12"
+VERSION="1.13"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -662,9 +662,37 @@ Stubby_Integration() {
 	echo -e $cBCYA"Integrating Stubby with unbound....."$cBGRA
 	opkg install stubby ca-bundle
 
-	download_file /opt/etc/stubby/ stubby.yml rgnldo		# v1.08
 	download_file /opt/etc/init.d S62stubby rgnldo			# v1.10
 	chmod 755 /opt/etc/init.d/S62stubby						# v1.11
+	download_file /opt/etc/stubby/ stubby.yml rgnldo		# v1.08
+
+	if [ "$(nvram get ipv6_service)" != "disabled" ];then	# v1.13
+		echo -e $cBCYA"Customising Stubby IPv6 'stubby.yml' configuration....."$cRESET
+		#  # - 0::1@5453 ## required IPV6 enabled
+		sed -i '/  # - 0::1@5453/s/^  # /  /' /opt/etc/stubby/stubby.yml			# v1.13
+		# Cloudflare Primary IPv6
+		#  - address_data: 2606:4700:4700::1111
+		#    tls_auth_name: "cloudflare-dns.com"
+		# Cloudflare Secondary IPv6
+		#  - address_data: 2606:4700:4700::1001
+		#    tls_auth_name: "cloudflare-dns.com"
+		sed -i '/address_data: 2606:4700:4700::1111/,/tls_auth_name:/s/^#//' /opt/etc/stubby/stubby.yml	# v1.13
+		sed -i '/address_data: 2606:4700:4700::1001/,/tls_auth_name:/s/^#//' /opt/etc/stubby/stubby.yml	# v1.13
+		# dns.sb IPv6
+		#  - address_data: 2a09::0
+		#    tls_auth_name: "dns.sb"
+		#    tls_pubkey_pinset:
+		#      - digest: "sha256"
+		#        value: /qCm+kZoAyouNBtgd1MPMS/cwpN4KLr60bAtajPLt0k=
+		# dns.sb IPv6
+		#  - address_data: 2a09::1
+		#    tls_auth_name: "dns.sb"
+		#    tls_pubkey_pinset:
+		#      - digest: "sha256"
+		#        value: /qCm+kZoAyouNBtgd1MPMS/cwpN4KLr60bAtajPLt0k=
+		sed -i '/address_data: 2a09::0/,/value:/s/^#//' /opt/etc/stubby/stubby.yml	# v1.13
+		sed -i '/address_data: 2a09::1/,/value:/s/^#//' /opt/etc/stubby/stubby.yml	# v1.13
+	fi
 
 	/opt/etc/init.d/S62stubby restart						# v1.11
 
@@ -710,8 +738,6 @@ Customise_config() {
 		 # private-address: fd00::/8
 		 # private-address: fe80::/10
 		 sed -i '/do\-ip6: yes/,/private\-address: fe80::\/10/s/^#//g' ${CONFIG_DIR}unbound.conf	# v1.10
-
-		 sed -i '/do-ip4: yes/d' ${CONFIG_DIR}unbound.conf	# v1.12 Remove conflicting IPv4
 		 sed -i '/do-ip6: no/d' ${CONFIG_DIR}unbound.conf	# v1.12 Remove conflicting IPv6
 	 fi
 
@@ -1025,6 +1051,9 @@ install_unbound() {
 		Option_Stubby_Integration
 
 		Option_Ad_Tracker_Blocker
+
+		echo -e $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.13
+		service restart_dnsmasq								# v1.13
 
 		# unbound apparently has a habit of taking its time to fully process its 'unbound.conf' and may terminate due to invalid directives
 		# e.g. fatal error: could not open autotrust file for writing, /root.key.22350-0-2a0796d0: Permission denied
