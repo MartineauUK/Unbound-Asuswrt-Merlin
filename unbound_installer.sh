@@ -644,7 +644,7 @@ Ad_Tracker_blocking() {
 	cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh
 	[ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
 	if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
-		$(Smart_LineInsert "$FN" "$(echo -e "cru a adblock 0 5 * * * ${CONFIG_DIR}adblock/gen_adblock.sh\t\t\t# unbound_installer")" )	# v1.11
+		$(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t\t\t# unbound_installer")" )	# v1.13
 	fi
 
 	chmod +x $FN											# v1.11 Hack????
