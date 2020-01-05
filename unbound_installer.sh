@@ -3,7 +3,7 @@
 # Script: unbound_installer.sh
 # Original Author: Martineau
 # Maintainer:
-# Last Updated Date: 29-Dec-2019
+# Last Updated Date: 05-Jan-2020
 #
 # Description:
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.13"
+VERSION="1.14"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -48,7 +48,7 @@ welcome_message() {
 				printf '|   2. Override how the firmware manages DNS                           |\n'
 				printf '|   3. Optionally Integrate with Stubby                                |\n'
 				printf '|   4. Optionally Install Ad and Tracker Blocking                      |\n'
-				printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"
+#				printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"		# v1.14 Removed
 				printf '|                                                                      |\n'
 				printf '| You can also use this script to uninstall unbound to back out the    |\n'
 				printf '| changes made during the installation. See the project repository at  |\n'
@@ -948,17 +948,6 @@ remove_existing_installation() {
 			echo -e $cRED"Unable to remove unbound - 'unbound' not installed?"$cRESET
 		fi
 
-		# Remove entries from /jffs/configs/dnsmasq.conf.add
-		if [ -s "/jffs/configs/dnsmasq.conf.add" ]; then  # file exists
-			for DNSMASQ_PARM in "^server=127\.0\.0\.1*#53535"; do
-				if [ -n "$(grep -oE "$DNSMASQ_PARM" /jffs/configs/dnsmasq.conf.add)" ]; then  # see if line exists
-					sed -i "\\~$DNSMASQ_PARM~d" "/jffs/configs/dnsmasq.conf.add"
-				fi
-			done
-		fi
-
-		service restart_dnsmasq >/dev/null 2>&1			# Just in case reboot is skipped!
-
 		# Purge unbound directories
 		#(NOTE: Entware installs to '/opt/etc/unbound' but some kn*b-h*d wants '/opt/var/lib/unbound'
 		for DIR in "/opt/var/lib/unbound/adblock" "/opt/var/lib/unbound" "/opt/etc/unbound"; do		# v1.07
@@ -981,7 +970,18 @@ remove_existing_installation() {
 			/opt/bin/find /opt/etc/init.d -type f -name S61unbound\* -delete
 		fi
 
+		# Remove entries from /jffs/configs/dnsmasq.conf.add
+		# if [ -s "/jffs/configs/dnsmasq.conf.add" ]; then  # file exists	# v1.14 Unnecessary since we now ONLY use dnsmasq.postconf
+			# for DNSMASQ_PARM in "^server=127\.0\.0\.1*#53535"; do
+				# if [ -n "$(grep -oE "$DNSMASQ_PARM" /jffs/configs/dnsmasq.conf.add)" ]; then  # see if line exists
+					# sed -i "\\~$DNSMASQ_PARM~d" "/jffs/configs/dnsmasq.conf.add"
+				# fi
+			# done
+		# fi
+
 		Check_dnsmasq_postconf "del"
+		echo -e $cBCYA"Restarting dnsmasq....."$cBGRE	# v1.14
+		service restart_dnsmasq >/dev/null 2>&1			# v1.14 relocated - Just in case reboot is skipped!
 
 		#Script_alias "delete"
 
