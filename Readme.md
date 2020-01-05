@@ -14,7 +14,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 ```
 +======================================================================+
 |  Welcome to the unbound-Installer-Asuswrt-Merlin installation script |
-|  Version 1.13 by Martineau                                           |
+|  Version 1.14 by Martineau                                           |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
@@ -23,7 +23,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 |   2. Override how the firmware manages DNS                           |
 |   3. Optionally Integrate with Stubby                                |
 |   4. Optionally Install Ad and Tracker Blocking                      |
-|   5. Optionally Customise CPU/Memory usage (Advanced Users)          |
+|                                                                      |
 |                                                                      |
 | You can also use this script to uninstall unbound to back out the    |
 | changes made during the installation. See the project repository at  |
