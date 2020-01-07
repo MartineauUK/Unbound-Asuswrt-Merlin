@@ -481,7 +481,14 @@ Check_dnsmasq_postconf() {
 			 echo -e "${TAB}pc_delete \"no-negcache\" \$CONFIG\t\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
 			 echo -e "${TAB}pc_delete \"domain-needed\" \$CONFIG\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
 			 echo -e "${TAB}pc_delete \"bogus-priv\" \$CONFIG\t\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "${TAB}pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG\t# unbound_installer"	>> /jffs/scripts/unbound.postconf	# v1.11
+			 # If dnssec_enable=1 then attempt to modify 'cache-size' results in dnsmasq fail loop?
+			 #		dnsmasq[15203]: cannot reduce cache size from default when DNSSEC enabled
+			 #		dnsmasq[15203]: FAILED to start up
+			 if [ "$(nvram get dnssec_enable)" != "1" ];then		# v1.15
+				echo -e "${TAB}pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG\t# unbound_installer"	>> /jffs/scripts/unbound.postconf	# v1.11
+			 else
+				echo -e $cBRED"**Warning: 'dnsmasq[]: cannot reduce cache size from default when DNSSEC enabled'"$cRESET
+			 fi
 			 echo -e "${TAB}UNBOUNDLISTENADDR=\"127.0.0.1#53535\"\t\t\t\t\t# unbound_installer"   			>> /jffs/scripts/unbound.postconf	# v1.12
 			 echo -e "#${TAB}UNBOUNDLISTENADDR=\"\$(netstat -nlup | awk '/unbound/ { print \$4 } ' | tr ':' '#')\"\t# unbound_installer"   >> /jffs/scripts/unbound.postconf	# v1.12
 			 echo -e "${TAB}pc_append \"server=\$UNBOUNDLISTENADDR\" \$CONFIG\t\t# unbound_installer"		>> /jffs/scripts/unbound.postconf	# v1.11
@@ -1096,6 +1103,9 @@ install_unbound() {
 
 		#	Configure NTP server Merlin
 		[ $(nvram get ntpd_enable) == "0" ] && echo -e $cBRED"\a[✖] ***ERROR Enable local NTP server=NO $cRESET see http://$(nvram get lan_ipaddr)/Advanced_System_Content.asp ->Basic Config"$cRESET || echo -e $cBGRE"[✔] Enable local NTP server=YES"
+
+		# DNSSEC ENABLED					# v1.15
+		[ "$(nvram get dnssec_enable)" == "1"  ] && echo -e $cBRED"\a[✖] Warning Enable DNSSEC support=YES $cRESET see http://$(nvram get lan_ipaddr)/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET || echo -e $cBGRE"[✔] Enable DNSSEC support=NO"
 
 		exit_message
 }
