@@ -3,7 +3,7 @@
 # Script: unbound_installer.sh
 # Original Author: Martineau
 # Maintainer:
-# Last Updated Date: 05-Jan-2020
+# Last Updated Date: 07-Jan-2020
 #
 # Description:
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.14"
+VERSION="1.15"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -48,7 +48,7 @@ welcome_message() {
 				printf '|   2. Override how the firmware manages DNS                           |\n'
 				printf '|   3. Optionally Integrate with Stubby                                |\n'
 				printf '|   4. Optionally Install Ad and Tracker Blocking                      |\n'
-#				printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"		# v1.14 Removed
+				printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"		# v1.15
 				printf '|                                                                      |\n'
 				printf '| You can also use this script to uninstall unbound to back out the    |\n'
 				printf '| changes made during the installation. See the project repository at  |\n'
@@ -65,12 +65,14 @@ welcome_message() {
 			else
 				localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-				[ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"	# v1.11
+				[ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"	# v1.11
 
-				# As the developer, I need to differentiate between the GitHub md5sum has'nt changed, which means I've tweaked it locally
+				# As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
 				[ ! -f /jffs/scripts/unbound_installer.md5 ] && echo $remotemd5 > /jffs/scripts/unbound_installer.md5	# v1.09
 
-				[ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 "${GITHUB_DIR}/unbound_installer.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"	|| REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
+				[ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"	|| REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
+
+				[ -z "$REMOTE_VERSION_NUMDOT" ] && REMOTE_VERSION_NUMDOT="?.?? $cRED - Unable to verify Github version"			# v1.15
 
 				LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')				# v1.04
 				REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')	# v1.04
@@ -86,11 +88,11 @@ welcome_message() {
 
 				if [ "$localmd5" != "$remotemd5" ]; then
 					if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then
-						printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %s\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+						printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
 					else
 						if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then		# v1.09
 							ALLOWUPGRADE="N"												# v1.09
-							printf '%bu  = Push to Github PENDING for %b%s%b %s >>>> %s\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+							printf '%bu  = Push to Github PENDING for %b%s%b %b >>>> %b\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
 						else
 							# MD5 Mismatch due to local development?
 							if [ "$(awk '{print $1}' /jffs/scripts/unbound_installer.md5)" != "$remotemd5" ];then
@@ -100,7 +102,7 @@ welcome_message() {
 									ALLOWUPGRADE="N"												# v1.09
 									printf '%bu  = %bPush to Github PENDING for %b(Minor) %b%s %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.09
 								else
-									printf '%bu  =  %b%s%b %s <- %s\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+									printf '%bu  =  %b%s%b %s <- %b\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
 								fi
 							fi
 						fi
@@ -660,10 +662,17 @@ Option_Stubby_Integration() {
 Stubby_Integration() {
 
 	echo -e $cBCYA"Integrating Stubby with unbound....."$cBGRA
+	# Firmware may already contain stubby i.e. which stubby --> /usr/sbin/stubby '0.2.9' aka spoof 100002009
+	ENTWARE_STUBBY_MAJVER=$(opkg info stubby | grep "^Version" | cut -d' ' -f2 | cut -d'-' -f1)
+	[ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V) || FIRMWARE_STUBBY_VER="n/a"
+
+	echo -e $cBCYA"Entware stubby Major version="$ENTWARE_STUBBY_MAJVER", Firmware stubby Major version="${FIRMWARE_STUBBY_MAJVER}$cBGRA
+	ENTWARE_STUBBY_MAJVER=$(opkg info stubby | grep "^Version" | cut -d' ' -f2 | tr '-' ' ' | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}')
+	[ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}') || FIRMWARE_STUBBY_VER="000000000"
 	opkg install stubby ca-bundle
 
 	download_file /opt/etc/init.d S62stubby rgnldo			# v1.10
-	chmod 755 /opt/etc/init.d/S62stubby						# v1.11
+	chmod 755 /opt/etc/init.d/S62stubby					# v1.11
 	download_file /opt/etc/stubby/ stubby.yml rgnldo		# v1.08
 
 	if [ "$(nvram get ipv6_service)" != "disabled" ];then	# v1.13
@@ -747,57 +756,34 @@ Customise_config() {
 		read -r "ANS"
 		[ "$ANS" == "y"  ] && Enable_Logging											# v1.07
 
-	 #echo -e "\nDo you want to optimise Performance/Memory parameters? (Advanced Users)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
-	 #read -r "ANS"
-	 #[ "$ANS" == "youmustbeverystupid"  ] && Optimise_Performance_Memory
+	 echo -e "\nDo you want to optimise Performance/Memory parameters? (Advanced Users)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
+	 read -r "ANS"
+	 [ "$ANS" == "y"  ] && Optimise_Performance_Memory				# v1.15
 }
 Optimise_Performance_Memory() {
 
-	local FN="/jffs/scripts/dnsmasq.postconf"
+	local FN="/jffs/scripts/init-start"
 
-     # https://github.com/MatthewVance/stubby-docker/blob/master/unbound/unbound.sh
-     # Lookup IP of Stubby container as work around because forward-host did not
-     # resolve stubby correctly and does not support @port syntax.
-     # This uses ping rather than 'dig +short stubby' to avoid needing dnsutils
-     # package
+	local Tuning_script="/jffs/scripts/stuning"				# v1.15 Would benefit from a meaningful name e.g.'unbound_tuning'
+
 	if [ "$1" != "del" ];then
-
-		echo -e $cBCYA"Customising Unbound Performance/Memory 'proc/sys/net' parameters and 'dnsmasq.postconf'"$cRESET			# v1.07
-
-		local reserved=12582912
-		local availableMemory=$(($availableMemory - $reserved))
-		local msg_cache_size=$(($availableMemory / 3))
-		local rr_cache_size=$(($availableMemory / 3))
-
-		local stubby_ip=$(ping -4 -c 1 stubby | head -n 1 | cut -d ' ' -f 3 | cut -d '(' -f 2 | cut -d ')' -f 1)
-		local stubby_port=@8053
-		local stubby=$stubby_ip$stubby_port
-
-		local nproc=$(nproc)
-		[ $nproc -gt 1 ] && local threads=$((nproc - 1)) || thread=1       # v1.07
-
-		sed -i \
-			-e "s/msg\-cache\-size:.*/msg\-cache\-size: ${msg_cache_size}/" \
-			-e "s/rrset\-cache\-size:.*/rrset\-cache\-size: ${rr_cache_size}/" \
-			-e "s/num\-threads:.*/num\-threads: ${threads}/" \
-			-e "s/@STUBBY@/${stubby}/" ${CONFIG_DIR}unbound.conf
-
-
-
-		echo "4096    87380   8388608" > /proc/sys/net/ipv4/tcp_wmem
-		echo "4096    87380   8388608" > /proc/sys/net/ipv4/tcp_rmem
-		echo "8388608 8388608 8388608" > /proc/sys/net/ipv4/tcp_mem
-		echo "8388608"                 > /proc/sys/net/core/rmem_max
-		echo "8388608"                 > /proc/sys/net/core/wmem_max
-
-		# Move to 'check_dnsmasq_postconf()' ? - nah! as the file MUST physically already exist by now!
-		[ -z "$(grep -E "^echo.*tcp_wmem" $FN)" ] && echo -e "4096    87380   8388608 > /proc/sys/net/ipv4/tcp_wmemt\t# unbound_installer" >> $FN
-		[ -z "$(grep -E "^echo.*tcp_rmem" $FN)" ] && echo -e "4096    87380   8388608 > /proc/sys/net/ipv4/tcp_rmemt\t# unbound_installer" >> $FN
-		[ -z "$(grep -E "^echo.*tcp_mem"  $FN)" ] && echo -e "4096    87380   8388608 > /proc/sys/net/ipv4/tcp_wmemt\t# unbound_installer" >> $FN
-		[ -z "$(grep -E "^echo.*rmem_max" $FN)" ] && echo -e "8388608 8388608 8388608 > /proc/sys/net/ipv4/tcp_memt\t# unbound_installer"  >> $FN
-		[ -z "$(grep -E "^echo.*wmem_max" $FN)" ] && echo -e "8388608                 > /proc/sys/net/core/wmem_maxt\t# unbound_installer" >> $FN
-	#else
-		 #sed -i '/#.*unbound_installer/d' $FN	# Removal will be handled by 'check_dnsmasq_postconf()'
+		echo -e $cBCYA"Customising Unbound Performance/Memory 'proc/sys/net' parameters"$cGRA			# v1.15
+		download_file /jffs/scripts stuning rgnldo
+		dos2unix $Tuning_script
+		chmod +x $Tuning_script
+		[ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+		if [ -z "$(grep -F "$Tuning_script" $FN | grep -v "^#")" ];then
+			$(Smart_LineInsert "$FN" "$(echo -e "sh $Tuning_script start\t\t\t# unbound_installer")" )	# v1.15
+		fi
+		chmod +x $FN
+		echo -e $cBCYA"Applying Unbound Performance/Memory tweaks using '$Tuning_script'"$cRESET
+		sh $Tuning_script start
+	else
+		 if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_installer" $FN)" ];then
+			echo -e $cBCYA"Deleting Performance/Memory tweaks '$Tuning_script'"
+			[ -f $Tuning_script ] && rm $Tuning_script
+			sed -i '/#.*unbound_installer/d' $FN
+		 fi
 	fi
 }
 Enable_Logging() {															# v1.07
@@ -915,9 +901,9 @@ remove_existing_installation() {
 		echo -e $cBCYA"\nUninstalling unbound"$cRESET
 
 		# Remove firewall rules
-		echo -e $cBCYA"Removing firewall rules"$cRESET
-		[ -n "$(grep "unbound_installer" /jffs/scripts/firewall-start)" ] && sed -i '/unbound_installer/d' "/jffs/scripts/firewall-start" >/dev/null	# v1.11
-		#Redirect_outbound_DNS_requests "del"								# v1.09
+		#echo -e $cBCYA"Removing firewall rules"$cRESET					# v1.15 Removed
+		#[ -n "$(grep "unbound_installer" /jffs/scripts/firewall-start)" ] && sed -i '/unbound_installer/d' "/jffs/scripts/firewall-start" >/dev/null	# v1.11
+		#Redirect_outbound_DNS_requests "del"							# v1.09
 
 		# Kill unbound process
 		pidof unbound | while read -r "spid" && [ -n "$spid" ]; do
@@ -941,7 +927,7 @@ remove_existing_installation() {
 		Chk_Entware unbound
 		if [ "$READY" -eq "0" ]; then
 			echo -e $cBCYA"Existing unbound package found. Removing unbound"$cBGRA
-			if opkg remove $ENTWARE_UNBOUND; then echo -e $cBGRE"unbound Entware packages '$ENTWARE_UNBOUND' successfully installed"; else echo -e $cBRED"\a\t***Error occurred when removing unbound"$cRESET; fi
+			if opkg remove $ENTWARE_UNBOUND; then echo -e $cBGRE"unbound Entware packages '$ENTWARE_UNBOUND' successfully removed"; else echo -e $cBRED"\a\t***Error occurred when removing unbound"$cRESET; fi # v1.15
 			#if opkg remove haveged; then echo "haveged successfully removed"; else echo "Error occurred when removing haveged"; fi
 			#if opkg remove coreutils-nproc; then echo "coreutils-nproc successfully removed"; else echo "Error occurred when removing coreutils-nproc"; fi
 		else
@@ -967,7 +953,18 @@ remove_existing_installation() {
 
 		# Remove file /opt/etc/init.d/S61unbound
 		if [ -d "/opt/etc/init.d" ]; then
+			echo -e $cBCYA"Removing '/opt/etc/init.d/S61unbound'"$cBGRE
 			/opt/bin/find /opt/etc/init.d -type f -name S61unbound\* -delete
+		fi
+
+
+		# Remove stubby files 								# v1.15 - Assumes this script installed Stubby!!!
+		if [ -d "/opt/etc/init.d" ]; then
+			echo -e $cBCYA"Uninstalling stubby"$cBGRA
+			opkg remove stubby --autoremove
+			/opt/bin/find /opt/etc/init.d -type f -name S62stubby\* -delete
+			echo -e $cBCYA"Deleting  '/opt/etc/stubby'"
+			rm -R /opt/etc/stubby 2>/dev/null
 		fi
 
 		# Remove entries from /jffs/configs/dnsmasq.conf.add
@@ -980,10 +977,12 @@ remove_existing_installation() {
 		# fi
 
 		Check_dnsmasq_postconf "del"
-		echo -e $cBCYA"Restarting dnsmasq....."$cBGRE	# v1.14
+		echo -e $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.14
 		service restart_dnsmasq >/dev/null 2>&1			# v1.14 relocated - Just in case reboot is skipped!
 
 		#Script_alias "delete"
+
+		Optimise_Performance_Memory "del"				# v1.15
 
 		# Reboot router to complete uninstall of unbound
 		echo -e $cBGRE"\n\tUninstall of unbound completed.\n"$cRESET
@@ -1034,7 +1033,7 @@ install_unbound() {
 		Enable_unbound_statistics					# Install Entware opkg 'unbound-control'
 
 		Install_Entware_opkg "haveged"
-		Install_Entware_opkg "coreutils-nproc"
+		#Install_Entware_opkg "coreutils-nproc"		# v1.15 Removed
 		Install_Entware_opkg "column"
 
 		S02haveged_update
