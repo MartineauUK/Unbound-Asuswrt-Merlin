@@ -3,7 +3,7 @@
 # Script: unbound_installer.sh
 # Original Author: Martineau
 # Maintainer:
-# Last Updated Date: 07-Jan-2020
+# Last Updated Date: 08-Jan-2020
 #
 # Description:
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.15"
+VERSION="1.16"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -34,7 +34,7 @@ welcome_message() {
 
 		while true; do
 
-			# No need to display the Header box every tim....
+			# No need to display the Header box every time....
 			if [ -z "$HDR" ];then							# v1.09
 
 				printf '\n+======================================================================+\n'
@@ -109,7 +109,6 @@ welcome_message() {
 					fi
 				fi
 
-
 				if [ -z "$SUPPRESSMENU" ];then								# v1.11
 
 					if [ -f ${CONFIG_DIR}unbound.conf ]; then					# v1.06
@@ -120,10 +119,23 @@ welcome_message() {
 						MENU_1="$(printf '%b1 %b = Begin unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
 					fi
 					MENU_2="$(printf '%b2 %b = Remove Existing unbound Installation\n' "${cBYEL}" "${cRESET}")"
-					MENU_L="$(printf "%bl %b = Show unbound log entries\n" "${cBYEL}" "${cRESET}")"
+
+					if [ -n "$(which unbound-control)" ];then
+						# Dynamic unbound logging @dave14305							# v1.16
+						MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
+						if [ "$(unbound-control get_option log-replies)" == "yes" ] || [ "$(unbound-control get_option log-queries)" == "yes" ] ;then	# v1.16
+							LOGSTATUS=$cBGRE"LIVE "$cRESET
+							LOGGING_OPTION="(lx=Disable Logging)"
+						else
+							LOGSTATUS=
+							LOGGING_OPTION="(lo=Enable Logging)"
+						fi
+						# Dynamic unbound logging @dave14305							# v1.16
+						MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
+					fi
 
 					if [ -n "$(pidof unbound)" ];then
-						[ -n "$(which unbound-control)" ] && MENU_QO="$(printf "%bqo%b = Query unbound Configuration option e.g 'qo verbosity' or 'qo logfile'\n" "${cBYEL}" "${cRESET}")"
+						[ -n "$(which unbound-control)" ] && MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
 						MENU_RL="$(printf "%brl%b = Reload unbound Configuration (Doesn't interrupt/halt unbound)\n" "${cBYEL}" "${cRESET}")"
 						MENU_S="$(printf '%bs %b = Display unbound statistics (s=Summary Totals; sa=All)\n' "${cBYEL}" "${cRESET}")"
 					fi
@@ -132,7 +144,7 @@ welcome_message() {
 					printf "%s\t\t%s\n"             "$MENU_1" "$MENU_L"
 					printf "%s\t\t\t\t%s\n"         "$MENU_2" "$MENU_VX"		# v1.11
 					printf "\t\t\t\t\t\t\t\t\t%s\n" 		  "$MENU_RL"
-					#printf "\t\t\t\t\t\t\t\t\t%s\n" 		  "$MENU_QO"
+					printf "\t\t\t\t\t\t\t\t\t%s\n" 		  "$MENU_OQ"
 
 					echo
 					printf "%s\t\t\t\t\t\t%s\n"     "$MENU_RS" "$MENU_S"
@@ -173,20 +185,43 @@ welcome_message() {
 					unbound-control reload										# v1.08
 					#break
 				;;
-				l)																# v1.08
-					# logfile: "/opt/var/lib/unbound/unbound.log"
-					if [ -n "$(grep -E "^logfile:" ${CONFIG_DIR}unbound.conf)" ];then
-						echo -e $cBGRE"\a\n\t\tPress CTRL-C to stop\n"$cRESET
-						trap 'welcome_message' INT
-						tail -F "$(grep -E "^logfile:.*" ${CONFIG_DIR}unbound.conf | awk '{print $2}' | tr -d '"')"								# v1.08
-					else
-						echo -e $cBRED"\a\nunbound logging not ENABLED\n"$RESET
-					fi
-					#break
+				l|ln*|lo|lx)													# v1.16
+
+					case $menu1 in
+
+						lo)														# v1.16
+							unbound-control -q verbosity 2
+							unbound-control -q set_option log-queries: yes
+							unbound-control -q set_option log-replies: yes
+							unbound-control -q set_option log-time-ascii: yes
+							# NOTE: Viewing 'unbound.conf' may now be inaccurate
+							echo -e $cBCYA"\nUnbound logging ENABLED"$cRESET
+							;;
+						lx)														# v1.16
+							unbound-control -q verbosity 1
+							unbound-control -q set_option log-queries: no
+							unbound-control -q set_option log-replies: no
+							# NOTE: Viewing 'unbound.conf' may now be inaccurate
+							echo -e $cBCYA"\nUnbound logging DISABLED"$cRESET
+							;;
+						l|ln*)													# v1.16
+							# logfile: "/opt/var/lib/unbound/unbound.log"
+							NUM=
+							[ "${menu1:0:2}" == "ln" ] && NUM="-n $(echo "$menu1" | cut -d' ' -f2)"	# v1.16
+							if [ -n "$(grep -E "^logfile:" ${CONFIG_DIR}unbound.conf)" ];then
+								echo -e $cBGRE"\a\n\t\tPress CTRL-C to stop\n"$cRESET
+								trap 'welcome_message' INT
+								tail $NUM -F "$(grep -E "^logfile:.*" ${CONFIG_DIR}unbound.conf | awk '{print $2}' | tr -d '"')"	# v1.16								# v1.08
+							else
+								echo -e $cBRED"\a\nunbound logging not ENABLED\n"$RESET
+							fi
+							#break
+							;;
+					esac
 				;;
-				s|sa|"q?"|fs|qo|qo*)											# v1.08
+				s|sa|"q?"|fs|oq|oq*|ox|ox*)										# v1.08
 					echo
-					Query_unbound_control "$menu1"
+					Unbound_Control "$menu1"									# v1.16
 					#break
 				;;
 				u|uf)															# v1.07
@@ -473,26 +508,27 @@ Check_dnsmasq_postconf() {
 		fi
 
 		if [ ! -f /jffs/scripts/unbound.postconf ];then
-			 echo -e "#!/bin/sh"																			>  /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "CONFIG=\$1"																			>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "source /usr/sbin/helper.sh"															>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "#if [ -n \"\$(pidof unbound)\" ]; then\t\t\t\t\t\t# unbound_installer"						>> /jffs/scripts/unbound.postconf	# v1.12
-			 echo -e "${TAB}pc_delete \"servers-file\" \$CONFIG\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "${TAB}pc_delete \"no-negcache\" \$CONFIG\t\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "${TAB}pc_delete \"domain-needed\" \$CONFIG\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "${TAB}pc_delete \"bogus-priv\" \$CONFIG\t\t\t\t\t\t# unbound_installer"				>> /jffs/scripts/unbound.postconf	# v1.11
-			 # If dnssec_enable=1 then attempt to modify 'cache-size' results in dnsmasq fail loop?
-			 #		dnsmasq[15203]: cannot reduce cache size from default when DNSSEC enabled
-			 #		dnsmasq[15203]: FAILED to start up
-			 if [ "$(nvram get dnssec_enable)" != "1" ];then		# v1.15
-				echo -e "${TAB}pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG\t# unbound_installer"	>> /jffs/scripts/unbound.postconf	# v1.11
-			 else
-				echo -e $cBRED"**Warning: 'dnsmasq[]: cannot reduce cache size from default when DNSSEC enabled'"$cRESET
-			 fi
-			 echo -e "${TAB}UNBOUNDLISTENADDR=\"127.0.0.1#53535\"\t\t\t\t\t# unbound_installer"   			>> /jffs/scripts/unbound.postconf	# v1.12
+			 echo -e "#!/bin/sh"																>  /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "CONFIG=\$1"																>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "source /usr/sbin/helper.sh"												>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "logger -t \"(dnsmasq.postconf)\" \"Updating \$CONFIG\" for unbound.....\t\t\t\t\t\t# unbound_installer"	>> /jffs/scripts/unbound.postconf
+			 echo -e "if [ -n \"\$(pidof unbound)\" ];then"										>> /jffs/scripts/unbound.postconf	# v1.12
+			 echo -e "${TAB}pc_delete \"servers-file\" \$CONFIG"								>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}pc_delete \"no-negcache\" \$CONFIG"									>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}pc_delete \"domain-needed\" \$CONFIG"								>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}pc_delete \"bogus-priv\" \$CONFIG"									>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}# By design, if GUI DNSSEC ENABLED then attempt to modify 'cache-size=0' results in dnsmasq start-up fail loop" >> /jffs/scripts/unbound.postconf
+			 echo -e "${TAB}#		dnsmasq[15203]: cannot reduce cache size from default when DNSSEC enabled" >> /jffs/scripts/unbound.postconf
+			 echo -e "${TAB}#		dnsmasq[15203]: FAILED to start up"							>> /jffs/scripts/unbound.postconf
+			 echo -e "${TAB}if [ -n \"\$(grep \"^dnssec\" \$CONFIG)\" ];then"					>> /jffs/scripts/unbound.postconf	# v1.16
+			 echo -e "${TAB}${TAB}pc_delete \"dnssec\" \$CONFIG"								>> /jffs/scripts/unbound.postconf	# v1.16
+			 echo -e "${TAB}${TAB}logger -t \"(dnsmasq.postconf)\" \"**Warning: Removing 'dnssec' directive from 'dnsmasq' to allow DISABLE cache (set 'cache-size=0')\""	>> /jffs/scripts/unbound.postconf		# v1.16
+			 echo -e "${TAB}fi"   																>> /jffs/scripts/unbound.postconf
+			 echo -e "${TAB}pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG"			>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "${TAB}UNBOUNDLISTENADDR=\"127.0.0.1#53535\""   							>> /jffs/scripts/unbound.postconf	# v1.12
 			 echo -e "#${TAB}UNBOUNDLISTENADDR=\"\$(netstat -nlup | awk '/unbound/ { print \$4 } ' | tr ':' '#')\"\t# unbound_installer"   >> /jffs/scripts/unbound.postconf	# v1.12
-			 echo -e "${TAB}pc_append \"server=\$UNBOUNDLISTENADDR\" \$CONFIG\t\t# unbound_installer"		>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "#fi\t\t\t\t\t\t\t\t\t\t\t\t\t\t# unbound_installer"   								>> /jffs/scripts/unbound.postconf	# v1.12
+			 echo -e "${TAB}pc_append \"server=\$UNBOUNDLISTENADDR\" \$CONFIG"					>> /jffs/scripts/unbound.postconf	# v1.11
+			 echo -e "fi"   																	>> /jffs/scripts/unbound.postconf	# v1.12
 		fi
 	else
 		echo -e $cBCYA"Removing unbound installer directives from 'dnsmasq.postconf'"$cRESET		# v1.08
@@ -613,7 +649,7 @@ Redirect_outbound_DNS_requests() {
 	chmod +x $FN										# v1.11 Hack???
 }
 Option_Ad_Tracker_Blocker() {
-		echo -e "\nDo you want to install Ad and Tracker blocking?\n\n\tReply$cBRED 'y' or press$cBGRE ENTER $cRESET to skip"
+		echo -e "\nDo you want to install Ad and Tracker blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
 		read -r "ANS"
 		[ "$ANS" == "y"  ] && Ad_Tracker_blocking		# v1.06 (Apparently requests '/opt/etc/init.d/S61unbound start')
 
@@ -662,7 +698,7 @@ Ad_Tracker_blocking() {
 }
 Option_Stubby_Integration() {
 
-		echo -e "\nDo you want to integrate Stubby with unbound?\n\n\tReply$cBRED 'y' or press$cBGRE ENTER $cRESET to skip"
+		echo -e "\nDo you want to integrate Stubby with unbound?\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
 		read -r "ANS"
 		[ "$ANS" == "y"  ] && Stubby_Integration
 }
@@ -759,13 +795,11 @@ Customise_config() {
 
 	 echo -e $cBCYA"Customising Unbound configuration Options:"$cRESET
 
-	 echo -e "\nDo you want to ENABLE unbound logging?\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
-		read -r "ANS"
-		[ "$ANS" == "y"  ] && Enable_Logging											# v1.07
+	 Enable_Logging											# v1.16 Always create the log file, but ask user if it should be ENABLED
 
 	 echo -e "\nDo you want to optimise Performance/Memory parameters? (Advanced Users)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
 	 read -r "ANS"
-	 [ "$ANS" == "y"  ] && Optimise_Performance_Memory				# v1.15
+	 [ "$ANS" == "y"  ] && Optimise_Performance_Memory		# v1.15
 }
 Optimise_Performance_Memory() {
 
@@ -795,12 +829,22 @@ Optimise_Performance_Memory() {
 }
 Enable_Logging() {															# v1.07
 
-	 if [ -n "$(grep -F "# verbosity:" ${CONFIG_DIR}unbound.conf)" ];then
-		sed -i '/# verbosity:/,/# log-replies: yes/s/^# //' ${CONFIG_DIR}unbound.conf
+	 # v1.16 allows dynamic Enable/Disable from unbound_installer main menu (Options lo/lx)
+	 #		but the log file needs to exist in the config so unbound will create it - ready to be used
+	 echo -e "\nDo you want to ENABLE unbound logging? (You can dynamically ENABLE/DISABLE Logging later from the main menu)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
+	 read -r "ANS"
+	 if [ "$ANS" == "y"  ];then
+		 if [ -n "$(grep -F "# verbosity:" ${CONFIG_DIR}unbound.conf)" ];then
+			sed -i '/# verbosity:/,/# log-replies: yes/s/^# //' ${CONFIG_DIR}unbound.conf
 
-		echo -e $cBCYA"Unbound Logging enabled - $(grep -F 'verbosity:' ${CONFIG_DIR}unbound.conf)"$cRESET
+
+			echo -e $cBCYA"Unbound Logging enabled - $(grep -F 'verbosity:' ${CONFIG_DIR}unbound.conf)"$cRESET
+		 fi
+	 else
+		sed -i '/# logfile:/s/^# //' ${CONFIG_DIR}unbound.conf
+		# @dave14305 recommends 'log-time-ascii: yes'							# v1.16
+		[ -z "$(grep "log-time-ascii:" ${CONFIG_DIR}unbound.conf)" ] && sed -i '/^logfile: /alog-time-ascii: yes' ${CONFIG_DIR}unbound.conf
 	 fi
-
 }
 Enable_unbound_statistics() {
 
@@ -815,7 +859,7 @@ Enable_unbound_statistics() {
 	unbound-control-setup
 	echo -e $cBMAG"Use 'unbound-control stats_noreset' to monitor unbound performance"$cRESET
 }
-Query_unbound_control() {
+Unbound_Control() {
 
 	unbound-control -q status
 	if [ "$?" != 0 ]; then
@@ -834,17 +878,34 @@ Query_unbound_control() {
 		sa)
 			unbound-control stats$RESET  | column
 		;;
-		qo|qo*)
+		oq|oq*)
 			local CONFIG_VARIABLE
-			if [ $(echo "$1" | wc -w ) -eq 1 ];then
+			if [ $(echo "$@" | wc -w ) -eq 1 ];then
 				echo -e "\nEnter option name or press$cBGRE ENTER $cRESET to skip"
 				read -r "CONFIG_VARIABLE"
 			else
-				CONFIG_VARIABLE=$(echo "$1" | sed 's/[^ ]* //')
+				CONFIG_VARIABLE=$(echo "$@" | awk '{print $2}')
 			fi
 			if [ "$CONFIG_VARIABLE" != ""  ];then
 				local RESULT="$(unbound-control get_option $CONFIG_VARIABLE)"
-				[ -z "(echo $RESULT | grep -i "error")" ] && echo -e $cRESET"unbound '$CONFIG_VARIABLE:' is '$RESULT'"  2>&1 || echo -e $cBRED"'$CONFIG_VARIABLE:' $RESULT" 2>&1
+				[ -z "$(echo "$RESULT" | grep -ow "error" )" ] && echo -e $cRESET"unbound-control $cBMAG'$CONFIG_VARIABLE'$cRESET $CBGRE'$RESULT'"  2>&1 || echo -e $cRESET"unbound-control get_option $cBMAG'$CONFIG_VARIABLE:'$cBRED $RESULT" 2>&1
+			fi
+			echo -en $cRESET 2>&1
+		;;
+		ox|ox*)															# v1.16
+			local CONFIG_VARIABLE
+			if [ "$(echo $@ | wc -w)" -eq 1 ];then
+				echo -e "\nEnter option name or press$cBGRE ENTER $cRESET to skip"
+				read -r "CONFIG_VARIABLE" "CONFIG_VALUE"
+			else
+				CONFIG_VARIABLE=$(echo "$@" | awk '{print $2}')
+				CONFIG_VALUE=$(echo "$@" | awk '{print $3'})
+			fi
+
+			if [ -n "$CONFIG_VARIABLE" ] && [ -n "$CONFIG_VALUE" ];then
+				local RESULT="$(unbound-control set_option $CONFIG_VARIABLE $CONFIG_VALUE)"
+				[ "$RESULT" == "ok" ] && local COLOR=$cBGRE || COLOR=$cBRED
+				echo -e $cRESET"unbound-control set_option $cBMAG'$CONFIG_VARIABLE $CONFIG_VALUE'$COLOR '$RESULT'"  2>&1
 			fi
 			echo -en $cRESET 2>&1
 		;;
