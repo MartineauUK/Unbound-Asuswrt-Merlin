@@ -35,7 +35,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 
 unbound (pid 27874) is running... uptime: 0 Days, 01:10:04 version: 1.9.3
 
-i  = Update ('/opt/var/lib/unbound/') unbound Configuration       l  = Show unbound LIVE log entries (lx=Disable Logging)
+i  = Update ('/opt/var/lib/unbound/') unbound Configuration             l  = Show unbound LIVE log entries (lx=Disable Logging)
 z  = Remove Existing unbound Installation                               v  = View ('/opt/var/lib/unbound/') unbound Configuration (vx=Edit; vh=View Example Configuration) 
 ?  = About Configuration                                                rl = Reload unbound Configuration (Doesn't interrupt/halt unbound)
                                                                         oq = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'
