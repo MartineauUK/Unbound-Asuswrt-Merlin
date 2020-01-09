@@ -3,7 +3,7 @@
 # Script: unbound_installer.sh
 # Original Author: Martineau
 # Maintainer:
-# Last Updated Date: 08-Jan-2020
+# Last Updated Date: 09-Jan-2020
 #
 # Description:
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.16"
+VERSION="1.17"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -30,254 +30,7 @@ ALLOWUPGRADE="Y"											# Default is allow script download from Github		# v1.
 
 # Uncomment the line below for debugging
 #set -x
-welcome_message() {
 
-		while true; do
-
-			# No need to display the Header box every time....
-			if [ -z "$HDR" ];then							# v1.09
-
-				printf '\n+======================================================================+\n'
-				printf '|  Welcome to the %bunbound-Installer-Asuswrt-Merlin%b installation script |\n' "$cBGRE" "$cRESET"
-				printf '|  Version %s by Martineau                                           |\n' "$VERSION"
-				printf '|                                                                      |\n'
-				printf '| Requirements: USB drive with Entware installed                       |\n'
-				printf '|                                                                      |\n'
-				printf '| The install script will:                                             |\n'
-				printf '|   1. Install the unbound Entware package                             |\n'
-				printf '|   2. Override how the firmware manages DNS                           |\n'
-				printf '|   3. Optionally Integrate with Stubby                                |\n'
-				printf '|   4. Optionally Install Ad and Tracker Blocking                      |\n'
-				printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"		# v1.15
-				printf '|                                                                      |\n'
-				printf '| You can also use this script to uninstall unbound to back out the    |\n'
-				printf '| changes made during the installation. See the project repository at  |\n'
-				printf '|         %bhttps://github.com/rgnldo/Unbound-Asuswrt-Merlin%b             |\n' "$cBGRE" "$cRESET"
-				printf '|     for helpful user tips on unbound usage/configuration.            |\n'
-				printf '+======================================================================+\n'
-
-				HDR="N"										# v1.09
-			else
-			    [ -z "$SUPPRESSMENU" ] && echo -e $cGRE_"\n"$cRESET 2>&1
-			fi
-			if [ "$1" = "uninstall" ]; then
-				menu1="2"
-			else
-				localmd5="$(md5sum "$0" | awk '{print $1}')"
-
-				[ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"	# v1.11
-
-				# As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
-				[ ! -f /jffs/scripts/unbound_installer.md5 ] && echo $remotemd5 > /jffs/scripts/unbound_installer.md5	# v1.09
-
-				[ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"	|| REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
-
-				[ -z "$REMOTE_VERSION_NUMDOT" ] && REMOTE_VERSION_NUMDOT="?.?? $cRED - Unable to verify Github version"			# v1.15
-
-				LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')				# v1.04
-				REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')	# v1.04
-
-				if [ -n "$(pidof unbound)" ];then
-					UNBOUND_STATUS=$(unbound-control status | grep pid)" uptime: "$(Convert_SECS_to_HHMMSS "$(unbound-control status | grep uptime | awk '{print $2}')" "days")" "$(unbound-control status | grep version)
-					echo -e $cBMAG"\n"$UNBOUND_STATUS"\n"$cRESET
-				else
-					echo
-				fi
-
-				[ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0			# v1.11
-
-				if [ "$localmd5" != "$remotemd5" ]; then
-					if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then
-						printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
-					else
-						if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then		# v1.09
-							ALLOWUPGRADE="N"												# v1.09
-							printf '%bu  = Push to Github PENDING for %b%s%b %b >>>> %b\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
-						else
-							# MD5 Mismatch due to local development?
-							if [ "$(awk '{print $1}' /jffs/scripts/unbound_installer.md5)" != "$remotemd5" ];then
-								printf '%bu  = %bUpdate (Minor) %b%s %b%s\n\n' "${cYEL}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.07
-							else
-								if [ $REMOTE_VERSION_NUM -le $LOCAL_VERSION_NUM ];then
-									ALLOWUPGRADE="N"												# v1.09
-									printf '%bu  = %bPush to Github PENDING for %b(Minor) %b%s %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.09
-								else
-									printf '%bu  =  %b%s%b %s <- %b\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
-								fi
-							fi
-						fi
-					fi
-				fi
-
-				if [ -z "$SUPPRESSMENU" ];then								# v1.11
-
-					if [ -f ${CONFIG_DIR}unbound.conf ]; then					# v1.06
-						MENU_RS="$(printf '%brs%b = %bRestart%b (or %bStart%b) unbound\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "$cBGRE" "${cRESET}")"
-						MENU_1="$(printf '%b1 %b = Update %b%s %bunbound Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
-						MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
-					else
-						MENU_1="$(printf '%b1 %b = Begin unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
-					fi
-					MENU_2="$(printf '%b2 %b = Remove Existing unbound Installation\n' "${cBYEL}" "${cRESET}")"
-
-					if [ -n "$(which unbound-control)" ];then
-						# Dynamic unbound logging @dave14305							# v1.16
-						MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
-						if [ "$(unbound-control get_option log-replies)" == "yes" ] || [ "$(unbound-control get_option log-queries)" == "yes" ] ;then	# v1.16
-							LOGSTATUS=$cBGRE"LIVE "$cRESET
-							LOGGING_OPTION="(lx=Disable Logging)"
-						else
-							LOGSTATUS=
-							LOGGING_OPTION="(lo=Enable Logging)"
-						fi
-						# Dynamic unbound logging @dave14305							# v1.16
-						MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
-					fi
-
-					if [ -n "$(pidof unbound)" ];then
-						[ -n "$(which unbound-control)" ] && MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
-						MENU_RL="$(printf "%brl%b = Reload unbound Configuration (Doesn't interrupt/halt unbound)\n" "${cBYEL}" "${cRESET}")"
-						MENU_S="$(printf '%bs %b = Display unbound statistics (s=Summary Totals; sa=All)\n' "${cBYEL}" "${cRESET}")"
-					fi
-
-					# v1.08 use horizontal menu!!!! Radical eh?
-					printf "%s\t\t%s\n"             "$MENU_1" "$MENU_L"
-					printf "%s\t\t\t\t%s\n"         "$MENU_2" "$MENU_VX"		# v1.11
-					printf "\t\t\t\t\t\t\t\t\t%s\n" 		  "$MENU_RL"
-					printf "\t\t\t\t\t\t\t\t\t%s\n" 		  "$MENU_OQ"
-
-					echo
-					printf "%s\t\t\t\t\t\t%s\n"     "$MENU_RS" "$MENU_S"
-
-					printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
-				fi
-				printf '\n%bOption ==>%b ' "${cBYEL}" "${cRESET}"
-				read -r "menu1"
-			fi
-
-			case "$menu1" in
-				0)
-					HDR=											# v1.09
-				;;
-
-				1|1v)
-					[ "$menu1" == "1v" ] && { echo -e $cRED_"\nVerbose Download progress messages ENABLED"$cRESET; SILENT=; }				# v1.08
-					install_unbound "$@"
-					break
-				;;
-				2)
-					validate_removal
-					break
-				;;
-				v|vx)
-					case $menu1 in
-						v) ACCESS="--view"								# v1.11 View/Readonly
-						;;
-						vx) ACCESS="--unix"								# Edit in Unix format
-						;;
-					esac
-					nano $ACCESS ${CONFIG_DIR}unbound.conf
-					#SUPPRESSMENU="Y"
-					#break
-				;;
-				rl)
-					echo -en $cBCYA"\nReloading 'unbound.conf'..... status="$cRESET
-					unbound-control reload										# v1.08
-					#break
-				;;
-				l|ln*|lo|lx)													# v1.16
-
-					case $menu1 in
-
-						lo)														# v1.16
-							unbound-control -q verbosity 2
-							unbound-control -q set_option log-queries: yes
-							unbound-control -q set_option log-replies: yes
-							unbound-control -q set_option log-time-ascii: yes
-							# NOTE: Viewing 'unbound.conf' may now be inaccurate
-							echo -e $cBCYA"\nUnbound logging ENABLED"$cRESET
-							;;
-						lx)														# v1.16
-							unbound-control -q verbosity 1
-							unbound-control -q set_option log-queries: no
-							unbound-control -q set_option log-replies: no
-							# NOTE: Viewing 'unbound.conf' may now be inaccurate
-							echo -e $cBCYA"\nUnbound logging DISABLED"$cRESET
-							;;
-						l|ln*)													# v1.16
-							# logfile: "/opt/var/lib/unbound/unbound.log"
-							NUM=
-							[ "${menu1:0:2}" == "ln" ] && NUM="-n $(echo "$menu1" | cut -d' ' -f2)"	# v1.16
-							if [ -n "$(grep -E "^logfile:" ${CONFIG_DIR}unbound.conf)" ];then
-								echo -e $cBGRE"\a\n\t\tPress CTRL-C to stop\n"$cRESET
-								trap 'welcome_message' INT
-								tail $NUM -F "$(grep -E "^logfile:.*" ${CONFIG_DIR}unbound.conf | awk '{print $2}' | tr -d '"')"	# v1.16								# v1.08
-							else
-								echo -e $cBRED"\a\nunbound logging not ENABLED\n"$RESET
-							fi
-							#break
-							;;
-					esac
-				;;
-				s|sa|"q?"|fs|oq|oq*|ox|ox*)										# v1.08
-					echo
-					Unbound_Control "$menu1"									# v1.16
-					#break
-				;;
-				u|uf)															# v1.07
-					[ "$menu1" == "uf" ] && echo -e $cRED_"\n"Forced Update"\n"$cRESET				# v1.07
-					update_installer $menu1
-					#break
-				;;
-				rs|rsnouser)													# v1.07
-					echo
-					[ "$menu1" == "rsnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
-					/opt/etc/init.d/S61unbound restart
-					echo -en $cRESET"\nPlease wait for up to ${cBYEL}30 seconds${cRESET} for status....."$cRESET
-					WAIT=31		# 16 i.e. 15 secs should be adequate?
-					INTERVAL=1
-					I=0
-					 while [ $I -lt $((WAIT-1)) ]
-						do
-							sleep 1
-							I=$((I + 1))
-							[ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET ; break; }
-						done
-					[ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
-					[ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
-					#break
-				;;
-				stop)
-					echo
-					/opt/etc/init.d/S61unbound stop
-					break
-				;;
-				dd|ddnouser)												# v1.07
-					echo
-					[ "$menu1" == "ddnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
-					echo -e $cBYEL
-					unbound -dd
-					echo -e $cRESET
-					[ "$menu1" == "ddnouser" ] &&  sed -i 's/username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
-					break
-				;;
-				nouser)														# v1.08 debugging Hack
-					if [ -f ${CONFIG_DIR}unbound.conf ];then
-						echo -e $cRED_"\nusername: \"nobody\" changed to username: \"\"\n"$cRESET
-						sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
-						unbound-control reload
-					fi
-				;;
-				e)
-					exit_message
-					break
-				;;
-				*)
-					printf '%bInvalid Option%b %s%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
-				;;
-			esac
-		done
-}
 
 Say(){
    echo -e $$ $@ | logger -st "($(basename $0))"
@@ -467,33 +220,6 @@ is_dir_empty() {
 		set -- * ; test -f "$1" && return 1
 		return 0
 }
-check_dnsmasq_parms() {
-
-		if [ -s "/etc/dnsmasq.conf" ]; then  # dnsmasq.conf file exists
-			for DNSMASQ_PARM in "server=127.0.0.1#53535"; do		# v1.08
-				if grep -q "$DNSMASQ_PARM" "/etc/dnsmasq.conf"; then  # see if line exists
-					printf 'Required dnsmasq parm %b%s%b found in /etc/dnsmasq.conf\n' "${cBGRE}" "$DNSMASQ_PARM" "${cRESET}"
-					continue #line found in dnsmasq.conf, no update required to /jffs/configs/dnsmasq.conf.add
-				fi
-				if [ -s "/jffs/configs/dnsmasq.conf.add" ]; then
-					if grep -q "$DNSMASQ_PARM" "/jffs/configs/dnsmasq.conf.add"; then  # see if line exists
-						#printf '%b%s%b found in /jffs/configs/dnsmasq.conf.add\n' "${cBGRE}" "$DNSMASQ_PARM" "${cRESET}"
-						:
-					else
-						printf 'Adding %b%s%b to /jffs/configs/dnsmasq.conf.add\n' "${cBGRE}" "$DNSMASQ_PARM" "${cRESET}"
-						printf '%s\n' "$DNSMASQ_PARM # unbound_installer" >> /jffs/configs/dnsmasq.conf.add
-					fi
-				else
-					printf 'Adding %b%s%b to /jffs/configs/dnsmasq.conf.add\n' "${cBGRE}" "$DNSMASQ_PARM" "${cRESET}"
-					printf '%s\n' "$DNSMASQ_PARM" > /jffs/configs/dnsmasq.conf.add
-				fi
-			done
-		else
-			echo -e $cBRED"\n\n\t***ERROR '/etc/dnsmasq.conf' file not found?. dnsmasq appears to not be configured on your router. Check router configuration"$cRESET
-			exit_message
-			exit 1
-		fi
-}
 Check_dnsmasq_postconf() {
 
 	local FN="/jffs/scripts/dnsmasq.postconf"
@@ -511,7 +237,7 @@ Check_dnsmasq_postconf() {
 			 echo -e "#!/bin/sh"																>  /jffs/scripts/unbound.postconf	# v1.11
 			 echo -e "CONFIG=\$1"																>> /jffs/scripts/unbound.postconf	# v1.11
 			 echo -e "source /usr/sbin/helper.sh"												>> /jffs/scripts/unbound.postconf	# v1.11
-			 echo -e "logger -t \"(dnsmasq.postconf)\" \"Updating \$CONFIG\" for unbound.....\t\t\t\t\t\t# unbound_installer"	>> /jffs/scripts/unbound.postconf
+			 echo -e "logger -t \"(dnsmasq.postconf)\" \"Updating \$CONFIG for unbound.....\"\t\t\t\t\t\t# unbound_installer"	>> /jffs/scripts/unbound.postconf
 			 echo -e "if [ -n \"\$(pidof unbound)\" ];then"										>> /jffs/scripts/unbound.postconf	# v1.12
 			 echo -e "${TAB}pc_delete \"servers-file\" \$CONFIG"								>> /jffs/scripts/unbound.postconf	# v1.11
 			 echo -e "${TAB}pc_delete \"no-negcache\" \$CONFIG"									>> /jffs/scripts/unbound.postconf	# v1.11
@@ -540,33 +266,20 @@ Check_dnsmasq_postconf() {
 	[ -f /jffs/scripts/unbound.postconf ] && chmod +x /jffs/scripts/unbound.postconf				# v1.11
 }
 create_required_directories() {
-		for DIR in  "/opt/etc/unbound" "/opt/var/lib/unbound" "/opt/var/log"; do
+		for DIR in  "/opt/etc/unbound" "/opt/var/lib/unbound" "/opt/var/lib/unbound/adblock" "/opt/var/log"; do
 			if [ ! -d "$DIR" ]; then
 				if mkdir -p "$DIR" >/dev/null 2>&1; then
 					printf "Created project directory %b%s%b\\n" "${cBGRE}" "${DIR}" "${cRESET}"
-					[ "$DIR" == "/opt/etc/unbound" ] && chown nobody /opt/etc/unbound
+					#[ "$DIR" == "/opt/etc/unbound" ] && chown nobody /opt/etc/unbound
+					if [ "$DIR" == "/opt/etc/unbound" ] || [ "$DIR" == "/opt/var/lib/unbound" ];then	# v1.17
+						chown nobody $DIR
+					fi
 				else
 					printf "%b***ERROR creating directory %b%s%b. Exiting $(basename "$0")\\n" "$cBRED" "${cBGRE}" "${DIR}" "${cRESET}"
 					exit 1
 				fi
 			fi
 		done
-}
-make_backup() {
-		DIR="$1"
-		FILE="$2"
-		TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
-		BACKUP_FILE_NAME="${FILE}.${TIMESTAMP}"
-		if [ -f "$DIR/$FILE" ]; then
-			if ! mv "$DIR/$FILE" "$DIR/$BACKUP_FILE_NAME" >/dev/null 2>&1; then
-				printf 'Error backing up existing %b%s%b to %b%s%b\n' "$cBGRE" "$FILE" "$cRESET" "$cBGRE" "$BACKUP_FILE_NAME" "$cRESET"
-				printf 'Exiting %s\n' "$(basename "$0")"
-				exit 1
-			else
-				printf 'Existing %b%s%b found\n' "$cBGRE" "$FILE" "$cRESET"
-				printf '%b%s%b backed up to %b%s%b\n' "$cBGRE" "$FILE" "$cRESET" "$cBGRE" "$BACKUP_FILE_NAME" "$cRESET"
-			fi
-		fi
 }
 download_file() {
 
@@ -585,8 +298,11 @@ download_file() {
 		if [ "$STATUS" -eq "200" ]; then
 			printf '\t%b%s%b downloaded successfully\n' "$cBGRE" "$FILE" "$cRESET"
 		else
-			printf '\n%b%s%b download failed with curl error %s\n\n' "\n\t\a$cBRED" "$FILE" "$cBRED" "$STATUS"
-			printf 'Rerun %binstall_unbound.sh%b and select the %bRemove Existing unbound Installation%b option\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"
+			printf '\n%b%s%b download FAILED with curl error %s\n\n' "\n\t\a$cBMAG" "'$FILE'" "$cBRED" "$STATUS"
+			printf '\tRerun %bunbound_installer nochk%b and select the %bRemove Existing unbound Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"	# v1.17
+
+			Check_GUI_NVRAM										# v1.17
+
 			exit 1
 		fi
 }
@@ -619,83 +335,7 @@ S02haveged_update() {
 
 	/opt/etc/init.d/S02haveged restart
 }
-Redirect_outbound_DNS_requests() {
 
-	local FN="/jffs/scripts/firewall-start"
-
-	iptables -t nat -D PREROUTING -d "$(nvram get lan_ipaddr)" -p tcp --dport 53 -j REDIRECT --to-port 53535 2>/dev/null
-	iptables -t nat -D PREROUTING -d "$(nvram get lan_ipaddr)" -p udp --dport 53 -j REDIRECT --to-port 53535 2>/dev/null
-
-	if [ "$1" != "del" ] ;then
-		logger -t unbound "[*] Updating nat firewall rules to redirect ALL DNS requests"
-		echo -e $cBCYA"\nUpdating nat firewall rules to redirect ALL DNS requests"$cRESET
-		iptables -t nat -A PREROUTING -d "$(nvram get lan_ipaddr)" -p tcp --dport 53 -j REDIRECT --to-port 53535
-		iptables -t nat -A PREROUTING -d "$(nvram get lan_ipaddr)" -p udp --dport 53 -j REDIRECT --to-port 53535
-
-		if [ -z "$(grep -E "# unbound.*" $FN | grep -v "^#")" ]; then
-			echo -e $cBCYA"Updating 'firewall-start' to redirect ALL DNS requests to unbound"$cRESET
-			[ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
-			EXEC="sh /jffs/scripts/unbound_installer.sh firewall # unbound Firewall Addition"
-			echo -e "$EXEC" >> $FN
-		else
-			echo -e $cBGRE"'firewall-start' already contains unbound rule request to redirect ALL DNS requests"$cRESET
-		fi
-	else
-		logger -t unbound "[*] Deleted unbound firewall rules."
-		#echo -e $cBGRE"Deleted unbound firewall rules from 'firewall-start'"$cRESET
-		sed -i '/# unbound Firewall Addition/d' $FN
-	fi
-
-	chmod +x $FN										# v1.11 Hack???
-}
-Option_Ad_Tracker_Blocker() {
-		echo -e "\nDo you want to install Ad and Tracker blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
-		read -r "ANS"
-		[ "$ANS" == "y"  ] && Ad_Tracker_blocking		# v1.06 (Apparently requests '/opt/etc/init.d/S61unbound start')
-
-		# ....but just in case ;-)
-		[ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart	# Will also restart dnsmasq
-}
-Ad_Tracker_blocking() {
-
-	local FN="/jffs/scripts/services-start"
-
-	echo -e $cBCYA"Installing Ads and Tracker Blocking....."$cRESET		# v1.06
-	download_file ${CONFIG_DIR} unbound_adblock.tar.bz2 rgnldo			# v1.08
-	echo -e $cBCYA"Unzipping 'unbound_adblock.tar.bz2'....."$cBGRA
-	tar -jxvf ${CONFIG_DIR}unbound_adblock.tar.bz2 -C ${CONFIG_DIR}  	# v1.07
-
-	# FFS! Make sure the downloaded script doesn't use '/jffs'
-	if [ -n "$(grep -F "/jffs/" ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then
-		echo -e ${aBLINK}$cRED"Sanitising '/jffs/' references in ${CONFIG_DIR}adblock/gen_adblock.sh)...."${cRESET}$cBGRA
-		sed -i "s~/jffs/~${CONFIG_DIR}~" ${CONFIG_DIR}adblock/gen_adblock.sh
-	fi
-
-	echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
-	chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
-	sh ${CONFIG_DIR}adblock/gen_adblock.sh				# Apparently requests '/opt/etc/init.d/S61unbound start'
-
-	echo -e $cBCYA"Removing '${CONFIG_DIR}adblock/' temporary files '*.tmp tmp.*'....."$cRESET
-	rm ${CONFIG_DIR}adblock/*.tmp ${CONFIG_DIR}adblock/tmp.*			# v1.12
-
-	if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then				# v1.07
-		echo -e $cBCYA"Adding Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
-		sed -i "/adblock\/adservers/s/^#//" ${CONFIG_DIR}unbound.conf										# v1.11
-	fi
-
-	# Create cron job to refresh the Ads/Tracker lists		# v1.07
-	echo -e $cBCYA"Creating Daily cron job for Ad and Tracker update"$cBGRA
-	cru d adblock 2>/dev/null
-	cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh
-	[ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
-	if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
-		$(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t\t\t# unbound_installer")" )	# v1.13
-	fi
-
-	chmod +x $FN											# v1.11 Hack????
-
-	echo -e $cRESET
-}
 Option_Stubby_Integration() {
 
 		echo -e "\nDo you want to integrate Stubby with unbound?\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
@@ -766,8 +406,9 @@ Customise_config() {
 	 echo -e $cBCYA"Generating unbound-anchor 'root.key'....."$cBGRA			# v1.07
 	 /opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key
 
-	 echo -e $cBCYA"Retrieving 'root-hints' from 'https://www.internic.net/domain/named.cache'....."$cBGRA
-	 curl -o ${CONFIG_DIR}root.hints https://www.internic.net/domain/named.cache
+	# Not sure why if Ad and Tracker clocking is installed this is performed every day by the cru #adblock# cron job ????
+	 echo -e $cBCYA"Retrieving the 13 InterNIC Root DNS Servers from 'https://www.internic.net/domain/named.cache'....."$cBGRA
+	 curl --progress-bar -o ${CONFIG_DIR}root.hints https://www.internic.net/domain/named.cache		# v1.17
 	 echo -en $cRESET
 
 	 echo -e $cBCYA"Retrieving Custom Unbound configuration"$cBGRA
@@ -775,7 +416,7 @@ Customise_config() {
 
 	 # Entware creates a traditional '/opt/etc/unbound' directory structure so spoof it 		# v1.07
 	 mv /opt/etc/unbound/unbound.conf /opt/etc/unbound/unbound.conf.Example
-	 ln -s /opt/var/lib/unbound/unbound.conf /opt/etc/unbound/unbound.conf
+	 #ln -s /opt/var/lib/unbound/unbound.conf /opt/etc/unbound/unbound.conf
 
 	 chown nobody /opt/var/lib/unbound											# v1.10
 
@@ -857,7 +498,7 @@ Enable_unbound_statistics() {
 	# generating unbound_control.key-file
 	echo -e $cBCYA"Initialising 'unbound-control-setup'"$cBGRA
 	unbound-control-setup
-	echo -e $cBMAG"Use 'unbound-control stats_noreset' to monitor unbound performance"$cRESET
+	#echo -e $cBMAG"Use 'unbound-control stats_noreset' to monitor unbound performance"$cRESET
 }
 Unbound_Control() {
 
@@ -971,7 +612,6 @@ remove_existing_installation() {
 		# Remove firewall rules
 		#echo -e $cBCYA"Removing firewall rules"$cRESET					# v1.15 Removed
 		#[ -n "$(grep "unbound_installer" /jffs/scripts/firewall-start)" ] && sed -i '/unbound_installer/d' "/jffs/scripts/firewall-start" >/dev/null	# v1.11
-		#Redirect_outbound_DNS_requests "del"							# v1.09
 
 		# Kill unbound process
 		pidof unbound | while read -r "spid" && [ -n "$spid" ]; do
@@ -1045,8 +685,8 @@ remove_existing_installation() {
 		# fi
 
 		Check_dnsmasq_postconf "del"
-		echo -e $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.14
-		service restart_dnsmasq >/dev/null 2>&1			# v1.14 relocated - Just in case reboot is skipped!
+		echo -en $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.14
+		service restart_dnsmasq 			# v1.14 relocated - Just in case reboot is skipped!
 
 		#Script_alias "delete"
 
@@ -1106,26 +746,25 @@ install_unbound() {
 
 		S02haveged_update
 
-		#check_dnsmasq_parms
 		Check_dnsmasq_postconf
 
 		create_required_directories
 
 		S61unbound_update
 		Customise_config
-		#Redirect_outbound_DNS_requests						# v1.09 Removed v1.07
 
 		Option_Stubby_Integration
 
-		Option_Ad_Tracker_Blocker
-
-		echo -e $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.13
+		echo -en $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.13
 		service restart_dnsmasq								# v1.13
+		echo -en $cRESET
+
+		Option_Ad_Tracker_Blocker
 
 		# unbound apparently has a habit of taking its time to fully process its 'unbound.conf' and may terminate due to invalid directives
 		# e.g. fatal error: could not open autotrust file for writing, /root.key.22350-0-2a0796d0: Permission denied
-		echo -e $cRESET"\nPlease wait for up to ${cBCYA}30$cRESET seconds for ${cBCYA}status.....\n"$cRESET
-		WAIT=31		# 16 i.e. 15 secs should be adequate?
+		echo -e $cRESET"\nPlease wait for up to ${cBCYA}10$cRESET seconds for ${cBCYA}status.....\n"$cRESET
+		WAIT=11		# 16 i.e. 15 secs should be adequate?
 		INTERVAL=1
 		I=0
 		 while [ $I -lt $((WAIT-1)) ]
@@ -1136,6 +775,8 @@ install_unbound() {
 			done																			# v1.06
 
 		if pidof unbound >/dev/null 2>&1; then
+			echo -en $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.17
+			service restart_dnsmasq								# v1.17
 			echo -e $cBGRE"\n\tInstallation of unbound completed\n"		# v1.04
 		else
 			echo -e $cBRED"\a\n\t***ERROR Unsuccessful installation of unbound detected\n"		# v1.04
@@ -1143,32 +784,47 @@ install_unbound() {
 			grep unbound /tmp/syslog.log | tail -n 5			# v1.07
 			unbound -d			# v1.06
 			echo -e $cRESET"\n"
-			printf '\tRerun %bunbound_installer.sh%b and select the %bRemove%b option to backout changes\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"
+			printf '\n\tRerun %bunbound_installer nochk%b and select the %bRemove%b option to backout changes\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"
 		fi
 
-		echo -e $cBCYA"Checking Router Configuration pre-reqs....."	# v1.04
+
+		echo -en $cRESET
+
+		Check_GUI_NVRAM
+
+		exit_message
+}
+Check_GUI_NVRAM() {
+
+		echo -e $cBCYA"\n\tRouter Configuration pre-reqs status:\n"	# v1.04
 		# Check Swap file
-		[ $(Check_SWAP) -eq 0 ] && echo -e $cBRED"[✖]Warning SWAP file is not configured $cRESET - use amtm to create one!" || echo -e $cBGRE"[✔] Swapfile="$(grep "SwapTotal" /proc/meminfo | awk '{print $2" "$3}')$cRESET	# v1.04
+		[ $(Check_SWAP) -eq 0 ] && echo -e $cBRED"\t[✖]Warning SWAP file is not configured $cRESET - use amtm to create one!" || echo -e $cBGRE"\t[✔] Swapfile="$(grep "SwapTotal" /proc/meminfo | awk '{print $2" "$3}')$cRESET	# v1.04
 
 		#	DNSFilter: ON - mode Router
 		if [ $(nvram get dnsfilter_enable_x) -eq 0 ];then
-			echo -e $cBRED"\a[✖] ***ERROR DNS Filter is OFF! - $cRESET see http://$(nvram get lan_ipaddr)/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering"
+			echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is OFF! $cRESET see http://$(nvram get lan_ipaddr)/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering"
 		else
-			echo -e $cBGRE"[✔] DNS Filter=ON"
+			echo -e $cBGRE"\t[✔] DNS Filter=ON"
 			#	DNSFilter: ON - Mode Router ?
-			[ $(nvram get dnsfilter_mode) != "11" ] && echo -e $cBRED"\a[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET see http://$(nvram get lan_ipaddr)/DNSFilter.asp ->LAN->DNSFilter"$cRESET || echo -e $cBGRE"[✔] DNS Filter=ROUTER"
+			[ $(nvram get dnsfilter_mode) != "11" ] && echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET see http://$(nvram get lan_ipaddr)/DNSFilter.asp ->LAN->DNSFilter"$cRESET || echo -e $cBGRE"\t[✔] DNS Filter=ROUTER"
 		fi
 
 		#	Tools/Other WAN DNS local cache: NO # for the FW Merlin development team, it is desirable and safer by this mode.
-		[ $(nvram get nvram get dns_local_cache) != "0" ] && echo -e $cBRED"\a[✖] ***ERROR WAN: Use local caching DNS server as system resolver=YES $cRESET see http://$(nvram get lan_ipaddr)/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET || echo -e $cBGRE"[✔] WAN: Use local caching DNS server as system resolver=NO"
+		[ $(nvram get nvram get dns_local_cache) != "0" ] && echo -e $cBRED"\a\t[✖] ***ERROR WAN: Use local caching DNS server as system resolver=YES $cRESET see http://$(nvram get lan_ipaddr)/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO"
 
 		#	Configure NTP server Merlin
-		[ $(nvram get ntpd_enable) == "0" ] && echo -e $cBRED"\a[✖] ***ERROR Enable local NTP server=NO $cRESET see http://$(nvram get lan_ipaddr)/Advanced_System_Content.asp ->Basic Config"$cRESET || echo -e $cBGRE"[✔] Enable local NTP server=YES"
+		[ $(nvram get ntpd_enable) == "0" ] && echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET see http://$(nvram get lan_ipaddr)/Advanced_System_Content.asp ->Basic Config"$cRESET || echo -e $cBGRE"\t[✔] Enable local NTP server=YES"
 
 		# DNSSEC ENABLED					# v1.15
-		[ "$(nvram get dnssec_enable)" == "1"  ] && echo -e $cBRED"\a[✖] Warning Enable DNSSEC support=YES $cRESET see http://$(nvram get lan_ipaddr)/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET || echo -e $cBGRE"[✔] Enable DNSSEC support=NO"
+		[ "$(nvram get dnssec_enable)" == "1"  ] && echo -e $cBRED"\a\t[✖] Warning Enable DNSSEC support=YES $cRESET see http://$(nvram get lan_ipaddr)/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET || echo -e $cBGRE"\t[✔] Enable DNSSEC support=NO"
 
-		exit_message
+		echo -e $cBCYA"\n\tOptions:\n"
+		[ -f /jffs/scripts/stuning ] && echo -e $cBGRE"\t[✔] Unbound CPU/Memory Performance tweaks"
+		if [ -f ${CONFIG_DIR}unbound.conf ];then
+			[ -n "$(grep -E "^forward-zone:" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Stubby Integration"
+			[ -n "$(grep -E "^include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"
+		fi
+		echo -e $cRESET
 }
 exit_message() {
 
@@ -1176,6 +832,321 @@ exit_message() {
 		echo -e $cRESET
 		exit 0
 }
+
+Option_Ad_Tracker_Blocker() {
+		echo -e "\nDo you want to install Ad and Tracker blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
+		read -r "ANS"
+		[ "$ANS" == "y"  ] && Ad_Tracker_blocking		# v1.06 (Apparently requests '/opt/etc/init.d/S61unbound start')
+
+		# ....but just in case ;-)
+		[ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart	# Will also restart dnsmasq
+}
+Ad_Tracker_blocking() {
+
+	local FN="/jffs/scripts/services-start"
+
+	echo -e $cBCYA"Installing Ads and Tracker Blocking....."$cRESET		# v1.06
+	#download_file ${CONFIG_DIR} unbound_adblock.tar.bz2 rgnldo			# v1.08
+	#echo -e $cBCYA"Unzipping 'unbound_adblock.tar.bz2'....."$cBGRA
+	#tar -jxvf ${CONFIG_DIR}unbound_adblock.tar.bz2 -C ${CONFIG_DIR}  	# v1.07
+
+	download_file ${CONFIG_DIR} adblock/gen_adblock.sh	rgnldo			# v1.17
+	download_file ${CONFIG_DIR} adblock/blockhost		rgnldo			# v1.17
+	download_file ${CONFIG_DIR} adblock/permlist		rgnldo			# v1.17
+
+	# FFS! Make sure the downloaded script doesn't use '/jffs'
+	if [ -n "$(grep -F "/jffs/" ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then
+		echo -e ${aBLINK}$cRED"Sanitising '/jffs/' references in ${CONFIG_DIR}adblock/gen_adblock.sh)...."${cRESET}$cBGRA
+		sed -i "s~/jffs/~${CONFIG_DIR}~" ${CONFIG_DIR}adblock/gen_adblock.sh
+	fi
+
+	echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
+	chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
+	sh ${CONFIG_DIR}adblock/gen_adblock.sh				# Apparently requests '/opt/etc/init.d/S61unbound restart'
+														# and deletes '/opt/var/lib/unbound/unbound.log' WTF!
+
+	if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then				# v1.07
+		echo -e $cBCYA"Adding Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
+		sed -i "/adblock\/adservers/s/^#//" ${CONFIG_DIR}unbound.conf										# v1.11
+	fi
+
+	# Create cron job to refresh the Ads/Tracker lists		# v1.07
+	echo -e $cBCYA"Creating Daily cron job for Ad and Tracker update"$cBGRA
+	cru d adblock 2>/dev/null
+	cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh		# EVERY day Deletes '/opt/var/lib/unbound/unbound.log'
+	                                                                    #           Downloads InterNIC Root DNS server list
+																		#           Restarts S61unbound
+	[ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+	if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
+		$(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t\t\t# unbound_installer")" )	# v1.13
+	fi
+
+	chmod +x $FN											# v1.11 Hack????
+
+	echo -e $cRESET
+}
+welcome_message() {
+
+		while true; do
+
+			# No need to display the Header box every time....
+			if [ -z "$HDR" ];then							# v1.09
+
+				printf '\n+======================================================================+\n'
+				printf '|  Welcome to the %bunbound-Installer-Asuswrt-Merlin%b installation script |\n' "$cBGRE" "$cRESET"
+				printf '|  Version %s by Martineau                                           |\n' "$VERSION"
+				printf '|                                                                      |\n'
+				printf '| Requirements: USB drive with Entware installed                       |\n'
+				printf '|                                                                      |\n'
+				printf '| The install script will:                                             |\n'
+				printf '|   1. Install the unbound Entware package                             |\n'
+				printf '|   2. Override how the firmware manages DNS                           |\n'
+				printf '|   3. Optionally Integrate with Stubby                                |\n'
+				printf '|   4. Optionally Install Ad and Tracker Blocking                      |\n'
+				printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"		# v1.15
+				printf '|                                                                      |\n'
+				printf '| You can also use this script to uninstall unbound to back out the    |\n'
+				printf '| changes made during the installation. See the project repository at  |\n'
+				printf '|         %bhttps://github.com/rgnldo/Unbound-Asuswrt-Merlin%b             |\n' "$cBGRE" "$cRESET"
+				printf '|     for helpful user tips on unbound usage/configuration.            |\n'
+				printf '+======================================================================+\n'
+
+				HDR="N"										# v1.09
+			else
+			    [ -z "$SUPPRESSMENU" ] && echo -e $cGRE_"\n"$cRESET 2>&1
+			fi
+			if [ "$1" = "uninstall" ]; then
+				menu1="2"
+			else
+				localmd5="$(md5sum "$0" | awk '{print $1}')"
+
+				[ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"	# v1.11
+
+				# As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
+				[ ! -f /jffs/scripts/unbound_installer.md5 ] && echo $remotemd5 > /jffs/scripts/unbound_installer.md5	# v1.09
+
+				[ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"	|| REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
+
+				[ -z "$REMOTE_VERSION_NUMDOT" ] && REMOTE_VERSION_NUMDOT="?.?? $cRED - Unable to verify Github version"			# v1.15
+
+				LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')				# v1.04
+				REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')	# v1.04
+
+				if [ -n "$(pidof unbound)" ];then
+					UNBOUND_STATUS=$(unbound-control status | grep pid)" uptime: "$(Convert_SECS_to_HHMMSS "$(unbound-control status | grep uptime | awk '{print $2}')" "days")" "$(unbound-control status | grep version)
+					echo -e $cBMAG"\n"$UNBOUND_STATUS"\n"$cRESET
+				else
+					echo
+				fi
+
+				[ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0			# v1.11
+
+				if [ "$localmd5" != "$remotemd5" ]; then
+					if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then
+						printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+					else
+						if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then		# v1.09
+							ALLOWUPGRADE="N"												# v1.09
+							printf '%bu  = Push to Github PENDING for %b%s%b %b >>>> %b\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+						else
+							# MD5 Mismatch due to local development?
+							if [ "$(awk '{print $1}' /jffs/scripts/unbound_installer.md5)" != "$remotemd5" ];then
+								printf '%bu  = %bUpdate (Minor) %b%s %b%s\n\n' "${cYEL}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.07
+							else
+								if [ $REMOTE_VERSION_NUM -le $LOCAL_VERSION_NUM ];then
+									ALLOWUPGRADE="N"												# v1.09
+									printf '%bu  = %bPush to Github PENDING for %b(Minor) %b%s %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.09
+								else
+									printf '%bu  =  %b%s%b %s <- %b\n\n' "${cBRED}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+								fi
+							fi
+						fi
+					fi
+				fi
+
+				if [ -z "$SUPPRESSMENU" ];then								# v1.11
+
+					if [ -f ${CONFIG_DIR}unbound.conf ]; then					# v1.06
+						MENU_RS="$(printf '%brs%b = %bRestart%b (or %bStart%b) unbound\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "$cBGRE" "${cRESET}")"
+						MENU_1="$(printf '%b1 %b = Update %b%s %bunbound Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
+						MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit; vh=View Example Configuration) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
+					else
+						MENU_1="$(printf '%b1 %b = Begin unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
+					fi
+					MENU_2="$(printf '%b2 %b = Remove Existing unbound Installation\n' "${cBYEL}" "${cRESET}")"
+					MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"	# v1.17
+
+					if [ -n "$(which unbound-control)" ];then
+						# Dynamic unbound logging @dave14305							# v1.16
+						MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
+						if [ "$(unbound-control get_option log-replies)" == "yes" ] || [ "$(unbound-control get_option log-queries)" == "yes" ] ;then	# v1.16
+							LOGSTATUS=$cBGRE"LIVE "$cRESET
+							LOGGING_OPTION="(lx=Disable Logging)"
+						else
+							LOGSTATUS=
+							LOGGING_OPTION="(lo=Enable Logging)"
+						fi
+						# Dynamic unbound logging @dave14305							# v1.16
+						MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
+					fi
+
+					if [ -n "$(pidof unbound)" ];then
+						[ -n "$(which unbound-control)" ] && MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
+						MENU_RL="$(printf "%brl%b = Reload unbound Configuration (Doesn't interrupt/halt unbound)\n" "${cBYEL}" "${cRESET}")"
+						MENU_S="$(printf '%bs %b = Display unbound statistics (s=Summary Totals; sa=All)\n' "${cBYEL}" "${cRESET}")"
+					fi
+
+					# v1.08 use horizontal menu!!!! Radical eh?
+					printf "%s\t\t%s\n"             "$MENU_1" "$MENU_L"
+					printf "%s\t\t\t\t%s\n"         "$MENU_2" "$MENU_VX"		# v1.11
+					printf "%s\t\t\t\t\t\t%s\n"		"$MENU__" "$MENU_RL"		# v1.17
+					printf "\t\t\t\t\t\t\t\t\t%s\n" 		  "$MENU_OQ"
+
+					echo
+					printf "%s\t\t\t\t\t\t%s\n"     "$MENU_RS" "$MENU_S"
+
+					printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
+				fi
+				printf '\n%bOption ==>%b ' "${cBYEL}" "${cRESET}"
+				read -r "menu1"
+			fi
+
+			case "$menu1" in
+				0)
+					HDR=											# v1.09
+				;;
+				1|1v)
+					[ "$menu1" == "1v" ] && { echo -e $cRED_"\nVerbose Download progress messages ENABLED"$cRESET; SILENT=; }				# v1.08
+					install_unbound "$@"
+					break
+				;;
+				2)
+					validate_removal
+					break
+				;;
+				v|vx|vh)
+					case $menu1 in
+						v|vh) ACCESS="--view"							# v1.11 View/Readonly
+						;;
+						vx) ACCESS="--unix"								# Edit in Unix format
+						;;
+					esac
+					[ "$menu1" != "vh" ] && nano $ACCESS ${CONFIG_DIR}unbound.conf || nano $ACCESS /opt/etc/unbound/unbound.conf.Example	# v1.17
+					#SUPPRESSMENU="Y"
+					#break
+				;;
+				rl|rl*)
+
+					if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
+						NEW_CONFIG=$(echo "$menu1" | awk '{print $2}')
+						[ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/jffs/configs/"$NEW_CONFIG
+						[ -f $NEW_CONFIG ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+					fi
+					echo -en $cBCYA"\nReloading 'unbound.conf'.....$NEW_CONFIG' status="$cRESET
+					unbound-control reload										# v1.08
+					#break
+				;;
+				l|ln*|lo|lx)													# v1.16
+
+					case $menu1 in
+
+						lo)														# v1.16
+							unbound-control -q verbosity 2
+							unbound-control -q set_option log-queries: yes
+							unbound-control -q set_option log-replies: yes
+							unbound-control -q set_option log-time-ascii: yes
+							# NOTE: Viewing 'unbound.conf' may now be inaccurate
+							echo -e $cBCYA"\nUnbound logging ENABLED"$cRESET
+							;;
+						lx)														# v1.16
+							unbound-control -q verbosity 1
+							unbound-control -q set_option log-queries: no
+							unbound-control -q set_option log-replies: no
+							# NOTE: Viewing 'unbound.conf' may now be inaccurate
+							echo -e $cBCYA"\nUnbound logging DISABLED"$cRESET
+							;;
+						l|ln*)													# v1.16
+							# logfile: "/opt/var/lib/unbound/unbound.log"
+							NUM=
+							[ "${menu1:0:2}" == "ln" ] && NUM="-n $(echo "$menu1" | cut -d' ' -f2)"	# v1.16
+							if [ -n "$(grep -E "^logfile:" ${CONFIG_DIR}unbound.conf)" ];then
+								echo -e $cBGRE"\a\n\t\tPress CTRL-C to stop\n"$cRESET
+								trap 'welcome_message' INT
+								tail $NUM -F "$(grep -E "^logfile:.*" ${CONFIG_DIR}unbound.conf | awk '{print $2}' | tr -d '"')"	# v1.16								# v1.08
+							else
+								echo -e $cBRED"\a\nunbound logging not ENABLED\n"$RESET
+							fi
+							#break
+							;;
+					esac
+				;;
+				s|sa|"q?"|fs|oq|oq*|ox|ox*)										# v1.08
+					echo
+					Unbound_Control "$menu1"									# v1.16
+					#break
+				;;
+				u|uf)															# v1.07
+					[ "$menu1" == "uf" ] && echo -e $cRED_"\n"Forced Update"\n"$cRESET				# v1.07
+					update_installer $menu1
+					#break
+				;;
+				rs|rsnouser)													# v1.07
+					echo
+					[ "$menu1" == "rsnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
+					/opt/etc/init.d/S61unbound restart
+					echo -en $cRESET"\nPlease wait for up to ${cBYEL}30 seconds${cRESET} for status....."$cRESET
+					WAIT=31		# 16 i.e. 15 secs should be adequate?
+					INTERVAL=1
+					I=0
+					 while [ $I -lt $((WAIT-1)) ]
+						do
+							sleep 1
+							I=$((I + 1))
+							[ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET ; break; }
+						done
+					[ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
+					[ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
+					#break
+				;;
+				stop)
+					echo
+					/opt/etc/init.d/S61unbound stop
+					break
+				;;
+				dd|ddnouser)												# v1.07
+					echo
+					[ "$menu1" == "ddnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
+					echo -e $cBYEL
+					unbound -dd
+					echo -e $cRESET
+					[ "$menu1" == "ddnouser" ] &&  sed -i 's/username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
+					break
+				;;
+				about|"?")														# v1.17
+					echo -e $cBGRE"\n\tVersion="$VERSION
+					echo -e $cBMAG"\tLocal\t\t\\t\tmd5="$localmd5
+					echo -e $cBMAG"\tGithub\t\t\t\tmd5="$remotemd5
+					echo -e $cBMAG"\t/jffs/scripts/unbound.md5\tmd5="$(cat /jffs/scripts/unbound_installer.md5)
+
+					Check_GUI_NVRAM
+
+				;;
+				stats)
+					kill -SIGUSR1 $(pidof dnsmasq)						# v1.17
+				;;
+				e)
+					exit_message
+					break
+				;;
+				'')															# v1.17
+				;;
+				*)
+					printf '%bInvalid Option%b %s%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
+				;;
+			esac
+		done
+}
+
 #=============================================Main=============================================================
 # shellcheck disable=SC2068
 Main() { true; } # Syntax that is Atom Shellchecker compatible!
@@ -1184,8 +1155,6 @@ clear
 Check_Lock "$1"
 
 Script_alias "create"				# v1.08
-
-# [ "$1" == "firewall" ] && { Redirect_outbound_DNS_requests; exit 0; }		# v1.09 Removed - Called from firewall-start?
 
 ANSIColours
 
