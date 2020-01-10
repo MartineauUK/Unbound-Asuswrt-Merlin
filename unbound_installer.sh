@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.18"
+VERSION="1.19"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -266,7 +266,7 @@ Check_dnsmasq_postconf() {
 	[ -f /jffs/scripts/unbound.postconf ] && chmod +x /jffs/scripts/unbound.postconf				# v1.11
 }
 create_required_directories() {
-		for DIR in  "/opt/etc/unbound" "/opt/var/lib/unbound" "/opt/var/lib/unbound/adblock" "/opt/var/log"; do
+		for DIR in  "/opt/etc/unbound" "/opt/var/lib/unbound" "/opt/var/lib/unbound/adblock" "/opt/var/log" "/opt/share/unbound/configs"; do
 			if [ ! -d "$DIR" ]; then
 				if mkdir -p "$DIR" >/dev/null 2>&1; then
 					printf "Created project directory %b%s%b\\n" "${cBGRE}" "${DIR}" "${cRESET}"
@@ -428,7 +428,14 @@ Customise_config() {
 
 	 chown nobody /opt/var/lib/unbound											# v1.10
 
-	 echo -e $cBCYA"Checking IPv6....."$cRESET									# v1.10
+	 # Tag the 'unbound.conf' - useful when using multiple configs for testing	# v1.19
+	 local TAG="# rgnldo Github Version vx.xx (Date Loaded by unbound_installer "$(date)")"	# v1.19
+	 echo -e $cBCYA"Tagged 'unbound.conf' '$TAG' and backed up to '/opt/share/unbound/configs/reset.conf'"$cRESET	# v1.19
+	 sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf									# v1.19
+	 # Backup the config to easily restore it 'rl reset[.conf]'
+	 cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf		# v1.19
+
+	 echo -e $cBCYA"Checking IPv6....."$cRESET								# v1.10
 	 if [ "$(nvram get ipv6_service)" != "disabled" ];then
 		 echo -e $cBCYA"Customising Unbound IPv6 configuration....."$cRESET
 		 # integration IPV6
@@ -485,15 +492,14 @@ Enable_Logging() {															# v1.07
 	 if [ "$ANS" == "y"  ];then
 		 if [ -n "$(grep -F "# verbosity:" ${CONFIG_DIR}unbound.conf)" ];then
 			sed -i '/# verbosity:/,/# log-replies: yes/s/^# //' ${CONFIG_DIR}unbound.conf
-
-
 			echo -e $cBCYA"Unbound Logging enabled - $(grep -F 'verbosity:' ${CONFIG_DIR}unbound.conf)"$cRESET
 		 fi
 	 else
 		sed -i '/# logfile:/s/^# //' ${CONFIG_DIR}unbound.conf
-		# @dave14305 recommends 'log-time-ascii: yes'							# v1.16
-		[ -z "$(grep "log-time-ascii:" ${CONFIG_DIR}unbound.conf)" ] && sed -i '/^logfile: /alog-time-ascii: yes' ${CONFIG_DIR}unbound.conf
 	 fi
+
+	 # @dave14305 recommends 'log-time-ascii: yes'							# v1.16
+	 [ -z "$(grep "log-time-ascii:" ${CONFIG_DIR}unbound.conf)" ] && sed -i '/^logfile: /alog-time-ascii: yes' ${CONFIG_DIR}unbound.conf	#v1.19
 }
 Enable_unbound_statistics() {
 
@@ -531,7 +537,8 @@ Unbound_Control() {
 			CONFIG_VARIABLE="extended-statistics"
 			[ "$1" == "s+" ] && CONFIG_VALUE="yes" || CONFIG_VALUE="no"
 			local RESULT="$(unbound-control set_option $CONFIG_VARIABLE $CONFIG_VALUE)"
-			echo -e $cRESET"unbound-control set_option $cBMAG'$CONFIG_VARIABLE $CONFIG_VALUE'$COLOR '$RESULT'"  2>&1
+			[ "$RESULT" == "ok" ] && local COLOR=$cBGRE || COLOR=$cBRED
+			echo -e $cRESET"unbound-control set_option $cBMAG'$CONFIG_VARIABLE $CONFIG_VALUE'$COLOR $RESULT"  2>&1
 		;;
 		oq|oq*)
 			local CONFIG_VARIABLE
@@ -560,7 +567,7 @@ Unbound_Control() {
 			if [ -n "$CONFIG_VARIABLE" ] && [ -n "$CONFIG_VALUE" ];then
 				local RESULT="$(unbound-control set_option $CONFIG_VARIABLE $CONFIG_VALUE)"
 				[ "$RESULT" == "ok" ] && local COLOR=$cBGRE || COLOR=$cBRED
-				echo -e $cRESET"unbound-control set_option $cBMAG'$CONFIG_VARIABLE $CONFIG_VALUE'$COLOR '$RESULT'"  2>&1
+				echo -e $cRESET"unbound-control set_option $cBMAG'$CONFIG_VARIABLE $CONFIG_VALUE'$COLOR $RESULT"  2>&1
 			fi
 			echo -en $cRESET 2>&1
 		;;
@@ -804,7 +811,7 @@ install_unbound() {
 
 		# unbound apparently has a habit of taking its time to fully process its 'unbound.conf' and may terminate due to invalid directives
 		# e.g. fatal error: could not open autotrust file for writing, /root.key.22350-0-2a0796d0: Permission denied
-		echo -e $cRESET"\nPlease wait for up to ${cBCYA}10$cRESET seconds for ${cBCYA}status.....\n"$cRESET
+		echo -e $cRESET"\nCustomisation complete - Please wait for up to ${cBCYA}10$cRESET seconds for ${cBCYA}status.....\n"$cRESET
 		WAIT=11		# 16 i.e. 15 secs should be adequate?
 		INTERVAL=1
 		I=0
@@ -817,6 +824,12 @@ install_unbound() {
 
 		if pidof unbound >/dev/null 2>&1; then
 			service restart_dnsmasq >/dev/null		# v1.18 Redundant? - S61unbound now reinstates 'POSTCMD=service restart_dnsmasq'
+			local TAG="# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer "$(date)")"	# v1.19
+			echo -e $cBCYA"Tagged 'unbound.conf' '$TAG' and backed up to '/opt/share/unbound/configs/user.conf'"$cRESET
+			# Backup the config to easily restore it 'rl user[.conf]'	# v1.19
+			cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/user.conf	# v1.19
+			sed -i "1i$TAG" /opt/share/unbound/configs/user.conf	# v1.19
+			cmp --silent ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf || sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf # v1.19
 			echo -e $cBGRE"\n\tInstallation of unbound completed\n"		# v1.04
 		else
 			echo -e $cBRED"\a\n\t***ERROR Unsuccessful installation of unbound detected\n"		# v1.04
@@ -1007,7 +1020,10 @@ welcome_message() {
 
 				if [ -n "$(pidof unbound)" ];then
 					UNBOUND_STATUS=$(unbound-control status | grep pid)" uptime: "$(Convert_SECS_to_HHMMSS "$(unbound-control status | grep uptime | awk '{print $2}')" "days")" "$(unbound-control status | grep version)
-					echo -e $cBMAG"\n"$UNBOUND_STATUS"\n"$cRESET
+					# Display 'unbound.conf' header if present
+					UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf)	# v1.19
+					[ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*version" )" ] && UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
+					echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET	# v1.19
 				else
 					echo
 				fi
@@ -1061,8 +1077,15 @@ welcome_message() {
 
 					if [ -n "$(pidof unbound)" ];then
 						[ -n "$(which unbound-control)" ] && MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
-						MENU_RL="$(printf "%brl%b = Reload unbound Configuration (Doesn't interrupt/halt unbound)\n" "${cBYEL}" "${cRESET}")"
-						MENU_S="$(printf '%bs %b = Display unbound statistics (s=Summary Totals; sa=All; s{+|-}=Extended Stats On/Off)\n' "${cBYEL}" "${cRESET}")"
+						MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
+						if [ "$(unbound-control get_option extended-statistics)" == "yes" ];then	# v1.18
+							EXTENDEDSTATS=$cBGRE" Extended"$cRESET
+							EXTENDEDSTATS_OPTION="s-=Disable Extended Stats"
+						else
+							EXTENDEDSTATS=
+							EXTENDEDSTATS_OPTION="s+=Enable Extended Stats"
+						fi
+						MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$EXTENDEDSTATS_OPTION")"
 					fi
 
 					# v1.08 use horizontal menu!!!! Radical eh?
@@ -1105,14 +1128,29 @@ welcome_message() {
 					#break
 				;;
 				rl|rl*)
-
+					# 'reset' and 'user' are Recovery aliases
+					#		i.e. 'reset' is rgnldo's config, and 'user' is the customised install version
+					local PERFORMRELOAD="Y"
 					if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
 						NEW_CONFIG=$(echo "$menu1" | awk '{print $2}')
-						[ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/jffs/configs/"$NEW_CONFIG
-						[ -f $NEW_CONFIG ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+						[ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"
+						[ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG	# v1.19
+
+						if [ -f $NEW_CONFIG ];then
+							cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+							local TXT=" <<== $NEW_CONFIG"
+						else
+							echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n"$RESET
+							local PERFORMRELOAD="N"
+						fi
 					fi
-					echo -en $cBCYA"\nReloading 'unbound.conf'.....$NEW_CONFIG' status="$cRESET
-					unbound-control reload										# v1.08
+
+					if [ "$PERFORMRELOAD" == "Y" ];then								# v1.19
+						local TAG="(Date Loaded by unbound_installer "$(date)")"
+						sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
+						echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
+						unbound-control reload										# v1.08
+					fi
 					#break
 				;;
 				l|ln*|lo|lx)													# v1.16
