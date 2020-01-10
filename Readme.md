@@ -35,7 +35,6 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 
 unbound (pid 3113) is running... uptime: 0 Days, 01:14:24 version: 1.9.3 (# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer Fri Jan 10 11:43:15 GMT 2020))
 
-u  = Push to Github PENDING for (Major) unbound_installer v1.19 >>>> v1.18
 
 i  = Update ('/opt/var/lib/unbound/') unbound Configuration		l  = Show unbound log entries (lo=Enable Logging)
 z  = Remove Existing unbound Installation				v  = View ('/opt/var/lib/unbound/') unbound Configuration (vx=Edit; vh=View Example Configuration) 
