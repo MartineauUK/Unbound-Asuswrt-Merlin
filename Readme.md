@@ -69,7 +69,10 @@ Done.
 Option Auto Reply 'y'	Installing Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker....
 	adblock/firefox_DOH downloaded successfully
 Adding Firefox DoH 'include: /opt/var/lib/unbound/adblock/firefox_DOH'
+
 <snip>
+
+Auto install Customisation complete 0 minutes and 48 seconds elapsed - Please wait for up to 10 seconds for status.....
 
 
 Option ==> ?
