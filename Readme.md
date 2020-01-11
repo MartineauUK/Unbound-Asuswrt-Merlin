@@ -59,6 +59,19 @@ Option ==> i 5 4
 
 <snip>
 
+Customising Unbound configuration Options:
+Option Auto Reply 'y'	Customising Unbound Performance/Memory 'proc/sys/net' parameters
+	stuning downloaded successfully
+Applying Unbound Performance/Memory tweaks using '/jffs/scripts/stuning'
+Restarting dnsmasq.....
+Done.
+ Starting unbound...              done. 
+Option Auto Reply 'y'	Installing Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker....
+	adblock/firefox_DOH downloaded successfully
+Adding Firefox DoH 'include: /opt/var/lib/unbound/adblock/firefox_DOH'
+<snip>
+
+
 Option ==> ?
 
 	Version=1.19
