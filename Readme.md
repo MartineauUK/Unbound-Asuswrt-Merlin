@@ -99,13 +99,30 @@ Option ==> ?
 	[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker
 
 ```
-The script will remember the Auto Selected Options, for the #current session so you may include additional Auto install Option features
+The script will remember the Auto Selected Options (for the #current session) so you may include additional Auto install Option features
 
 ```
 e  = Exit Script
 
 Option ==> i 3
+
+<snip>
+
+	Options (Auto Reply=Y for Options '3 4 5'):
+
+	[✔] Ad and Tracker Blocking
+	[✔] Unbound CPU/Memory Performance tweaks
+	[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker
+
 ```
+To Auto reply to ALL of the Selectable User Options, rather than manually enter the complete list, simply use:
+
+```
+e  = Exit Script
+
+Option ==> i all
+```
+
 To reinstate ALL Selectable User Option prompts issue
 
 ```
