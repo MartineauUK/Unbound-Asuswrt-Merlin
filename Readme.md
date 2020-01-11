@@ -14,7 +14,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 ```
 +======================================================================+
 |  Welcome to the unbound-Installer-Asuswrt-Merlin installation script |
-|  Version 1.19 by Martineau                                           |
+|  Version 1.20 by Martineau                                           |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
@@ -47,4 +47,51 @@ e  = Exit Script
 
 
 Option ==>  
+```
+
+New in #v1.20 is the ability to specify which User Selectable options are to be installed without having to manually reply to each individual feature prompt
+
+e.g. Auto Install '4. Optionally Install Ad and Tracker Blocking' and '5. Optionally Customise CPU/Memory usage (Advanced Users)'
+```
+e  = Exit Script
+
+Option ==> i 5 4
+
+<snip>
+
+Option ==> ?
+
+	Version=1.19
+	Local					md5=ef4d4d25251d3e75ed367755f6e36099
+	Github					md5=c5f2a8a62a0cd6a1ad64306a8b9dcd79
+	/jffs/scripts/unbound_installer.md5	md5=c5f2a8a62a0cd6a1ad64306a8b9dcd79
+
+	Router Configuration recommended pre-reqs status:
+
+	[✔] Swapfile=262140 kB
+	[✖] ***ERROR DNS Filter is OFF!  						see http://10.88.8.1/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering
+	[✖] ***ERROR WAN: Use local caching DNS server as system resolver=YES  		see http://10.88.8.1/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks
+	[✖] ***ERROR Enable local NTP server=NO  					see http://10.88.8.1/Advanced_System_Content.asp ->Basic Config
+	[✔] Enable DNS Rebind protection=NO
+	[✔] Enable DNSSEC support=NO
+
+	Options (Auto Reply=Y for Options '4 5'):
+
+	[✔] Unbound CPU/Memory Performance tweaks
+	[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker
+
+```
+The script will remember the Auto Selected Options, for the #current session so you may include additional Auto install Option features
+
+```
+e  = Exit Script
+
+Option ==> i 3
+```
+To reinstate ALL Selectable USer Option prompts issue
+
+```
+e  = Exit Script
+
+Option ==> i?
 ```
