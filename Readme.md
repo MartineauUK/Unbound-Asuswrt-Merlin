@@ -19,19 +19,21 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
 | The install script will:                                             |
-|   1. Install the unbound Entware package                             |
-|   2. Override how the firmware manages DNS                           |
-|   3. Optionally Integrate with Stubby                                |
-|   4. Optionally Install Ad and Tracker Blocking                      |
-|   5. Optionally Customise CPU/Memory usage (Advanced Users)          |
-|   6. Optionally Disable Firefox DNS-over-HTTPS (DoH) (USA users)     |
-|                                                                      |
+|     Install the unbound Entware package                              |
+|     Override how the firmware manages DNS                            |
+| User Selectable Install Options:                                     |
+|   1. Enable Unbound Logging                                          |
+|   2. Integrate with Stubby                                           |
+|   3. Install Ad and Tracker Blocking                                 |
+|   4. Customise CPU/Memory usage (Advanced Users)                     |
+|   5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)                |
 |                                                                      |
 | You can also use this script to uninstall unbound to back out the    |
 | changes made during the installation. See the project repository at  |
 |         https://github.com/rgnldo/Unbound-Asuswrt-Merlin             |
 |     for helpful user tips on unbound usage/configuration.            |
 +======================================================================+
+
 
 unbound (pid 3113) is running... uptime: 0 Days, 01:14:24 version: 1.9.3 (# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer Fri Jan 10 11:43:15 GMT 2020))
 
