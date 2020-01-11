@@ -18,7 +18,7 @@
 ####################################################################################################
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.19"
+VERSION="1.20"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -27,6 +27,11 @@ CONFIG_DIR="/opt/var/lib/unbound/"
 ENTWARE_UNBOUND="unbound-control-setup unbound-control unbound-anchor unbound-daemon"
 SILENT="s"													# Default is no progress messages for file downloads # v1.08
 ALLOWUPGRADE="Y"											# Default is allow script download from Github		# v1.09
+CHECK_GITHUB=1												# Only check Github MD5 every nn times
+MAX_OPTIONS=5												# Available Installation Options 1 thru 5 see $AUTO_REPLYx
+USER_OPTION_PROMPTS="?"										# Global reset if ANY Auto-Options specified
+CURRENT_AUTO_OPTIONS=										# List of CURRENT Auto Reply Options
+
 
 # Uncomment the line below for debugging
 #set -x
@@ -338,9 +343,16 @@ S02haveged_update() {
 
 Option_Stubby_Integration() {
 
+	 local ANS=$1											# v1.20
+	 if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+		echo -en $cBYEL"Option Auto Reply 'y'\t"
+	 fi
+
+	 if [ "$USER_OPTION_PROMPTS" == "?" ];then
 		echo -e "\nDo you want to integrate Stubby with unbound?\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
 		read -r "ANS"
-		[ "$ANS" == "y"  ] && Stubby_Integration
+	 fi
+	 [ "$ANS" == "y"  ] && Stubby_Integration
 }
 Stubby_Integration() {
 
@@ -451,44 +463,61 @@ Customise_config() {
 
 	 echo -e $cBCYA"Customising Unbound configuration Options:"$cRESET
 
-	 Enable_Logging											# v1.16 Always create the log file, but ask user if it should be ENABLED
+	 Enable_Logging "$1"											# v1.16 Always create the log file, but ask user if it should be ENABLED
 
-	 echo -e "\nDo you want to optimise Performance/Memory parameters? (Advanced Users)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
-	 read -r "ANS"
-	 [ "$ANS" == "y"  ] && Optimise_Performance_Memory		# v1.15
 }
-Optimise_Performance_Memory() {
+Option_Optimise_Performance() {
 
-	local FN="/jffs/scripts/init-start"
+	 local ANS=$1											# v1.20
+	 if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+		echo -en $cBYEL"Option Auto Reply 'y'\t"
+	 fi
 
-	local Tuning_script="/jffs/scripts/stuning"				# v1.15 Would benefit from a meaningful name e.g.'unbound_tuning'
+	 if [ "$USER_OPTION_PROMPTS" == "?" ];then
+		echo -e "\nDo you want to optimise Performance/Memory parameters? (Advanced Users)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
+		read -r "ANS"
+	 fi
+	 [ "$ANS" == "y"  ] && Optimise_Performance
+}
+Optimise_Performance() {
 
-	if [ "$1" != "del" ];then
-		echo -e $cBCYA"Customising Unbound Performance/Memory 'proc/sys/net' parameters"$cGRA			# v1.15
-		download_file /jffs/scripts stuning rgnldo
-		dos2unix $Tuning_script
-		chmod +x $Tuning_script
-		[ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
-		if [ -z "$(grep -F "$Tuning_script" $FN | grep -v "^#")" ];then
-			$(Smart_LineInsert "$FN" "$(echo -e "sh $Tuning_script start\t\t\t# unbound_installer")" )	# v1.15
+		local FN="/jffs/scripts/init-start"
+
+		local Tuning_script="/jffs/scripts/stuning"				# v1.15 Would benefit from a meaningful name e.g.'unbound_tuning'
+
+		if [ "$1" != "del" ];then
+			echo -e $cBCYA"Customising Unbound Performance/Memory 'proc/sys/net' parameters"$cGRA			# v1.15
+			download_file /jffs/scripts stuning rgnldo
+			dos2unix $Tuning_script
+			chmod +x $Tuning_script
+			[ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+			if [ -z "$(grep -F "$Tuning_script" $FN | grep -v "^#")" ];then
+				$(Smart_LineInsert "$FN" "$(echo -e "sh $Tuning_script start\t\t\t# unbound_installer")" )	# v1.15
+			fi
+			chmod +x $FN
+			echo -e $cBCYA"Applying Unbound Performance/Memory tweaks using '$Tuning_script'"$cRESET
+			sh $Tuning_script start
+		else
+			 if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_installer" $FN)" ];then
+				echo -e $cBCYA"Deleting Performance/Memory tweaks '$Tuning_script'"
+				[ -f $Tuning_script ] && rm $Tuning_script
+				sed -i '/#.*unbound_installer/d' $FN
+			 fi
 		fi
-		chmod +x $FN
-		echo -e $cBCYA"Applying Unbound Performance/Memory tweaks using '$Tuning_script'"$cRESET
-		sh $Tuning_script start
-	else
-		 if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_installer" $FN)" ];then
-			echo -e $cBCYA"Deleting Performance/Memory tweaks '$Tuning_script'"
-			[ -f $Tuning_script ] && rm $Tuning_script
-			sed -i '/#.*unbound_installer/d' $FN
-		 fi
-	fi
 }
-Enable_Logging() {															# v1.07
+Enable_Logging() {											# v1.07
 
-	 # v1.16 allows dynamic Enable/Disable from unbound_installer main menu (Options lo/lx)
-	 #		but the log file needs to exist in the config so unbound will create it - ready to be used
-	 echo -e "\nDo you want to ENABLE unbound logging? (You can dynamically ENABLE/DISABLE Logging later from the main menu)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
-	 read -r "ANS"
+	 local ANS=$1											# v1.20
+	 if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+		echo -en $cBYEL"Option Auto Reply 'y'\t"
+	 fi
+
+	 if [ "$USER_OPTION_PROMPTS" == "?" ];then
+		 # v1.16 allows dynamic Enable/Disable from unbound_installer main menu (Options lo/lx)
+		 #		but the log file needs to exist in the config so unbound will create it - ready to be used
+		 echo -e "\nDo you want to ENABLE unbound logging? (You can dynamically ENABLE/DISABLE Logging later from the main menu)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
+		 read -r "ANS"
+	 fi
 	 if [ "$ANS" == "y"  ];then
 		 if [ -n "$(grep -F "# verbosity:" ${CONFIG_DIR}unbound.conf)" ];then
 			sed -i '/# verbosity:/,/# log-replies: yes/s/^# //' ${CONFIG_DIR}unbound.conf
@@ -707,22 +736,13 @@ remove_existing_installation() {
 			rm -R /opt/etc/stubby 2>/dev/null
 		fi
 
-		# Remove entries from /jffs/configs/dnsmasq.conf.add
-		# if [ -s "/jffs/configs/dnsmasq.conf.add" ]; then  # file exists	# v1.14 Unnecessary since we now ONLY use dnsmasq.postconf
-			# for DNSMASQ_PARM in "^server=127\.0\.0\.1*#53535"; do
-				# if [ -n "$(grep -oE "$DNSMASQ_PARM" /jffs/configs/dnsmasq.conf.add)" ]; then  # see if line exists
-					# sed -i "\\~$DNSMASQ_PARM~d" "/jffs/configs/dnsmasq.conf.add"
-				# fi
-			# done
-		# fi
-
 		Check_dnsmasq_postconf "del"
 		echo -en $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.14
 		service restart_dnsmasq 			# v1.14 relocated - Just in case reboot is skipped!
 
 		#Script_alias "delete"
 
-		Optimise_Performance_Memory "del"				# v1.15
+		Optimise_Performance "del"				# v1.15
 
 		# Reboot router to complete uninstall of unbound
 		echo -e $cBGRE"\n\tUninstall of unbound completed.\n"$cRESET
@@ -736,12 +756,35 @@ remove_existing_installation() {
 }
 install_unbound() {
 
+		# Check if any Auto-Install options supplied		# v1.20
+		shift
+
+		local OPT=1
+		while [ $# -gt 0 ]; do # Until you run out of parameters.....
+
+			[ -n "$( echo "$1" | grep -v '[0-9]')" ] && { echo -e $cBRED"\a\n\tInvalid Option '$1' (Must be numeric Option in range 1-$MAX_OPTIONS)\n"$cRESET; exit 1; }
+			[ $OPT -gt $MAX_OPTIONS ] && { echo -e $cBRED"\a\n\tToo many Auto-Reply Options specified! (Only $MAX_OPTIONS Options available)\n"$cRESET; exit 1; }
+			[ "$1" -gt $MAX_OPTIONS ] && { echo -e $cBRED"\a\n\tOption '$1' out of range! (>$MAX_OPTIONS)\n"$cRESET; exit 1; }
+			eval "AUTO_REPLY$1='y'"							# v1.20
+
+			[ -z "$(echo "$CURRENT_AUTO_OPTIONS" | grep -ow "$1" )" ] && CURRENT_AUTO_OPTIONS=$CURRENT_AUTO_OPTIONS" "$1	# v1.20
+
+			USER_OPTION_PROMPTS=							# Disable User manual Options prompts
+
+			shift
+
+			OPT=$((OPT + 1))
+
+		done
+
+		[ -n "$CURRENT_AUTO_OPTIONS" ] && CURRENT_AUTO_OPTIONS=$(echo $CURRENT_AUTO_OPTIONS | tr ' ' '\n' | sort | tr '\n' ' ' | sed 's/^[ \t]*//;s/[ \t]*$//')	# v1.20 Old-skool strip leading/trailing spaces
+
 		[ -z "$(which unbound)" ] && local ACTION="INSTALL" || local ACTION="UPDATE"
 
 		Check_GUI_NVRAM "install"
 
 		if [ $? -gt 0 ] || [ "$(Check_GUI_NVRAM "install")" -gt 0 ];then
-			echo -e "\n\tThe router does not currently meet ALL of the recommended pre-reqs as shown above."
+			echo -e $cRESET"\n\tThe router does not currently meet ALL of the recommended pre-reqs as shown above."
 			echo -e "\tHowever, whilst they are recommended, you may proceed with the unbound ${cBGRE}${ACTION}$cRESET"
 			echo -e "\tas the recommendations are NOT usually FATAL.\n"
 
@@ -752,7 +795,7 @@ install_unbound() {
 
 		echo -en $cBCYA"\n${ACTION}ing unbound"$cRESET
 
-		GITHUB_DIR="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
+		local START_TIME=$(date +%s)
 
 		if [ -d "/jffs/dnscrypt" ] || [ -f "/opt/sbin/dnscrypt-proxy" ]; then
 			echo "Warning! DNSCrypt installation detected"
@@ -797,21 +840,27 @@ install_unbound() {
 		create_required_directories
 
 		S61unbound_update
-		Customise_config
+		Customise_config 					"$AUTO_REPLY1"
 
-		Option_Stubby_Integration
+		Option_Optimise_Performance			"$AUTO_REPLY4"
+
+		Option_Stubby_Integration			"$AUTO_REPLY2"
 
 		echo -en $cBCYA"Restarting dnsmasq....."$cBGRE		# v1.13
 		service restart_dnsmasq								# v1.13
 		echo -en $cRESET
 
-		Option_Ad_Tracker_Blocker
+		Option_Ad_Tracker_Blocker			"$AUTO_REPLY3"
 
-		Option_Disable_Firefox_DoH								# v1.18
+		Option_Disable_Firefox_DoH			"$AUTO_REPLY5"		# v1.18
+
+		local END_TIME=$(date +%s)
+		local DIFFTIME=$((END_TIME-START_TIME))
 
 		# unbound apparently has a habit of taking its time to fully process its 'unbound.conf' and may terminate due to invalid directives
 		# e.g. fatal error: could not open autotrust file for writing, /root.key.22350-0-2a0796d0: Permission denied
-		echo -e $cRESET"\nCustomisation complete - Please wait for up to ${cBCYA}10$cRESET seconds for ${cBCYA}status.....\n"$cRESET
+		[ "$USER_OPTION_PROMPTS" == "?" ] && local INSTALLMETHOD="Manual install" || local INSTALLMETHOD="Auto install"
+		echo -e $cRESET"\n$INSTALLMETHOD Customisation complete $cBGRE$(($DIFFTIME / 60)) minutes and $(($DIFFTIME % 60)) seconds elapsed - ${cRESET}Please wait for up to ${cBCYA}10$cRESET seconds for ${cBCYA}status.....\n"$cRESET
 		WAIT=11		# 16 i.e. 15 secs should be adequate?
 		INTERVAL=1
 		I=0
@@ -829,7 +878,7 @@ install_unbound() {
 			# Backup the config to easily restore it 'rl user[.conf]'	# v1.19
 			cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/user.conf	# v1.19
 			sed -i "1i$TAG" /opt/share/unbound/configs/user.conf	# v1.19
-			cmp --silent ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf || sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf # v1.19
+			cmp -s ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf || sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf # v1.19
 			echo -e $cBGRE"\n\tInstallation of unbound completed\n"		# v1.04
 		else
 			echo -e $cBRED"\a\n\t***ERROR Unsuccessful installation of unbound detected\n"		# v1.04
@@ -879,11 +928,16 @@ Check_GUI_NVRAM() {
 		[ "$(nvram get dnssec_enable)" == "1" ] && echo -e $cBRED"\a\t[✖] Warning Enable DNSSEC support=YES $cRESET \t\t\t\t\t\tsee http://$(nvram get lan_ipaddr)/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1 || echo -e $cBGRE"\t[✔] Enable DNSSEC support=NO" 2>&1
 
 		if [ "$1" != "install" ];then						# v1.18 Don't bother reporting the options on "install"
-			echo -e $cBCYA"\n\tOptions:\n" 2>&1
-			[ -f /jffs/scripts/stuning ] && echo -e $cBGRE"\t[✔] Unbound CPU/Memory Performance tweaks" 2>&1
+			[ "$USER_OPTION_PROMPTS" != "?" ] && local TXT="$cRESET (Auto Reply=Y for Options '$CURRENT_AUTO_OPTIONS')" || local TEXT=		# v1.20
+			echo -e $cBCYA"\n\tOptions$TXT:\n" 2>&1
+
 			if [ -f ${CONFIG_DIR}unbound.conf ];then
+				if [ -n "$(grep -E "^log-replies:" ${CONFIG_DIR}unbound.conf)" ] || [ -n "$(grep -E "^log-queries:" ${CONFIG_DIR}unbound.conf)" ] ;then
+					echo -e $cBGRE"\t[✔] Unbound Logging" 2>&1
+				fi
 				[ -n "$(grep -E "^forward-zone:" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
 				[ -n "$(grep -E "^include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Ad and Tracker Blocking" 2>&1
+				[ -f /jffs/scripts/stuning ] && echo -e $cBGRE"\t[✔] Unbound CPU/Memory Performance tweaks" 2>&1
 				[ -n "$(grep -E "^include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker" 2>&1
 			fi
 		fi
@@ -900,9 +954,17 @@ exit_message() {
 }
 
 Option_Ad_Tracker_Blocker() {
-		echo -e "\nDo you want to install Ad and Tracker blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
-		read -r "ANS"
-		[ "$ANS" == "y"  ] && Ad_Tracker_blocking		# v1.06 (Apparently requests '/opt/etc/init.d/S61unbound start')
+
+		local ANS=$1										# v1.20
+		if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+			echo -en $cBYEL"Option Auto Reply 'y'\t"
+		fi
+
+		if [ "$USER_OPTION_PROMPTS" == "?" ];then
+			echo -e "\nDo you want to install Ad and Tracker blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
+			read -r "ANS"
+		fi
+		[ "$ANS" == "y"  ] && Ad_Tracker_blocking			# v1.06
 
 		# ....but just in case ;-)
 		[ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart	# Will also restart dnsmasq
@@ -952,9 +1014,17 @@ Ad_Tracker_blocking() {
 }
 Option_Disable_Firefox_DoH() {
 
-		echo -e "\nDo you want to DISABLE Firefox DNS-over-HTTPS (DoH)? (USA users)\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
-		read -r "ANS"
+		local ANS=$1										# v1.20
+		if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+			echo -en $cBYEL"Option Auto Reply 'y'\t"
+		fi
+
+		if [ "$USER_OPTION_PROMPTS" == "?" ];then
+			echo -e "\nDo you want to DISABLE Firefox DNS-over-HTTPS (DoH)? (USA users)\n\n\tReply$cBRED 'y' ${cBGRE}or press ENTER $cRESET to skip"
+			read -r "ANS"
+		fi
 		[ "$ANS" == "y"  ] && Disable_Firefox_DoH			# v1.18
+
 
 }
 Disable_Firefox_DoH() {
@@ -982,12 +1052,14 @@ welcome_message() {
 				printf '| Requirements: USB drive with Entware installed                       |\n'
 				printf '|                                                                      |\n'
 				printf '| The install script will:                                             |\n'
-				printf '|   1. Install the unbound Entware package                             |\n'
-				printf '|   2. Override how the firmware manages DNS                           |\n'
-				printf '|   3. Optionally Integrate with Stubby                                |\n'
-				printf '|   4. Optionally Install Ad and Tracker Blocking                      |\n'
-				printf '|   5. Optionally Customise CPU/Memory usage (%bAdvanced Users%b)          |\n' "$cBRED" "$cRESET"		# v1.15
-				printf '|   6. Optionally Disable Firefox DNS-over-HTTPS (DoH) (USA users)     |\n'	# v1.18
+				printf '|     Install the unbound Entware package                              |\n'
+				printf '|     Override how the firmware manages DNS                            |\n'
+				printf '| User Selectable Install Options:                                     |\n'
+				printf '|   1. Enable Unbound Logging                                          |\n'
+				printf '|   2. Integrate with Stubby                                           |\n'
+				printf '|   3. Install Ad and Tracker Blocking                                 |\n'
+				printf '|   4. Customise CPU/Memory usage (%bAdvanced Users%b)                     |\n' "$cBRED" "$cRESET"		# v1.15
+				printf '|   5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)                |\n'	# v1.18
 				printf '|                                                                      |\n'
 				printf '| You can also use this script to uninstall unbound to back out the    |\n'
 				printf '| changes made during the installation. See the project repository at  |\n'
@@ -1002,22 +1074,8 @@ welcome_message() {
 			if [ "$1" = "uninstall" ]; then
 				menu1="2"
 			else
-				localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-				[ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"	# v1.11
-
-				[ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"	|| REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
-
-				[ -z "$REMOTE_VERSION_NUMDOT" ] && REMOTE_VERSION_NUMDOT="?.?? $cRED - Unable to verify Github version"			# v1.15
-
-				LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')				# v1.04
-				REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')	# v1.04
-
-				# As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
-				if [ -n "$REMOTE_VERSION_NUMDOT" ];then
-					[ ! -f /jffs/scripts/unbound_installer.md5 ] && echo $REMOTE_VERSION_NUM $remotemd5 > /jffs/scripts/unbound_installer.md5	# v1.09
-				fi
-
+				# Show unbound uptime
 				if [ -n "$(pidof unbound)" ];then
 					UNBOUND_STATUS=$(unbound-control status | grep pid)" uptime: "$(Convert_SECS_to_HHMMSS "$(unbound-control status | grep uptime | awk '{print $2}')" "days")" "$(unbound-control status | grep version)
 					# Display 'unbound.conf' header if present
@@ -1028,19 +1086,40 @@ welcome_message() {
 					echo
 				fi
 
-				[ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0			# v1.11
+				if [ $CHECK_GITHUB -eq 1 ];then				# v1.20
 
-				if [ "$localmd5" != "$remotemd5" ]; then
-					if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then
-						printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
-					else
-						if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then		# v1.09
-							ALLOWUPGRADE="N"												# v1.09
-							printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b %b >>>> %b\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+					GITHUB_DIR=$GITHUB_MARTINEAU
+
+					localmd5="$(md5sum "$0" | awk '{print $1}')"
+
+					[ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"	# v1.11
+
+					[ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"	|| REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
+
+					[ -z "$REMOTE_VERSION_NUMDOT" ] && REMOTE_VERSION_NUMDOT="?.?? $cRED - Unable to verify Github version"			# v1.15
+
+					LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')				# v1.04
+					REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')	# v1.04
+
+					# As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
+					if [ -n "$REMOTE_VERSION_NUMDOT" ];then
+						[ ! -f /jffs/scripts/unbound_installer.md5 ] && echo $REMOTE_VERSION_NUM $remotemd5 > /jffs/scripts/unbound_installer.md5	# v1.09
+					fi
+
+					[ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0			# v1.11
+
+					if [ "$localmd5" != "$remotemd5" ]; then
+						if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then
+							printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
 						else
-							# MD5 Mismatch due to local development?
-							if [ "$(awk '{print $1}' /jffs/scripts/unbound_installer.md5)" == "$remotemd5" ];then
-								printf '%bu  = %bPush to Github PENDING for %b(Minor) %b%s >>>> %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.09
+							if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then		# v1.09
+								ALLOWUPGRADE="N"												# v1.09
+								printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b %b >>>> %b\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT"	# v1.04
+							else
+								# MD5 Mismatch due to local development?
+								if [ "$(awk '{print $1}' /jffs/scripts/unbound_installer.md5)" == "$remotemd5" ];then
+									printf '%bu  = %bPush to Github PENDING for %b(Minor) %b%s >>>> %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION"	# v1.09
+								fi
 							fi
 						fi
 					fi
@@ -1059,8 +1138,6 @@ welcome_message() {
 					MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"	# v1.17
 
 					if [ -n "$(which unbound-control)" ];then
-						# Dynamic unbound logging @dave14305							# v1.16
-						MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
 						if [ -n "$(pidof unbound)" ];then
 							if [ "$(unbound-control get_option log-replies)" == "yes" ] || [ "$(unbound-control get_option log-queries)" == "yes" ] ;then	# v1.16
 								LOGSTATUS=$cBGRE"LIVE "$cRESET
@@ -1070,8 +1147,6 @@ welcome_message() {
 								LOGGING_OPTION="(lo=Enable Logging)"
 							fi
 						fi
-
-						# Dynamic unbound logging @dave14305							# v1.16
 						MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
 					fi
 
@@ -1107,9 +1182,19 @@ welcome_message() {
 				0)
 					HDR=											# v1.09
 				;;
-				1|1v|i|iu)
-					[ "$menu1" == "1v" ] && { echo -e $cRED_"\nVerbose Download progress messages ENABLED"$cRESET; SILENT=; }				# v1.08
-					install_unbound "$@"
+				1|1v|i|iu|i*|"i?")
+					[ "$menu1" == "1v" ] && { echo -e $cRED_"\nVerbose Download progress messages ENABLED"$cRESET; SILENT=; }	# v1.08
+					[ "$menu1" == "i?" ] && USER_OPTION_PROMPTS="?"	# v1.20 Force Selectable User option prompts
+					if [ "$(echo "$menu1" | awk '{print $2}' )" == "all" ];then	# v1.20
+						menu1="i"
+						I=1
+						while [ $I -le $MAX_OPTIONS ];do
+								menu1=$menu1" "$I					# v1.20 Auto Reply to all Selectable User options
+								I=$((I + 1))
+							done
+					fi
+
+					install_unbound $menu1
 					#break
 				;;
 				2|z)
@@ -1239,9 +1324,19 @@ welcome_message() {
 
 				;;
 				sd|dnsmasqstats)											# v1.18
+
 					[ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
+					# Is scribe / Diversion running?
+					[ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"	# v1.20
 					echo -e $cBGRA
-					kill -SIGUSR1 $(pidof dnsmasq) | tail -n 50 $SYSLOG | grep -F "dnsmasq[" | tail -n 5
+					# cache size 0, 0/0 cache insertions re-used unexpired cache entries.
+					# queries forwarded 4382, queries answered locally 769
+					# pool memory in use 0, max 0, allocated 0
+					# server 127.0.0.1#53535: queries sent 4375, retried or failed 29
+					# server 100.120.82.1#53: queries sent 0, retried or failed 0
+					# server 1.1.1.1#53: queries sent 7, retried or failed 0
+					# Host                                     Address                        Flags      Expires
+					kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -v Host
 				;;
 				e)
 					exit_message
