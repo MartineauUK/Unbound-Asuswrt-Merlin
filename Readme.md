@@ -88,7 +88,7 @@ e  = Exit Script
 
 Option ==> i 3
 ```
-To reinstate ALL Selectable USer Option prompts issue
+To reinstate ALL Selectable User Option prompts issue
 
 ```
 e  = Exit Script
