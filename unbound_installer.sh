@@ -46,8 +46,8 @@
 #
 # Description:
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
-#  See https://github.com/rgnldo/unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
-#  See https://github.com/MartineauUK/unbound-Asuswrt-Merlin for a description of changes to this script,
+#  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
+#  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for a description of changes to this script,
 #
 # Acknowledgement:
 #  Test team: rngldo
