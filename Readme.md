@@ -176,10 +176,11 @@ Option ==>
 You can start in 'easy' mode by using
 ```
 unbound_installer   easy
-``
+```
 or you can quickly change modes at the option prompt
 
-``e  = Exit Script
+```
+e  = Exit Script
 
 Option ==> easy | advanced
 ```
