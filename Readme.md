@@ -14,7 +14,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 ```
 +======================================================================+
 |  Welcome to the unbound-Installer-Asuswrt-Merlin installation script |
-|  Version 1.20 by Martineau                                           |
+|  Version 1.21 by Martineau                                           |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
@@ -129,4 +129,57 @@ To reinstate ALL Selectable User Option prompts issue
 e  = Exit Script
 
 Option ==> i?
+```
+
+v1.21 now allows dumbing down of the menus
+
+```
++======================================================================+
+|  Welcome to the unbound-Installer-Asuswrt-Merlin installation script |
+|  Version 1.21 by Martineau                                           |
+|                                                                      |
+| Requirements: USB drive with Entware installed                       |
+|                                                                      |
+|   1 = Install unbound DNS Server                                     |
+|                                                                      |
+|   2 = Install unbound DNS Server - Advanced Mode                     |
+|       o1. Enable unbound Logging                                     |
+|       o2. Integrate with Stubby                                      |
+|       o3. Install Ad and Tracker Blocking                            |
+|       o4. Customise CPU/Memory usage (Advanced Users)                |
+|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
+|                                                                      |
+|   3 = Advanced Tools                                                 |
+|                                                                      |
+| You can also use this script to uninstall unbound to back out the    |
+| changes made during the installation. See the project repository at  |
+|         https://github.com/rgnldo/unbound-Asuswrt-Merlin             |
+|     for helpful user tips on unbound usage/configuration.            |
++======================================================================+
+
+unbound (pid 20593) is running... uptime: 0 Days, 16:45:47 version: 1.9.3 (# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer Mon Jan 13 19:42:33 GMT 2020))
+
+u = Push to Github PENDING for (Major) unbound_installer v1.21 >>>> v1.20
+
+1  = Begin unbound Installation Process ('/opt/var/lib/unbound/')
+2  = Begin unbound Advanced Installation Process ('/opt/var/lib/unbound/')
+3  = Advanced Tools
+
+ 	
+
+e  = Exit Script
+
+Option ==> 
+
+```
+
+You can start in 'easy' mode by using
+```
+unbound_installer   easy
+``
+or you can quickly change modes at the option prompt
+
+``e  = Exit Script
+
+Option ==> easy | advanced
 ```
