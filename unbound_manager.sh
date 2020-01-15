@@ -1107,7 +1107,7 @@ welcome_message() {
             if [ -z "$HDR" ];then                           # v1.09
 
                 printf '\n+======================================================================+\n'
-                printf '|  Welcome to the %bunbound-Installer-Asuswrt-Merlin%b installation script |\n' "$cBGRE" "$cRESET"
+                printf '|  Welcome to the %bunbound-Manager/Installation-Asuswrt-Merlin%b script   |\n' "$cBGRE" "$cRESET"
                 printf '|  Version %s by Martineau                                           |\n' "$VERSION"
                 printf '|                                                                      |\n'
                 printf '| Requirements: USB drive with Entware installed                       |\n'
