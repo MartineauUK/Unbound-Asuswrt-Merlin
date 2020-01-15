@@ -1,8 +1,8 @@
 #!/bin/sh
-#============================================================================================ © 2019 Martineau v1.21
+#============================================================================================ © 2019 Martineau v1.22
 # Configure unbound DNS
 #
-# Usage:    unbound_installer  ['help'|''-h''] | [ [easy] [install] ]
+# Usage:    unbound_installer  ['help'|''-h''] | [ [easy] [install] [recovery] [config=config_file]
 #
 #                              Option ==> easy
 #                              Will allow quick install options (3. Advanced Tools will be shown a separate page) (Totally brain-dead in IMHO)
@@ -42,7 +42,7 @@
 #
 
 # Maintainer: Martineau
-# Last Updated Date: 14-Jan-2020
+# Last Updated Date: 15-Jan-2020
 #
 # Description:
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
@@ -58,7 +58,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.21"
+VERSION="1.22"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -1147,7 +1147,7 @@ welcome_message() {
                     UNBOUND_STATUS=$(unbound-control status | grep pid)" uptime: "$(Convert_SECS_to_HHMMSS "$(unbound-control status | grep uptime | awk '{print $2}')" "days")" "$(unbound-control status | grep version)
                     # Display 'unbound.conf' header if present
                     UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
-                    [ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*version" )" ] && UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
+                    [ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ] && UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
                     echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET  # v1.19
                 else
                     echo
@@ -1257,6 +1257,7 @@ welcome_message() {
                         printf "\t\t\t\t\t\t\t\t\t%s\n"           "$MENU_OQ"
                         echo
                         printf "%s\t\t\t\t\t\t%s\n"     "$MENU_RS" "$MENU_S"
+						printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
                     else
 
                         if [ -n "$ADVANCED_TOOLS" ];then							# v1.21
@@ -1328,27 +1329,37 @@ welcome_message() {
                 rl|rl*)
                     # 'reset' and 'user' are Recovery aliases
                     #       i.e. 'reset' is rgnldo's config, and 'user' is the customised install version
-                    local PERFORMRELOAD="Y"
-                    if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
-                        NEW_CONFIG=$(echo "$menu1" | awk '{print $2}')
-                        [ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"
-                        [ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.19
+					if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
 
-                        if [ -f $NEW_CONFIG ];then
-                            cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
-                            local TXT=" <<== $NEW_CONFIG"
-                        else
-                            echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n"$RESET
-                            local PERFORMRELOAD="N"
-                        fi
-                    fi
+						NEW_CONFIG=$(echo "$menu1" | awk '{print $2}')
+						if [ "$NEW_CONFIG" != "?" ];then							# v1.22
+							local PERFORMRELOAD="Y"
+							[ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"
+							[ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.19
 
-                    if [ "$PERFORMRELOAD" == "Y" ];then                             # v1.19
-                        local TAG="(Date Loaded by unbound_installer "$(date)")"
-                        sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
-                        echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-                        unbound-control reload                                      # v1.08
-                    fi
+							if [ -f $NEW_CONFIG ];then
+								cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+								local TXT=" <<== $NEW_CONFIG"
+							else
+								echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n"$cRESET
+								local PERFORMRELOAD="N"
+							fi
+						else
+							# List available .conf files
+							echo -e $cBMAG
+							ls -lAhC /opt/share/unbound/configs/					# v1.22
+							echo -en $cRESET
+						fi
+
+					fi
+
+					if [ "$PERFORMRELOAD" == "Y" ];then                             # v1.19
+						local TAG="Date Loaded by unbound_installer "$(date)")"
+						sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+						echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
+						unbound-control reload                                      # v1.08
+					fi
+
                     #break
                 ;;
                 l|ln*|lo|lx)                                                    # v1.16
@@ -1379,7 +1390,7 @@ welcome_message() {
                                 trap 'welcome_message' INT
                                 tail $NUM -F "$(grep -E "^logfile:.*" ${CONFIG_DIR}unbound.conf | awk '{print $2}' | tr -d '"')"    # v1.16                             # v1.08
                             else
-                                echo -e $cBRED"\a\nunbound logging not ENABLED\n"$RESET
+                                echo -e $cBRED"\a\nunbound logging not ENABLED\n"c$RESET
                             fi
                             #break
                             ;;
@@ -1393,7 +1404,8 @@ welcome_message() {
                 u|uf)                                                           # v1.07
                     [ "$menu1" == "uf" ] && echo -e $cRED_"\n"Forced Update"\n"$cRESET              # v1.07
                     update_installer $menu1
-                    [ $? -eq 0 ] && break                                       # v1.18 Only exit if new script downloaded
+                    [ $? -eq 0 ] && exec "$0"                                   # v1.18 Only exit if new script downloaded
+
                 ;;
                 rs|rsnouser)                                                    # v1.07
                     echo
@@ -1440,7 +1452,9 @@ welcome_message() {
 
                     [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
                     # Is scribe / Diversion running?
-                    [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"    # v1.20
+					if grep -q diversion /etc/dnsmasq.conf ;then
+						SYSLOG="/opt/var/log/dnsmasq.log"					# v1.22
+					fi
                     echo -e $cBGRA
                     # cache size 0, 0/0 cache insertions re-used unexpired cache entries.
                     # queries forwarded 4382, queries answered locally 769
@@ -1474,14 +1488,8 @@ welcome_message() {
 # shellcheck disable=SC2068
 Main() { true; } # Syntax that is Atom Shellchecker compatible!
 
-clear
-Check_Lock "$1"
-
-Script_alias "create"               # v1.08
 
 ANSIColours
-
-[ -z "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU= || EASYMENU="Y"
 
 # Need assistance ?
 if [ "$1" == "-h" ] || [ "$1" == "help" ];then
@@ -1492,6 +1500,59 @@ if [ "$1" == "-h" ] || [ "$1" == "help" ];then
     exit 0
 fi
 
+
+
+Check_Lock "$1"
+
+Script_alias "create"               # v1.08
+
+[ -z "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU= || EASYMENU="Y"
+NEW_CONFIG=$(echo "$@" | sed -n "s/^.*config=//p" | awk '{print $1}')						# v1.22
+if [	-n "$NEW_CONFIG" ];then
+	[ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"		# v1.22
+	[ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG 	# v1.22
+	if [ -f  $NEW_CONFIG ];then
+		if [ -n "$(pidof unbound)" ];then
+			TXT=" <<== $NEW_CONFIG"
+			[ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+			TAG="(Date Loaded by unbound_installer "$(date)")"
+			[ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
+			echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
+			unbound-control reload
+			unset $TAG
+			unset $TXT
+			unset $NEW_CONFIG
+		else
+			echo -e $cBRED"\a\nunbound not ACTIVE to Load Configuration file '$NEW_CONFIG'\n\n"$cRESET
+			rm -rf /tmp/unbound.lock
+			exit 1
+		fi
+	else
+		echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n\n"$cRESET
+		rm -rf /tmp/unbound.lock
+		exit 1
+	fi
+else
+	if [ "$1" == "recovery" ];then 								# v1.22
+		NEW_CONFIG="/opt/share/unbound/configs/reset.conf"
+		if [ -f  $NEW_CONFIG ];then
+			TXT=" <<== $NEW_CONFIG"
+			[ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+		else
+			echo -e $cBCYA"Recovery: Retrieving Custom unbound configuration"$cBGRA
+			download_file $CONFIG_DIR unbound.conf rgnldo
+		fi
+		TAG="(Date Loaded by unbound_installer "$(date)")"
+		[ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
+		echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
+		unbound-control reload
+		unset $TAG
+		unset $TXT
+		unset $NEW_CONFIG
+	fi
+fi
+
+clear
 welcome_message "$@"
 
 echo -e $cRESET
