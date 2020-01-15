@@ -1193,7 +1193,7 @@ welcome_message() {
                 fi
 
                 [ -n "UPDATE_SCRIPT_ALERT" ] && echo -e $UPDATE_SCRIPT_ALERT"\n"    # v1.21
-                CHECK_GITHUB=0                                                  # v1.21 Only check Gitgub on first run of script
+                CHECK_GITHUB=0                                                  # v1.21 Only check Github on first run of script
 
 
                 if [ -z "$SUPPRESSMENU" ];then                                  # v1.11
@@ -1519,7 +1519,7 @@ if [	-n "$NEW_CONFIG" ];then
 			[ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
 			TAG="(Date Loaded by unbound_installer "$(date)")"
 			[ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
-			echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
+			echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
 			unbound-control reload
 			TXT=
 			unset $TAG
