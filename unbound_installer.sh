@@ -1339,7 +1339,8 @@ welcome_message() {
 
 							if [ -f $NEW_CONFIG ];then
 								cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
-								local TXT=" <<== $NEW_CONFIG"
+								#local TXT=" <<== $NEW_CONFIG"
+
 							else
 								echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n"$cRESET
 								local PERFORMRELOAD="N"
@@ -1359,6 +1360,7 @@ welcome_message() {
 						echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
 						unbound-control reload                                      # v1.08
 					fi
+					unset $TXT
 
                     #break
                 ;;
@@ -1519,6 +1521,7 @@ if [	-n "$NEW_CONFIG" ];then
 			[ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
 			echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
 			unbound-control reload
+			TXT=
 			unset $TAG
 			unset $TXT
 			unset $NEW_CONFIG
@@ -1547,6 +1550,7 @@ else
 		echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
 		unbound-control reload
 		unset $TAG
+		TXT=
 		unset $TXT
 		unset $NEW_CONFIG
 	fi
