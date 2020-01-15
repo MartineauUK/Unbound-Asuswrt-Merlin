@@ -1,6 +1,8 @@
 #!/bin/sh
 #============================================================================================ © 2019 Martineau v1.22
-# Configure unbound DNS
+#  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
+#  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
+#  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for a description of changes to this script.
 #
 # Usage:    unbound_installer  ['help'|''-h''] | [ [easy] [install] [recovery] [config=config_file]
 #
@@ -45,14 +47,15 @@
 # Last Updated Date: 15-Jan-2020
 #
 # Description:
-#  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
-#  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
-#  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for a description of changes to this script,
+
 #
 # Acknowledgement:
 #  Test team: rngldo
 #  Contributors: rgnldo (Xentrk for this script template, thelonelycoder)
 #
+#	https://calomel.org/unbound_dns.html
+#   https://wiki.archlinux.org/index.php/unbound
+#	https://www.tumfatig.net/20190417/storing-unbound8-logs-into-influxdb/
 #
 ####################################################################################################
 
@@ -990,8 +993,12 @@ Check_GUI_NVRAM() {
                     echo -e $cBGRE"\t[✔] unbound Logging" 2>&1
                 fi
                 [ -n "$(grep -E "^forward-zone:" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
-                [ -n "$(grep -E "^include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Ad and Tracker Blocking" 2>&1
-                [ -f /jffs/scripts/stuning ] && echo -e $cBGRE"\t[✔] unbound CPU/Memory Performance tweaks" 2>&1
+
+                if [ -n "$(grep -E "^include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
+					local TXT="No. of Adblock domains "$cBMAG"$(wc -l <${CONFIG_DIR}adblock/adservers)"$cRESET
+					echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1
+                fi
+				[ -f /jffs/scripts/stuning ] && echo -e $cBGRE"\t[✔] unbound CPU/Memory Performance tweaks" 2>&1
                 [ -n "$(grep -E "^include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker" 2>&1
             fi
         #fi
