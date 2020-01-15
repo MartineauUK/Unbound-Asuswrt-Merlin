@@ -689,7 +689,7 @@ update_installer() {
 
     local UPDATED=1         # 0=Updated; 1=NOT Updated              # v1.18
 
-    if [ "$localmd5" != "$remotemd5" ]; then
+    if [ "$1" == "uf" ] || [ "$localmd5" != "$remotemd5" ]; then
         if [ "$1" == "uf" ] || [ "$( awk '{print $1}' /jffs/scripts/unbound_installer.md5)" != "$remotemd5" ]; then # v1.18
             echo 2>&1
             download_file /jffs/scripts unbound_installer.sh martineau
