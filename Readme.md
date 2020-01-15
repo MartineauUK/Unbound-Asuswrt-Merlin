@@ -13,7 +13,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 
 ```
 +======================================================================+
-|  Welcome to the unbound-Manager-Asuswrt-Merlin script                |
+|  Welcome to the unbound-Manager/Installation-Asuswrt-Merlin script   |
 |  Version 1.23 by Martineau                                           |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
@@ -79,10 +79,10 @@ Auto install Customisation complete 0 minutes and 48 seconds elapsed - Please wa
 
 Option ==> ?
 
-	Version=1.19
-	Local					md5=ef4d4d25251d3e75ed367755f6e36099
-	Github					md5=c5f2a8a62a0cd6a1ad64306a8b9dcd79
-	/jffs/scripts/unbound_installer.md5	md5=c5f2a8a62a0cd6a1ad64306a8b9dcd79
+	Version=1.23
+        Local                               md5=2bb3b490fb11cfba726decd30d35e88d
+        Github                              md5=2bb3b490fb11cfba726decd30d35e88d
+        /jffs/scripts/unbound_manager.md5   md5=2bb3b490fb11cfba726decd30d35e88d
 
 	Router Configuration recommended pre-reqs status:
 
@@ -110,7 +110,7 @@ Option ==> i 3
 
 	Options (Auto Reply=Y for Options '3 4 5'):
 
-	[✔] Ad and Tracker Blocking
+        [✔] Ad and Tracker Blocking (No. of Adblock domains 63400)
 	[✔] Unbound CPU/Memory Performance tweaks
 	[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker
 
@@ -135,7 +135,7 @@ v1.21 now allows dumbing down of the menus
 
 ```
 +======================================================================+
-|  Welcome to the unbound-Installer-Asuswrt-Merlin installation script |
+|  Welcome to the unbound-Manager/Installation-Asuswrt-Merlin script   |
 |  Version 1.21 by Martineau                                           |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
@@ -159,7 +159,6 @@ v1.21 now allows dumbing down of the menus
 
 unbound (pid 20593) is running... uptime: 0 Days, 16:45:47 version: 1.9.3 (# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer Mon Jan 13 19:42:33 GMT 2020))
 
-u = Push to Github PENDING for (Major) unbound_installer v1.21 >>>> v1.20
 
 1  = Begin unbound Installation Process ('/opt/var/lib/unbound/')
 2  = Begin unbound Advanced Installation Process ('/opt/var/lib/unbound/')
@@ -175,7 +174,7 @@ Option ==>
 
 You can start in 'easy' mode by using
 ```
-unbound_installer   easy
+unbound_manager   easy
 ```
 or you can quickly change modes at the option prompt
 
