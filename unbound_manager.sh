@@ -1,10 +1,10 @@
 #!/bin/sh
-#============================================================================================ © 2019 Martineau v1.22
+#============================================================================================ © 2019 Martineau v1.23
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
 #  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for a description of changes to this script.
 #
-# Usage:    unbound_installer  ['help'|''-h''] | [ [easy] [install] [recovery] [config=config_file]
+# Usage:    unbound_manager    ['help'|''-h''] | [ [easy] [install] [recovery] [config=config_file]
 #
 #                              Option ==> easy
 #                              Will allow quick install options (3. Advanced Tools will be shown a separate page) (Totally brain-dead in IMHO)
@@ -61,7 +61,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.22"
+VERSION="1.23"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -283,14 +283,14 @@ Check_dnsmasq_postconf() {
     if [ "$1" != "del" ];then
         echo -e $cBCYA"Customising 'dnsmasq.postconf'"$cRESET       # v1.08
         if [ -z "$(grep -E "sh \/jffs\/scripts\/unbound\.postconf" $FN)" ];then
-            $(Smart_LineInsert "$FN" "$(echo -e "sh /jffs/scripts/unbound.postconf \"\$1\"\t\t# unbound_installer")" )  # v1.10
+            $(Smart_LineInsert "$FN" "$(echo -e "sh /jffs/scripts/unbound.postconf \"\$1\"\t\t# unbound_manager")" )  # v1.10
         fi
 
         if [ ! -f /jffs/scripts/unbound.postconf ];then
              echo -e "#!/bin/sh"                                                                >  /jffs/scripts/unbound.postconf   # v1.11
              echo -e "CONFIG=\$1"                                                               >> /jffs/scripts/unbound.postconf   # v1.11
              echo -e "source /usr/sbin/helper.sh"                                               >> /jffs/scripts/unbound.postconf   # v1.11
-             echo -e "logger -t \"(dnsmasq.postconf)\" \"Updating \$CONFIG for unbound.....\"\t\t\t\t\t\t# unbound_installer"   >> /jffs/scripts/unbound.postconf
+             echo -e "logger -t \"(dnsmasq.postconf)\" \"Updating \$CONFIG for unbound.....\"\t\t\t\t\t\t# unbound_manager"   >> /jffs/scripts/unbound.postconf
              echo -e "if [ -n \"\$(pidof unbound)\" ];then"                                     >> /jffs/scripts/unbound.postconf   # v1.12
              echo -e "${TAB}pc_delete \"servers-file\" \$CONFIG"                                >> /jffs/scripts/unbound.postconf   # v1.11
              echo -e "${TAB}pc_delete \"no-negcache\" \$CONFIG"                                 >> /jffs/scripts/unbound.postconf   # v1.11
@@ -305,13 +305,13 @@ Check_dnsmasq_postconf() {
              echo -e "${TAB}fi"                                                                 >> /jffs/scripts/unbound.postconf
              echo -e "${TAB}pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG"           >> /jffs/scripts/unbound.postconf   # v1.11
              echo -e "${TAB}UNBOUNDLISTENADDR=\"127.0.0.1#53535\""                              >> /jffs/scripts/unbound.postconf   # v1.12
-             echo -e "#${TAB}UNBOUNDLISTENADDR=\"\$(netstat -nlup | awk '/unbound/ { print \$4 } ' | tr ':' '#')\"\t# unbound_installer"   >> /jffs/scripts/unbound.postconf    # v1.12
+             echo -e "#${TAB}UNBOUNDLISTENADDR=\"\$(netstat -nlup | awk '/unbound/ { print \$4 } ' | tr ':' '#')\"\t# unbound_manager"   >> /jffs/scripts/unbound.postconf    # v1.12
              echo -e "${TAB}pc_append \"server=\$UNBOUNDLISTENADDR\" \$CONFIG"                  >> /jffs/scripts/unbound.postconf   # v1.11
              echo -e "fi"                                                                       >> /jffs/scripts/unbound.postconf   # v1.12
         fi
     else
         echo -e $cBCYA"Removing unbound installer directives from 'dnsmasq.postconf'"$cRESET        # v1.08
-        sed -i '/#.*unbound_installer/d' $FN
+        sed -i '/#.*unbound_manager/d' $FN
         [ -f /jffs/scripts/unbound.postconf ] && rm /jffs/scripts/unbound.postconf                  # v1.11
     fi
 
@@ -352,7 +352,7 @@ download_file() {
             printf '\t%b%s%b downloaded successfully\n' "$cBGRE" "$FILE" "$cRESET"
         else
             printf '\n%b%s%b download FAILED with curl error %s\n\n' "\n\t\a$cBMAG" "'$FILE'" "$cBRED" "$STATUS"
-            printf '\tRerun %bunbound_installer nochk%b and select the %bRemove Existing unbound Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
+            printf '\tRerun %bunbound_manager nochk%b and select the %bRemove Existing unbound Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
 
             Check_GUI_NVRAM                                     # v1.17
 
@@ -474,7 +474,7 @@ Customise_config() {
      [ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > /jffs/scripts/services-start; chmod +x /jffs/scripts/services-start; }           # v1.18
      if [ -z "$(grep "root_servers" /jffs/scripts/services-start)" ];then       # v1.18
         echo -e $cBCYA"Creating Bi-weekly InterNIC Root DNS Servers cron job"$cRESET
-        $(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a root_servers  \"0 2 */15 * * curl -o \/opt\/var\/lib\/unbound\/root\.hints https://www.internic.net/domain/named.cache\"\t# unbound_installer")" )  # v1.21
+        $(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a root_servers  \"0 2 */15 * * curl -o \/opt\/var\/lib\/unbound\/root\.hints https://www.internic.net/domain/named.cache\"\t# unbound_manager")" )  # v1.21
         cru a root_servers  "0 2 */15 * * curl -o /opt/var/lib/unbound/root.hints https://www.internic.net/domain/named.cache"
         chmod +x /jffs/scripts/services-start
      fi
@@ -489,7 +489,7 @@ Customise_config() {
      chown nobody /opt/var/lib/unbound                                          # v1.10
 
      # Tag the 'unbound.conf' - useful when using multiple configs for testing  # v1.19
-     local TAG="# rgnldo Github Version vx.xx (Date Loaded by unbound_installer "$(date)")" # v1.19
+     local TAG="# rgnldo Github Version vx.xx (Date Loaded by unbound_manager "$(date)")" # v1.19
      echo -e $cBCYA"Tagged 'unbound.conf' '$TAG' and backed up to '/opt/share/unbound/configs/reset.conf'"$cRESET   # v1.19
      sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf                                  # v1.19
      # Backup the config to easily restore it 'rl reset[.conf]'
@@ -540,16 +540,16 @@ Optimise_Performance() {
             chmod +x $Tuning_script
             [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
             if [ -z "$(grep -F "$Tuning_script" $FN | grep -v "^#")" ];then
-                $(Smart_LineInsert "$FN" "$(echo -e "sh $Tuning_script start\t\t\t# unbound_installer")" )  # v1.15
+                $(Smart_LineInsert "$FN" "$(echo -e "sh $Tuning_script start\t\t\t# unbound_manager")" )  # v1.15
             fi
             chmod +x $FN
             echo -e $cBCYA"Applying unbound Performance/Memory tweaks using '$Tuning_script'"$cRESET
             sh $Tuning_script start
         else
-             if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_installer" $FN)" ];then
+             if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_manager" $FN)" ];then
                 echo -e $cBCYA"Deleting Performance/Memory tweaks '$Tuning_script'"
                 [ -f $Tuning_script ] && rm $Tuning_script
-                sed -i '/#.*unbound_installer/d' $FN
+                sed -i '/#.*unbound_manager/d' $FN
              fi
         fi
 }
@@ -561,7 +561,7 @@ Enable_Logging() {                                          # v1.07
      fi
 
      if [ "$USER_OPTION_PROMPTS" == "?" ];then
-         # v1.16 allows dynamic Enable/Disable from unbound_installer main menu (Options lo/lx)
+         # v1.16 allows dynamic Enable/Disable from unbound_manager main menu (Options lo/lx)
          #      but the log file needs to exist in the config so unbound will create it - ready to be used
          echo -e "\nDo you want to ENABLE unbound logging? (You can dynamically ENABLE/DISABLE Logging later from the main menu)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
          read -r "ANS"
@@ -672,15 +672,15 @@ Install_Entware_opkg() {
 Script_alias() {
 
         #if [ "$1" == "create" ];then
-            # Create alias 'unbound_installer' for '/jffs/scripts/unbound_installer.sh'
-            if [ -d "/opt/bin" ] && [ ! -L "/opt/bin/unbound_installer" ]; then
-                echo -e $cBGRE"Creating 'unbound_installer' alias" 2>&1
-                ln -s /jffs/scripts/unbound_installer.sh /opt/bin/unbound_installer    # v1.04
+            # Create alias 'unbound_manager' for '/jffs/scripts/unbound_manager.sh'	# v1.22
+            if [ -d "/opt/bin" ] && [ ! -L "/opt/bin/unbound_manager" ]; then
+                echo -e $cBGRE"Creating 'unbound_manager' alias" 2>&1
+                ln -s /jffs/scripts/unbound_manager.sh /opt/bin/unbound_manager    # v1.04
             fi
         #else
             # Remove Script alias - why?
-            #echo -e $cBCYA"Removing 'unbound_installer' alias" 2>&1
-            #rm -rf "/opt/bin/unbound_installer" 2>/dev/null
+            #echo -e $cBCYA"Removing 'unbound_manager' alias" 2>&1
+            #rm -rf "/opt/bin/unbound_manager" 2>/dev/null
         #fi
 }
 Check_SWAP() {
@@ -693,18 +693,18 @@ update_installer() {
     local UPDATED=1         # 0=Updated; 1=NOT Updated              # v1.18
 
     if [ "$1" == "uf" ] || [ "$localmd5" != "$remotemd5" ]; then
-        if [ "$1" == "uf" ] || [ "$( awk '{print $1}' /jffs/scripts/unbound_installer.md5)" != "$remotemd5" ]; then # v1.18
+        if [ "$1" == "uf" ] || [ "$( awk '{print $1}' /jffs/scripts/unbound_manager.md5)" != "$remotemd5" ]; then # v1.18
             echo 2>&1
-            download_file /jffs/scripts unbound_installer.sh martineau
+            download_file /jffs/scripts unbound_manager.sh martineau
             printf '\n%bunbound Installer UPDATE Complete! %s\n' "$cBGRE" "$remotemd5" 2>&1
             localmd5="$(md5sum "$0" | awk '{print $1}')"
-            echo $localmd5 > /jffs/scripts/unbound_installer.md5        # v1.18
+            echo $localmd5 > /jffs/scripts/unbound_manager.md5        # v1.18
             UPDATED=0
         else
             echo -e $cRED_"\nScript update download DISABLED pending Push request to Github\n"$cRESET 2>&1
         fi
     else
-        printf '\n%bunbound_installer.sh is already the latest version. %s\n' "$cBMAG" "$localmd5"
+        printf '\n%bunbound_manager.sh is already the latest version. %s\n' "$cBMAG" "$localmd5"
     fi
 
     echo -e $cRESET 2>&1
@@ -922,7 +922,7 @@ install_unbound() {
 
         if pidof unbound >/dev/null 2>&1; then
             service restart_dnsmasq >/dev/null      # v1.18 Redundant? - S61unbound now reinstates 'POSTCMD=service restart_dnsmasq'
-            local TAG="# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer "$(date)")" # v1.19
+            local TAG="# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_manager "$(date)")" # v1.19
             echo -e $cBCYA"Tagged 'unbound.conf' '$TAG' and backed up to '/opt/share/unbound/configs/user.conf'"$cRESET
             # Backup the config to easily restore it 'rl user[.conf]'   # v1.19
             cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/user.conf    # v1.19
@@ -935,7 +935,7 @@ install_unbound() {
             grep unbound /tmp/syslog.log | tail -n 5            # v1.07
             unbound -d          # v1.06
             echo -e $cRESET"\n"
-            printf '\n\tRerun %bunbound_installer nochk%b and select the %bRemove%b option to backout changes\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"
+            printf '\n\tRerun %bunbound_manager nochk%b and select the %bRemove%b option to backout changes\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"
             exit_message                                            # v1.18
 
         fi
@@ -1066,7 +1066,7 @@ Ad_Tracker_blocking() {
                                                                         #           Restarts S61unbound
     [ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
     if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
-        $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_installer")" )  # v1.13
+        $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
     fi
 
     chmod +x $FN                                            # v1.11 Hack????
@@ -1166,9 +1166,9 @@ welcome_message() {
 
                     localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-                    [ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | md5sum | awk '{print $1}')"  # v1.11
+                    [ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v1.11
 
-                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_installer.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"  || REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
+                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"  || REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
 
                     [ -z "$REMOTE_VERSION_NUMDOT" ] && REMOTE_VERSION_NUMDOT="?.?? $cRED - Unable to verify Github version"         # v1.15
 
@@ -1177,7 +1177,7 @@ welcome_message() {
 
                     # As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
                     if [ -n "$REMOTE_VERSION_NUMDOT" ];then
-                        [ ! -f /jffs/scripts/unbound_installer.md5 ] && echo $REMOTE_VERSION_NUM $remotemd5 > /jffs/scripts/unbound_installer.md5   # v1.09
+                        [ ! -f /jffs/scripts/unbound_manager.md5 ] && echo $REMOTE_VERSION_NUM $remotemd5 > /jffs/scripts/unbound_manager.md5   # v1.09
                     fi
 
                     [ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0            # v1.11
@@ -1191,7 +1191,7 @@ welcome_message() {
                                 UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b %b >>>> %b\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")" # v1.21
                             else
                                 # MD5 Mismatch due to local development?
-                                if [ "$(awk '{print $1}' /jffs/scripts/unbound_installer.md5)" == "$remotemd5" ];then
+                                if [ "$(awk '{print $1}' /jffs/scripts/unbound_manager.md5)" == "$remotemd5" ];then
                                     UPDATE_SCRIPT_ALERT="$(printf '%bu  = %bPush to Github PENDING for %b(Minor) %b%s >>>> %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION")" # v11.21
                                 fi
                             fi
@@ -1362,7 +1362,7 @@ welcome_message() {
 					fi
 
 					if [ "$PERFORMRELOAD" == "Y" ];then                             # v1.19
-						local TAG="Date Loaded by unbound_installer "$(date)")"
+						local TAG="Date Loaded by unbound_manager "$(date)")"
 						sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
 						echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
 						unbound-control reload                                      # v1.08
@@ -1443,7 +1443,7 @@ welcome_message() {
                     echo
                     [ "$menu1" == "ddnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
                     echo -e $cBYEL
-                    unbound -dd
+                    unbound -vvvd
                     echo -e $cRESET
                     [ "$menu1" == "ddnouser" ] &&  sed -i 's/username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
                     break
@@ -1452,7 +1452,7 @@ welcome_message() {
                     echo -e $cBGRE"\n\tVersion="$VERSION
                     echo -e $cBMAG"\tLocal\t\t\\t\t\tmd5="$localmd5
                     echo -e $cBMAG"\tGithub\t\t\t\t\tmd5="$remotemd5
-                    echo -e $cBMAG"\t/jffs/scripts/unbound_installer.md5\tmd5="$(cat /jffs/scripts/unbound_installer.md5)
+                    echo -e $cBMAG"\t/jffs/scripts/unbound_manager.md5\tmd5="$(cat /jffs/scripts/unbound_manager.md5)
 
                     Check_GUI_NVRAM
 
@@ -1508,8 +1508,9 @@ if [ "$1" == "-h" ] || [ "$1" == "help" ];then
     echo -e $cRESET
     exit 0
 fi
+#echo -e $cBGRE"⚛️"
 
-
+#exit
 
 Check_Lock "$1"
 
@@ -1524,7 +1525,7 @@ if [	-n "$NEW_CONFIG" ];then
 		if [ -n "$(pidof unbound)" ];then
 			TXT=" <<== $NEW_CONFIG"
 			[ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
-			TAG="(Date Loaded by unbound_installer "$(date)")"
+			TAG="(Date Loaded by unbound_manager "$(date)")"
 			[ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
 			echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
 			unbound-control reload
@@ -1552,7 +1553,7 @@ else
 			echo -e $cBCYA"Recovery: Retrieving Custom unbound configuration"$cBGRA
 			download_file $CONFIG_DIR unbound.conf rgnldo
 		fi
-		TAG="(Date Loaded by unbound_installer "$(date)")"
+		TAG="(Date Loaded by unbound_manager "$(date)")"
 		[ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
 		echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
 		unbound-control reload
