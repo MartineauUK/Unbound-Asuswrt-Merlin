@@ -131,7 +131,7 @@ e  = Exit Script
 Option ==> i?
 ```
 
-v1.21 now allows dumbing down of the menus
+v1.21 now allows dumbing down of the menus ('Easy Mode') and will be used when invoked from amtm (default is 'Advanced Mode')
 
 ```
 +======================================================================+
@@ -174,7 +174,7 @@ Option ==>
 
 You can start in 'easy' mode by using
 ```
-unbound_manager   easy
+unbound_manager easy
 ```
 or you can quickly change modes at the option prompt
 
