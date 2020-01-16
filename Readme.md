@@ -48,7 +48,12 @@ rs = Restart (or Start) unbound						s  = Show unbound statistics (s=Summary Tot
 e  = Exit Script
 
 
-Option ==>  
+Option ==>  ?
+
+	Version=1.23
+	Local					md5=158ee4e258f016fc6b6ed46249bb458a
+	Github					md5=158ee4e258f016fc6b6ed46249bb458a
+	/jffs/scripts/unbound_manager.md5	md5=158ee4e258f016fc6b6ed46249bb458a
 ```
 
 New in #v1.20 is the ability to specify which User Selectable options are to be installed without having to manually reply to each individual feature prompt
