@@ -107,7 +107,11 @@ Option ==> ?
 	[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker
 
 ```
-The script will remember the Auto Selected Options (for the *current* session) so you may include additional Auto install Option features
+The script will remember the Auto Selected Options (for the *current* session) so you may simply specify the additional Auto install Option feature(s)
+
+ e.g. include additional option
+
+     o3. Ad and Tracker Blocking
 
 ```
 e  = Exit Script
@@ -140,6 +144,7 @@ Option ==> i?
 ```
 
 **v1.21** now allows dumbing down of the menus (**'Easy Mode'**) and will be used when invoked from **amtm** 
+
 (When invoked direct from the commandline the default is **'Advanced Mode'**)
 
 ```
@@ -181,7 +186,7 @@ Option ==>
 
 ```
 
-You can also start in **'Easy mode'** from the command line by using
+You can override the default **'Advanced mode'** startup i.e switch to **'Easy mode'** from the command line by using
 ```
 unbound_manager easy
 ```
@@ -190,5 +195,5 @@ or you can quickly change modes at the option prompt
 ```
 e  = Exit Script
 
-Option ==> easy | advanced
+Option ==> [ easy | advanced ]
 ```
