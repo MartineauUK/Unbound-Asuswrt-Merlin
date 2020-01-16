@@ -80,9 +80,9 @@ Auto install Customisation complete 0 minutes and 48 seconds elapsed - Please wa
 Option ==> ?
 
 	Version=1.23
-        Local                               md5=2bb3b490fb11cfba726decd30d35e88d
-        Github                              md5=2bb3b490fb11cfba726decd30d35e88d
-        /jffs/scripts/unbound_manager.md5   md5=2bb3b490fb11cfba726decd30d35e88d
+	Local					md5=158ee4e258f016fc6b6ed46249bb458a
+	Github					md5=158ee4e258f016fc6b6ed46249bb458a
+	/jffs/scripts/unbound_manager.md5	md5=158ee4e258f016fc6b6ed46249bb458a
 
 	Router Configuration recommended pre-reqs status:
 
