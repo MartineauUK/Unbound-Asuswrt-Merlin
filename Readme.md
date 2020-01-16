@@ -58,7 +58,8 @@ Option ==>  ?
 
 New in **v1.20** is the ability to specify which *User Selectable options* are to be installed without having to _manually_ reply to each individual feature prompt
 
-e.g. Auto install both options  
+ e.g. Auto install both options 
+
      **'o4. Customise CPU/Memory usage (Advanced Users)'**   
      **'o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)'**  
 ```
