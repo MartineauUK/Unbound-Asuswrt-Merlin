@@ -2,10 +2,10 @@
 #============================================================================================ © 2019-2020 Martineau v1.23
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
-# Usage:    unbound_manager    ['help'|''-h''] | [ [easy] [install] [recovery] [config=config_file]
+# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
 #
-#                              Option ==> easy
-#                              Will allow quick install options (3. Advanced Tools will be shown a separate page)
+#           unbound_manager    easy
+#                              Menu: Allow quick install options (3. Advanced Tools will be shown a separate page)
 #                                    |   1 = Install unbound DNS Server                                     |
 #                                    |                                                                      |
 #                                    |   2 = Install unbound DNS Server - Advanced Mode                     |
@@ -15,31 +15,45 @@
 #                                    |       o4. Customise CPU/Memory usage (Advanced Users)                |
 #                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
 #                                    |                                                                      |
-#                                    |   3 = Advanced Tools  (e.g '? About' and 'z Remove unbound' etc.)   |                                               |
+#                                    |   3 = Advanced Tools  (e.g '? About' and 'z Remove unbound' etc.)    |
 #
 #                              This may be toggled at any time using menu option [ 'advanced' | 'easy' ]
 #
-#                              Option ==> advanced
-#                                    |   i = Install unbound DNS Server =  - Advanced Mode                  |
-#                                    | User Selectable Install Options:                                     |
-#                                    |   1. Enable unbound Logging                                          |
-#                                    |   2. Integrate with Stubby                                           |
-#                                    |   3. Install Ad and Tracker Blocking                                 |
-#                                    |   4. Customise CPU/Memory usage (Advanced Users)                     |
-#                                    |   5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)                |
+#           unbound_manager    advanced
+#                              Menu: Allow custom selection of Optional features and Advanced Tools will be displayed as appropriate
+#                                    |                                                                      |
+#                                    |   i = Install unbound DNS Server - Advanced Mode                     |
+#                                    |       o1. Enable unbound Logging                                     |
+#                                    |       o2. Integrate with Stubby                                      |
+#                                    |       o3. Install Ad and Tracker Blocking                            |
+#                                    |       o4. Customise CPU/Memory usage (Advanced Users)                |
+#                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
+#                                    |                                                                      |
+#                                    |   z  = Remove Existing unbound Installation                          |
+#                                    |   ?  = About Configuration                                           |
+#
+#           unbound_manager    recovery
+#                              Will attempt to reload a default 'unbound.config' to fix a corrupt config
+#           unbound_manager    config=mytest
+#                              Will attempt to load '/opt/share/unbound/configs/mytest.config'
+#           unbound_manager    nochk
+#                              The script on start-up attempts to check GitHub for any version update/md5 mismatch, but a
+#                              failed install will look as if the script has stalled until cURL time-out expires (3 mins).
+#                              Use of nochk disables the 'stall' to quickly allow access to the 'z  = Remove Existing unbound Installation' option
+#
+#
+#  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for additional help/documentation with this script.
+
 
 # Maintainer: Martineau
-# Last Updated Date: 15-Jan-2020
+# Last Updated Date: 16-Jan-2020
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow (Xentrk for this script template and thelonelycoder)
-#
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow (Xentrk for this script template and thelonelycoder for amtm)
 #  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
-#  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for a description of changes to this script.
-
 #
 #	https://calomel.org/unbound_dns.html
 #   https://wiki.archlinux.org/index.php/unbound
@@ -299,7 +313,7 @@ Check_dnsmasq_postconf() {
         fi
     else
         echo -e $cBCYA"Removing unbound installer directives from 'dnsmasq.postconf'"$cRESET        # v1.08
-        sed -i '/#.*unbound_manager/d' $FN
+        sed -i '/#.*unbound_/d' $FN																	# v1.23
         [ -f /jffs/scripts/unbound.postconf ] && rm /jffs/scripts/unbound.postconf                  # v1.11
     fi
 
@@ -537,7 +551,7 @@ Optimise_Performance() {
              if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_manager" $FN)" ];then
                 echo -e $cBCYA"Deleting Performance/Memory tweaks '$Tuning_script'"
                 [ -f $Tuning_script ] && rm $Tuning_script
-                sed -i '/#.*unbound_manager/d' $FN
+                sed -i '/#.*unbound_/d' $FN					# v1.23
              fi
         fi
 }
@@ -921,7 +935,7 @@ install_unbound() {
             echo -e $cBRED"\a\n\t***ERROR Unsuccessful installation of unbound detected\n"      # v1.04
             echo -en ${cRESET}$cRED_
             grep unbound /tmp/syslog.log | tail -n 5            # v1.07
-            unbound -d          # v1.06
+            unbound -dvvv          # v1.06
             echo -e $cRESET"\n"
             printf '\n\tRerun %bunbound_manager nochk%b and select the %bRemove%b option to backout changes\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"
             exit_message                                            # v1.18
