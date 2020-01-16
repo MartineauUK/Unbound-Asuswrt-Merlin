@@ -56,9 +56,9 @@ Option ==>  ?
 	/jffs/scripts/unbound_manager.md5	md5=158ee4e258f016fc6b6ed46249bb458a
 ```
 
-New in #v1.20 is the ability to specify which User Selectable options are to be installed without having to manually reply to each individual feature prompt
+New in **v1.20** is the ability to specify which *User Selectable options* are to be installed without having to _manually_ reply to each individual feature prompt
 
-e.g. Auto Install '4. Optionally Install Ad and Tracker Blocking' and '5. Optionally Customise CPU/Memory usage (Advanced Users)'
+e.g. Auto Install **'4. Optionally Install Ad and Tracker Blocking'** and **'5. Optionally Customise CPU/Memory usage (Advanced Users)'
 ```
 e  = Exit Script
 
@@ -104,7 +104,7 @@ Option ==> ?
 	[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker
 
 ```
-The script will remember the Auto Selected Options (for the #current session) so you may include additional Auto install Option features
+The script will remember the Auto Selected Options (for the *current* session) so you may include additional Auto install Option features
 
 ```
 e  = Exit Script
@@ -120,7 +120,7 @@ Option ==> i 3
 	[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker
 
 ```
-To Auto reply to ALL of the Selectable User Options, rather than manually enter the complete list, simply use:
+To Auto reply to **ALL** of the *Selectable User Options*, rather than _manually_ enter the complete list, simply use:
 
 ```
 e  = Exit Script
@@ -128,7 +128,7 @@ e  = Exit Script
 Option ==> i all
 ```
 
-To reinstate ALL Selectable User Option prompts issue
+To reinstate **ALL** *Selectable User Option* prompts issue
 
 ```
 e  = Exit Script
@@ -136,7 +136,8 @@ e  = Exit Script
 Option ==> i?
 ```
 
-v1.21 now allows dumbing down of the menus ('Easy Mode') and will be used when invoked from amtm (default is 'Advanced Mode')
+**v1.21** now allows dumbing down of the menus (**'Easy Mode'**) and will be used when invoked from **amtm** 
+(When invoked direct from the commandline the default is **'Advanced Mode'**)
 
 ```
 +======================================================================+
@@ -177,7 +178,7 @@ Option ==>
 
 ```
 
-You can start in 'easy' mode by using
+You can also start in **'Easy mode'** from the command line by using
 ```
 unbound_manager easy
 ```
