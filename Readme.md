@@ -60,8 +60,8 @@ New in **v1.20** is the ability to specify which *User Selectable options* are t
 
  e.g. Auto install both options 
 
-     **'o4. Customise CPU/Memory usage (Advanced Users)'**   
-     **'o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)'**  
+     'o4. Customise CPU/Memory usage (Advanced Users)'   
+     'o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)'  
 ```
 e  = Exit Script
 
