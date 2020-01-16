@@ -13,7 +13,7 @@
 		printf "${GREEN_BG} ud${NC} %-9s%-21s%${ACORR}s\\n" "open" "unbound Manager   $localver" " $upd"
 
 		case_ud(){
-			/jffs/scripts/unbound_manager.sh
+			/jffs/scripts/unbound_manager.sh "easy"
 			sleep 2
 			show_amtm menu
 		}
@@ -31,7 +31,7 @@
 			echo " Contributor without consent: thelonelycoder"
 			continue_dialog
 
-			curl --retry 3 "https://raw.githubusercontent.com/MartineauUK/Unbound-Asuswrt-Merlin/master/unbound_manager.sh" -o "/jffs/scripts/unbound_manager.sh" && chmod 755 /jffs/scripts/unbound_manager.sh && sh /jffs/scripts/unbound_manager.sh
+			curl --retry 3 "https://raw.githubusercontent.com/MartineauUK/Unbound-Asuswrt-Merlin/master/unbound_manager.sh" -o "/jffs/scripts/unbound_manager.sh" && chmod 755 /jffs/scripts/unbound_manager.sh && sh /jffs/scripts/unbound_manager.sh "easy"
 			sleep 2
 			if [ -f /jffs/scripts/unbound_manager.sh ];then
 				show_amtm " unbound Manager installed"
