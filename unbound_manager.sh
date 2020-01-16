@@ -1,13 +1,11 @@
 #!/bin/sh
-#============================================================================================ © 2019 Martineau v1.23
+#============================================================================================ © 2019-2020 Martineau v1.23
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
-#  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
-#  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for a description of changes to this script.
 #
 # Usage:    unbound_manager    ['help'|''-h''] | [ [easy] [install] [recovery] [config=config_file]
 #
 #                              Option ==> easy
-#                              Will allow quick install options (3. Advanced Tools will be shown a separate page) (Totally brain-dead in IMHO)
+#                              Will allow quick install options (3. Advanced Tools will be shown a separate page)
 #                                    |   1 = Install unbound DNS Server                                     |
 #                                    |                                                                      |
 #                                    |   2 = Install unbound DNS Server - Advanced Mode                     |
@@ -17,41 +15,31 @@
 #                                    |       o4. Customise CPU/Memory usage (Advanced Users)                |
 #                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
 #                                    |                                                                      |
-#                                    |   3 = Advanced Tools  (Such '?' About and 'z' Remove unbound etc.)   |                                               |
+#                                    |   3 = Advanced Tools  (e.g '? About' and 'z Remove unbound' etc.)   |                                               |
 #
 #                              This may be toggled at any time using menu option [ 'advanced' | 'easy' ]
 #
 #                              Option ==> advanced
-#                                    |     Install the unbound Entware package                              |
-#                                    |     Override how the firmware manages DNS                            |
+#                                    |   i = Install unbound DNS Server =  - Advanced Mode                  |
 #                                    | User Selectable Install Options:                                     |
 #                                    |   1. Enable unbound Logging                                          |
 #                                    |   2. Integrate with Stubby                                           |
 #                                    |   3. Install Ad and Tracker Blocking                                 |
 #                                    |   4. Customise CPU/Memory usage (Advanced Users)                     |
 #                                    |   5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)                |
-#
-#                                    i  = Begin unbound Installation Process ('/opt/var/lib/unbound/')  l  = Show unbound LIVE log entries (lx=Disable Logging)
-#                                    z  = Remove Existing unbound Installation                          v  = View ('/opt/var/lib/unbound/') unbound Configuration (vx=Edit; vh=View Example Configuration)
-#                                    ?  = About Configuration                                           rl = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')
-#                                                                                                       oq = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'
-#
-#                                    rs = Restart (or Start) unbound                                    s  = Show unbound statistics (s=Summary Totals; sa=All; s+=Enable Extended Stats)
-#
-#                                    e  = Exit Script
-#
-#
-#
 
 # Maintainer: Martineau
 # Last Updated Date: 15-Jan-2020
 #
 # Description:
-
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo (Xentrk for this script template, thelonelycoder)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow (Xentrk for this script template and thelonelycoder)
+#
+#  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
+#  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for a description of changes to this script.
+
 #
 #	https://calomel.org/unbound_dns.html
 #   https://wiki.archlinux.org/index.php/unbound
@@ -1107,33 +1095,30 @@ welcome_message() {
             if [ -z "$HDR" ];then                           # v1.09
 
                 printf '\n+======================================================================+\n'
-                printf '|  Welcome to the %bunbound-Manager/Installation-Asuswrt-Merlin%b script   |\n' "$cBGRE" "$cRESET"
+                printf '|  Welcome to the %bunbound Manager/Installation script (Asuswrt-Merlin)%b |\n' "$cBGRE" "$cRESET"
                 printf '|  Version %s by Martineau                                           |\n' "$VERSION"
                 printf '|                                                                      |\n'
                 printf '| Requirements: USB drive with Entware installed                       |\n'
                 printf '|                                                                      |\n'
                 if [ -z "$EASYMENU" ];then
-                    printf '| The install script will:                                             |\n'
-                    printf '|     Install the unbound Entware package                              |\n'
-                    printf '|     Override how the firmware manages DNS                            |\n'
-                    printf '| User Selectable Install Options:                                     |\n'
-                    printf '|   1. Enable unbound Logging                                          |\n'
-                    printf '|   2. Integrate with Stubby                                           |\n'
-                    printf '|   3. Install Ad and Tracker Blocking                                 |\n'
-                    printf '|   4. Customise CPU/Memory usage (%bAdvanced Users%b)                     |\n' "$cBRED" "$cRESET"      # v1.15
-                    printf '|   5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)                |\n' # v1.18
+                    printf '|   i = Install unbound DNS Server - Advanced Mode                     |\n'
                 else
                     printf '|   1 = Install unbound DNS Server                                     |\n'
                     printf '|                                                                      |\n'
                     printf '|   2 = Install unbound DNS Server - Advanced Mode                     |\n'
+				fi
                     printf '|       o1. Enable unbound Logging                                     |\n'
                     printf '|       o2. Integrate with Stubby                                      |\n'
                     printf '|       o3. Install Ad and Tracker Blocking                            |\n'
                     printf '|       o4. Customise CPU/Memory usage (%bAdvanced Users%b)                |\n' "$cBRED" "$cRESET"
                     printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |\n'
                     printf '|                                                                      |\n'
+				if [ -z "$EASYMENU" ];then
+					printf '|   z  = Remove Existing unbound Installation                          |\n'
+					printf '|   ?  = About Configuration                                           |\n'
+				else
                     printf '|   3 = Advanced Tools                                                 |\n'
-                fi
+				fi
                 printf '|                                                                      |\n'
                 printf '| You can also use this script to uninstall unbound to back out the    |\n'
                 printf '| changes made during the installation. See the project repository at  |\n'
