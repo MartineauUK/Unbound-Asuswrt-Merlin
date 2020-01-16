@@ -13,24 +13,24 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 
 ```
 +======================================================================+
-|  Welcome to the unbound-Manager/Installation-Asuswrt-Merlin script   |
+|  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
 |  Version 1.23 by Martineau                                           |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
-| The install script will:                                             |
-|     Install the unbound Entware package                              |
-|     Override how the firmware manages DNS                            |
-| User Selectable Install Options:                                     |
-|   1. Enable Unbound Logging                                          |
-|   2. Integrate with Stubby                                           |
-|   3. Install Ad and Tracker Blocking                                 |
-|   4. Customise CPU/Memory usage (Advanced Users)                     |
-|   5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)                |
+|   i = Install unbound DNS Server - Advanced Mode                     |
+|       o1. Enable unbound Logging                                     |
+|       o2. Integrate with Stubby                                      |
+|       o3. Install Ad and Tracker Blocking                            |
+|       o4. Customise CPU/Memory usage (Advanced Users)                |
+|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
+|                                                                      |
+|   z  = Remove Existing unbound Installation                          |
+|   ?  = About Configuration                                           |
 |                                                                      |
 | You can also use this script to uninstall unbound to back out the    |
 | changes made during the installation. See the project repository at  |
-|         https://github.com/rgnldo/Unbound-Asuswrt-Merlin             |
+|         https://github.com/rgnldo/unbound-Asuswrt-Merlin             |
 |     for helpful user tips on unbound usage/configuration.            |
 +======================================================================+
 
