@@ -124,7 +124,7 @@ Option ==> i 3
 
 	Options (Auto Reply=Y for Options '3 4 5'):
 
-        [✔] Ad and Tracker Blocking (No. of Adblock domains 63400)
+	[✔] Ad and Tracker Blocking (No. of Adblock domains 63400, - Warning Diversion is also ACTIVE)
 	[✔] Unbound CPU/Memory Performance tweaks
 	[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker
 
