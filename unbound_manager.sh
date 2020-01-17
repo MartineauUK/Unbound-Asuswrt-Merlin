@@ -46,7 +46,7 @@
 
 
 # Maintainer: Martineau
-# Last Updated Date: 16-Jan-2020
+# Last Updated Date: 17-Jan-2020
 #
 # Description:
 #
@@ -55,9 +55,9 @@
 #  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow (Xentrk for this script template and thelonelycoder for amtm)
 #  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
 #
-#	https://calomel.org/unbound_dns.html
+#   https://calomel.org/unbound_dns.html
 #   https://wiki.archlinux.org/index.php/unbound
-#	https://www.tumfatig.net/20190417/storing-unbound8-logs-into-influxdb/
+#   https://www.tumfatig.net/20190417/storing-unbound8-logs-into-influxdb/
 #
 ####################################################################################################
 
@@ -313,7 +313,7 @@ Check_dnsmasq_postconf() {
         fi
     else
         echo -e $cBCYA"Removing unbound installer directives from 'dnsmasq.postconf'"$cRESET        # v1.08
-        sed -i '/#.*unbound_/d' $FN																	# v1.23
+        sed -i '/#.*unbound_/d' $FN                                                                 # v1.23
         [ -f /jffs/scripts/unbound.postconf ] && rm /jffs/scripts/unbound.postconf                  # v1.11
     fi
 
@@ -390,7 +390,6 @@ S02haveged_update() {
 
     /opt/etc/init.d/S02haveged restart
 }
-
 Option_Stubby_Integration() {
 
      local ANS=$1                                           # v1.20
@@ -417,7 +416,7 @@ Stubby_Integration() {
     opkg install stubby ca-bundle
 
     download_file /opt/etc/init.d S62stubby rgnldo          # v1.10
-    chmod 755 /opt/etc/init.d/S62stubby                 # v1.11
+    chmod 755 /opt/etc/init.d/S62stubby                     # v1.11
     download_file /opt/etc/stubby/ stubby.yml rgnldo        # v1.08
 
     if [ "$(nvram get ipv6_service)" != "disabled" ];then   # v1.13
@@ -463,21 +462,27 @@ Stubby_Integration() {
     fi
 
 }
+Get_RootDNS() {
+     # https://www.iana.org/domains/root/servers
+
+     # https://root-servers.org/ for live status
+     echo -e $cBCYA"Retrieving the 13 InterNIC Root DNS Servers from 'https://www.internic.net/domain/named.cache'....."$cBGRA
+     curl --progress-bar -o ${CONFIG_DIR}root.hints https://www.internic.net/domain/named.cache     # v1.17
+     echo -en $cRESET
+}
 Customise_config() {
 
      echo -e $cBCYA"Generating unbound-anchor 'root.key'....."$cBGRA            # v1.07
      /opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key
 
-     echo -e $cBCYA"Retrieving the 13 InterNIC Root DNS Servers from 'https://www.internic.net/domain/named.cache'....."$cBGRA
-     curl --progress-bar -o ${CONFIG_DIR}root.hints https://www.internic.net/domain/named.cache     # v1.17
-     echo -en $cRESET
+     Get_RootDNS                                                                # v1.24                                                             # v1.24 Now a function
 
-     # InterNIC Root DNS Servers cron job (02:00 15th day of the Month)
+     # InterNIC Root DNS Servers cron job
      [ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > /jffs/scripts/services-start; chmod +x /jffs/scripts/services-start; }           # v1.18
      if [ -z "$(grep "root_servers" /jffs/scripts/services-start)" ];then       # v1.18
-        echo -e $cBCYA"Creating Bi-weekly InterNIC Root DNS Servers cron job"$cRESET
-        $(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a root_servers  \"0 2 */15 * * curl -o \/opt\/var\/lib\/unbound\/root\.hints https://www.internic.net/domain/named.cache\"\t# unbound_manager")" )  # v1.21
-        cru a root_servers  "0 2 */15 * * curl -o /opt/var/lib/unbound/root.hints https://www.internic.net/domain/named.cache"
+        echo -e $cBCYA"Creating Daily (04:12) InterNIC Root DNS Servers cron job "$cRESET   # v1.24
+        $(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a root_servers  \"12 4 * * * curl -o \/opt\/var\/lib\/unbound\/root\.hints https://www.internic.net/domain/named.cache\"\t# unbound_manager")" )  # v1.24
+        cru a root_servers  "12 4 * * * curl -o /opt/var/lib/unbound/root.hints https://www.internic.net/domain/named.cache"    # v1.24 Daily again @04:12  :-( muppet!
         chmod +x /jffs/scripts/services-start
      fi
 
@@ -551,7 +556,7 @@ Optimise_Performance() {
              if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_manager" $FN)" ];then
                 echo -e $cBCYA"Deleting Performance/Memory tweaks '$Tuning_script'"
                 [ -f $Tuning_script ] && rm $Tuning_script
-                sed -i '/#.*unbound_/d' $FN					# v1.23
+                sed -i '/#.*unbound_/d' $FN                 # v1.23
              fi
         fi
 }
@@ -674,7 +679,7 @@ Install_Entware_opkg() {
 Script_alias() {
 
         #if [ "$1" == "create" ];then
-            # Create alias 'unbound_manager' for '/jffs/scripts/unbound_manager.sh'	# v1.22
+            # Create alias 'unbound_manager' for '/jffs/scripts/unbound_manager.sh' # v1.22
             if [ -d "/opt/bin" ] && [ ! -L "/opt/bin/unbound_manager" ]; then
                 echo -e $cBGRE"Creating 'unbound_manager' alias" 2>&1
                 ln -s /jffs/scripts/unbound_manager.sh /opt/bin/unbound_manager    # v1.04
@@ -997,10 +1002,12 @@ Check_GUI_NVRAM() {
                 [ -n "$(grep -E "^forward-zone:" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
 
                 if [ -n "$(grep -E "^include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
-					local TXT="No. of Adblock domains "$cBMAG"$(wc -l <${CONFIG_DIR}adblock/adservers)"$cRESET
-					echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1
+                    local TXT="No. of Adblock domains "$cBMAG"$(wc -l <${CONFIG_DIR}adblock/adservers)"$cRESET
+                    # Check if Diversion is also running
+                    [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v1.24
+                    echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1
                 fi
-				[ -f /jffs/scripts/stuning ] && echo -e $cBGRE"\t[✔] unbound CPU/Memory Performance tweaks" 2>&1
+                [ -f /jffs/scripts/stuning ] && echo -e $cBGRE"\t[✔] unbound CPU/Memory Performance tweaks" 2>&1
                 [ -n "$(grep -E "^include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker" 2>&1
             fi
         #fi
@@ -1120,19 +1127,19 @@ welcome_message() {
                     printf '|   1 = Install unbound DNS Server                                     |\n'
                     printf '|                                                                      |\n'
                     printf '|   2 = Install unbound DNS Server - Advanced Mode                     |\n'
-				fi
+                fi
                     printf '|       o1. Enable unbound Logging                                     |\n'
                     printf '|       o2. Integrate with Stubby                                      |\n'
                     printf '|       o3. Install Ad and Tracker Blocking                            |\n'
                     printf '|       o4. Customise CPU/Memory usage (%bAdvanced Users%b)                |\n' "$cBRED" "$cRESET"
                     printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |\n'
                     printf '|                                                                      |\n'
-				if [ -z "$EASYMENU" ];then
-					printf '|   z  = Remove Existing unbound Installation                          |\n'
-					printf '|   ?  = About Configuration                                           |\n'
-				else
+                if [ -z "$EASYMENU" ];then
+                    printf '|   z  = Remove Existing unbound Installation                          |\n'
+                    printf '|   ?  = About Configuration                                           |\n'
+                else
                     printf '|   3 = Advanced Tools                                                 |\n'
-				fi
+                fi
                 printf '|                                                                      |\n'
                 printf '| You can also use this script to uninstall unbound to back out the    |\n'
                 printf '| changes made during the installation. See the project repository at  |\n'
@@ -1209,7 +1216,7 @@ welcome_message() {
 
                         if [ -z "$EASYMENU" ] ;then
                             MENU_I="$(printf '%bi %b = Update unbound Installation %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
-                        else													#v1.21
+                        else                                                    #v1.21
                             [ -z "$ADVANCED_TOOLS" ] && MENU_I="$(printf '%b1 %b = Update unbound Installation  %b%s%b\n%b2 %b = Update unbound Advanced Installation %b%s%b\n%b3 %b = Advanced Tools\n\n ' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET" "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET"  "${cBYEL}" "${cRESET}" )"
                         fi
 
@@ -1254,7 +1261,7 @@ welcome_message() {
 
                     # v1.08 use horizontal menu!!!! Radical eh?
                     if [ -z "$EASYMENU" ];then
-                        if [ -z "$ADVANCED_TOOLS" ];then							# v1.21
+                        if [ -z "$ADVANCED_TOOLS" ];then                            # v1.21
                             printf "%s\t\t%s\n"             "$MENU_I" "$MENU_L"
                         fi
 
@@ -1263,10 +1270,10 @@ welcome_message() {
                         printf "\t\t\t\t\t\t\t\t\t%s\n"           "$MENU_OQ"
                         echo
                         printf "%s\t\t\t\t\t\t%s\n"     "$MENU_RS" "$MENU_S"
-						printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
+                        printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
                     else
 
-                        if [ -n "$ADVANCED_TOOLS" ];then							# v1.21
+                        if [ -n "$ADVANCED_TOOLS" ];then                            # v1.21
                             printf "%s\t\t\t\t%s\n"         "$MENU_Z"
                             printf "%s\t\t%s\n"             "$MENU_L"
                             printf "%s\t\t\t\t\t\t%s\n"     "$MENU__"
@@ -1274,13 +1281,13 @@ welcome_message() {
                             printf "%s\t\t%s\n"             "$MENU_RL"
                             printf "%s\t\t%s\n"             "$MENU_OQ"
                             printf "%s\t\t%s\n"             "$MENU_S"
-							printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
-						else
-							printf "%s\t%s\n"             "$MENU_I"
+                            printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
+                        else
+                            printf "%s\t%s\n"             "$MENU_I"
                         fi
                     fi
 
-					[ -n "$ADVANCED_TOOLS" ] && printf '\n%b[Enter] %bleave Advanced Tools Menu\n' "${cBGRE}" "${cRESET}" # v1.21
+                    [ -n "$ADVANCED_TOOLS" ] && printf '\n%b[Enter] %bleave Advanced Tools Menu\n' "${cBGRE}" "${cRESET}" # v1.21
                 fi
                 printf '\n%bOption ==>%b ' "${cBYEL}" "${cRESET}"
                 read -r "menu1"
@@ -1316,7 +1323,7 @@ welcome_message() {
                 ;;
                 3)
                     ADVANCED_TOOLS="Y"                              # v1.21
-					menu1=""
+                    menu1=""
                     ;;
                 z)
                     validate_removal
@@ -1335,38 +1342,38 @@ welcome_message() {
                 rl|rl*)
                     # 'reset' and 'user' are Recovery aliases
                     #       i.e. 'reset' is rgnldo's config, and 'user' is the customised install version
-					if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
+                    if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
 
-						NEW_CONFIG=$(echo "$menu1" | awk '{print $2}')
-						if [ "$NEW_CONFIG" != "?" ];then							# v1.22
-							local PERFORMRELOAD="Y"
-							[ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"
-							[ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.19
+                        NEW_CONFIG=$(echo "$menu1" | awk '{print $2}')
+                        if [ "$NEW_CONFIG" != "?" ];then                            # v1.22
+                            local PERFORMRELOAD="Y"
+                            [ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"
+                            [ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.19
 
-							if [ -f $NEW_CONFIG ];then
-								cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
-								#local TXT=" <<== $NEW_CONFIG"
+                            if [ -f $NEW_CONFIG ];then
+                                cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+                                #local TXT=" <<== $NEW_CONFIG"
 
-							else
-								echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n"$cRESET
-								local PERFORMRELOAD="N"
-							fi
-						else
-							# List available .conf files
-							echo -e $cBMAG
-							ls -lAhC /opt/share/unbound/configs/					# v1.22
-							echo -en $cRESET
-						fi
+                            else
+                                echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n"$cRESET
+                                local PERFORMRELOAD="N"
+                            fi
+                        else
+                            # List available .conf files
+                            echo -e $cBMAG
+                            ls -lAhC /opt/share/unbound/configs/                    # v1.22
+                            echo -en $cRESET
+                        fi
 
-					fi
+                    fi
 
-					if [ "$PERFORMRELOAD" == "Y" ];then                             # v1.19
-						local TAG="Date Loaded by unbound_manager "$(date)")"
-						sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
-						echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-						unbound-control reload                                      # v1.08
-					fi
-					unset $TXT
+                    if [ "$PERFORMRELOAD" == "Y" ];then                             # v1.19
+                        local TAG="Date Loaded by unbound_manager "$(date)")"
+                        sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+                        echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
+                        unbound-control reload                                      # v1.08
+                    fi
+                    unset $TXT
 
                     #break
                 ;;
@@ -1460,9 +1467,9 @@ welcome_message() {
 
                     [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
                     # Is scribe / Diversion running?
-					if grep -q diversion /etc/dnsmasq.conf ;then
-						SYSLOG="/opt/var/log/dnsmasq.log"					# v1.22
-					fi
+                    if grep -q diversion /etc/dnsmasq.conf ;then
+                        SYSLOG="/opt/var/log/dnsmasq.log"                   # v1.22
+                    fi
                     echo -e $cBGRA
                     # cache size 0, 0/0 cache insertions re-used unexpired cache entries.
                     # queries forwarded 4382, queries answered locally 769
@@ -1478,12 +1485,16 @@ welcome_message() {
                     echo -e $cBGRA
                     ;;
                 e)
-					exit_message
-					break
+                    exit_message
+                    break
 
                 ;;
+                getrootdns)                                                 # v1.24
+                    echo
+                    Get_RootDNS
+                ;;
                 '')                                                         # v1.17
-					[ -n "$ADVANCED_TOOLS" ] && ADVANCED_TOOLS=				# v1.21
+                    [ -n "$ADVANCED_TOOLS" ] && ADVANCED_TOOLS=             # v1.21
                 ;;
                 *)
                     printf '%bInvalid Option%b %s%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
@@ -1516,51 +1527,51 @@ Check_Lock "$1"
 Script_alias "create"               # v1.08
 
 [ -z "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU= || EASYMENU="Y"
-NEW_CONFIG=$(echo "$@" | sed -n "s/^.*config=//p" | awk '{print $1}')						# v1.22
-if [	-n "$NEW_CONFIG" ];then
-	[ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"		# v1.22
-	[ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG 	# v1.22
-	if [ -f  $NEW_CONFIG ];then
-		if [ -n "$(pidof unbound)" ];then
-			TXT=" <<== $NEW_CONFIG"
-			[ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
-			TAG="(Date Loaded by unbound_manager "$(date)")"
-			[ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
-			echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-			unbound-control reload
-			TXT=
-			unset $TAG
-			unset $TXT
-			unset $NEW_CONFIG
-		else
-			echo -e $cBRED"\a\nunbound not ACTIVE to Load Configuration file '$NEW_CONFIG'\n\n"$cRESET
-			rm -rf /tmp/unbound.lock
-			exit 1
-		fi
-	else
-		echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n\n"$cRESET
-		rm -rf /tmp/unbound.lock
-		exit 1
-	fi
+NEW_CONFIG=$(echo "$@" | sed -n "s/^.*config=//p" | awk '{print $1}')                       # v1.22
+if [    -n "$NEW_CONFIG" ];then
+    [ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"     # v1.22
+    [ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.22
+    if [ -f  $NEW_CONFIG ];then
+        if [ -n "$(pidof unbound)" ];then
+            TXT=" <<== $NEW_CONFIG"
+            [ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+            TAG="(Date Loaded by unbound_manager "$(date)")"
+            [ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
+            echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
+            unbound-control reload
+            TXT=
+            unset $TAG
+            unset $TXT
+            unset $NEW_CONFIG
+        else
+            echo -e $cBRED"\a\nunbound not ACTIVE to Load Configuration file '$NEW_CONFIG'\n\n"$cRESET
+            rm -rf /tmp/unbound.lock
+            exit 1
+        fi
+    else
+        echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n\n"$cRESET
+        rm -rf /tmp/unbound.lock
+        exit 1
+    fi
 else
-	if [ "$1" == "recovery" ];then 								# v1.22
-		NEW_CONFIG="/opt/share/unbound/configs/reset.conf"
-		if [ -f  $NEW_CONFIG ];then
-			TXT=" <<== $NEW_CONFIG"
-			[ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
-		else
-			echo -e $cBCYA"Recovery: Retrieving Custom unbound configuration"$cBGRA
-			download_file $CONFIG_DIR unbound.conf rgnldo
-		fi
-		TAG="(Date Loaded by unbound_manager "$(date)")"
-		[ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
-		echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
-		unbound-control reload
-		unset $TAG
-		TXT=
-		unset $TXT
-		unset $NEW_CONFIG
-	fi
+    if [ "$1" == "recovery" ];then                              # v1.22
+        NEW_CONFIG="/opt/share/unbound/configs/reset.conf"
+        if [ -f  $NEW_CONFIG ];then
+            TXT=" <<== $NEW_CONFIG"
+            [ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+        else
+            echo -e $cBCYA"Recovery: Retrieving Custom unbound configuration"$cBGRA
+            download_file $CONFIG_DIR unbound.conf rgnldo
+        fi
+        TAG="(Date Loaded by unbound_manager "$(date)")"
+        [ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
+        echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
+        unbound-control reload
+        unset $TAG
+        TXT=
+        unset $TXT
+        unset $NEW_CONFIG
+    fi
 fi
 
 clear
