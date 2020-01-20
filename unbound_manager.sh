@@ -61,7 +61,7 @@
 #
 ####################################################################################################
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin$PATH
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH             # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
 VERSION="1.25"
 GIT_REPO="unbound-Asuswrt-Merlin"
@@ -308,7 +308,7 @@ welcome_message() {
                     fi
                 fi
 
-                [ -n "UPDATE_SCRIPT_ALERT" ] && echo -e $UPDATE_SCRIPT_ALERT"\n"    # v1.21
+                [ -n "$UPDATE_SCRIPT_ALERT" ] && echo -e $UPDATE_SCRIPT_ALERT"\n"    # v1.25 Fix by SNB Forum Member @Cam
                 CHECK_GITHUB=0                                                  # v1.21 Only check Github on first run of script
 
 
