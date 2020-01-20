@@ -1306,7 +1306,7 @@ install_unbound() {
 
         Install_Entware_opkg "haveged"
         Install_Entware_opkg "column"
-        Install_Entware_opkg "diff"                         #v1.25
+        Install_Entware_opkg "diffutils"                         #v1.25
 
         S02haveged_update
 
