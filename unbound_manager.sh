@@ -1421,7 +1421,7 @@ Check_GUI_NVRAM() {
                 [ -n "$(grep -E "^forward-zone:" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
 
                 if [ -n "$(grep -E "^include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
-                    local TXT="No. of Adblock domains "$cBMAG"$(wc -l <${CONFIG_DIR}adblock/adservers)"$cRESET
+local TXT="No. of Adblock domains="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/adservers),"${cRESET}"Blocked Hosts="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/blockhost),"${cRESET}"Whitelist="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/permlist)"$cRESET
                     # Check if Diversion is also running
                     [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v1.24
                     echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1
