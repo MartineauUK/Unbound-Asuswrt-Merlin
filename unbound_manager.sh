@@ -1346,7 +1346,7 @@ install_unbound() {
 
         Check_GUI_NVRAM "install"
 
-        if [ $? -gt 0 ] || [ "$(Check_GUI_NVRAM "install")" -gt 0 ];then
+        if [ $? -gt 0 ];then
             echo -e $cRESET"\n\tThe router does not currently meet ALL of the recommended pre-reqs as shown above."
             echo -e "\tHowever, whilst they are recommended, you may proceed with the unbound ${cBGRE}${ACTION}$cRESET"
             echo -e "\tas the recommendations are NOT usually FATAL if they are NOT strictly followed.\n"
