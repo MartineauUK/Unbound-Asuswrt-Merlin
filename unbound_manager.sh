@@ -1381,7 +1381,7 @@ update_installer() {
         if [ "$1" == "uf" ] || [ "$( awk '{print $1}' /jffs/scripts/unbound_manager.md5)" != "$remotemd5" ]; then # v1.18
             echo 2>&1
             download_file /jffs/scripts unbound_manager.sh martineau
-            printf '\n%bunbound Installer UPDATE Complete! %s\n' "$cBGRE" "$remotemd5" 2>&1
+            printf '\n%bunbound Manager UPDATE Complete! %s\n' "$cBGRE" "$remotemd5" 2>&1
             localmd5="$(md5sum "$0" | awk '{print $1}')"
             echo $localmd5 > /jffs/scripts/unbound_manager.md5        # v1.18
             UPDATED=0
