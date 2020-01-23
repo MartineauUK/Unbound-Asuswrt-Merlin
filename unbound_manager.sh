@@ -721,11 +721,16 @@ welcome_message() {
 
                     Check_GUI_NVRAM
 
-                    echo -e $cBCYA"\n\tMemory/Cache:\n"                         # v1.26
+                    echo -e $cBCYA"\n\tunbound Memory/Cache:\n"                         # v1.26
                     CACHESIZE="$($UNBOUNCTRLCMD get_option key-cache-size)";echo -e $cRESET"\t'key-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
                     CACHESIZE="$($UNBOUNCTRLCMD get_option msg-cache-size)";echo -e $cRESET"\t'msg-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
                     CACHESIZE="$($UNBOUNCTRLCMD get_option rrset-cache-size)";echo -e $cRESET"\t'rrset-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
 
+                    echo -e $cBCYA"\n\tSystem Memory/Cache:\n"
+					SYSTEMRAM="$(free -m | sed 's/^[ \t]*//;s/[ \t]*$//')"
+					SYSTEMRAM=$(echo "$SYSTEMRAM" | sed 's/Mem:/\\tMem:/' | sed 's/\-/\\t\-/' | sed "s/Swap:/\\tSwap:/")
+
+					echo -e $cRESET"\t             $SYSTEMRAM"
                     # No of processors/threads
                     #$UNBOUNCTRLCMD get_option thread
                 ;;
