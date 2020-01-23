@@ -396,8 +396,12 @@ welcome_message() {
                     [ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0            # v1.11
 
                     if [ "$localmd5" != "$remotemd5" ]; then
-                        if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then
-                            UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"   # v1.21
+                        if [ $REMOTE_VERSION_NUM -ge $LOCAL_VERSION_NUM ];then		# v1.27
+                            if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then	# v1.27
+                                UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"   # v1.21
+                            else
+                                UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Minor) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"
+                            fi
                         else
                             if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then      # v1.09
                                 ALLOWUPGRADE="N"                                                # v1.09
