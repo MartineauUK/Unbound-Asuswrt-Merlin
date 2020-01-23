@@ -594,6 +594,7 @@ welcome_message() {
                     #break
                 ;;
                 rl|rl*)
+		    local TXT=
                     # 'reset' and 'user' are Recovery aliases
                     #       i.e. 'reset' is rgnldo's config, and 'user' is the customised install version
                     if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
@@ -627,7 +628,8 @@ welcome_message() {
                         $UNBOUNCTRLCMD reload                                      # v1.08
                         CHECK_GITHUB=1                                          # v1.27 force a GitHub version check to see if we are OK
                     fi
-                    unset $TXT
+                    local TXT=
+		    unset $TXT
 
                     #break
                 ;;
