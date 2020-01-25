@@ -11,7 +11,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 
 	unbound_manager
 
-#### NOTE: Using Xshell6/MobaXterm, you can dynamically change the font size using the CTRL+Mouse-scroll wheel to have a full-screen recommended unbound_manager window 191x37
+#### NOTE: For a standard screen display 1024x768 (or its modern standard 1366×768), using Xshell6/MobaXterm, you can dynamically change the font size using the CTRL+Mouse-scroll wheel to have a full-screen recommended unbound_manager window 191x37
 #### If using PuTTY I suggest you use PuTTY-url (v0.73) and manually set the unbound_manager window size 191x37 with font 'Terminal 9-point' (unbound_manager can/will display clickable URLs and basic PuTTY won't open the links)
 
 
