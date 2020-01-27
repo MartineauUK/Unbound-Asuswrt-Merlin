@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v1.27
+#============================================================================================ © 2019-2020 Martineau v1.28
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -46,7 +46,7 @@
 
 
 # Maintainer: Martineau
-# Last Updated Date: 23-Jan-2020
+# Last Updated Date: 27-Jan-2020
 #
 # Description:
 #
@@ -63,7 +63,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH             # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="1.27"
+VERSION="1.28"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -297,13 +297,28 @@ _quote() {
     esac
 
 }
+Show_Advanced_Menu() {
+    printf "%s\t\t\t\t%s\n"         "$MENU_Z" "$MENU_L"
+    printf "%s\t\t\t\t\t\t%s\n"     "$MENU__" "$MENU_VX"
+    printf "%s\t\t\t\t\t\t\t%s\n"   "$MENUW_X" "$MENU_VB"
+    printf "\t\t\t\t\t\t\t\t\t%s\n" "$MENU_RL"
+    printf "\t\t\t\t\t\t\t\t\t%s\n" "$MENU_OQ"
+    printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
+    [ -n "$MENU_AD" ] && printf "\n\t\t\t\t\t\t\t\t\t%s\n"  "$MENU_AD"       #v1.25
+    [ -n "$MENU_CA" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"    "$MENU_CA"         #v1.26
 
+    printf "\n%s\\n\n"              "$MENUW_DNSSEC"             # v1.28
+    printf "%s\\n\n"                "$MENUW_DNSINFO"            # v1.28
+    printf "\n%s\\n\n"              "$MENUW_LINKS"              # v1.28
+    printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
+    printf '\n%b[Enter] %bLeave %bAdvanced Tools Menu\n' "${cBGRE}" "$cBCYA" "${cRESET}" # v1.21
+}
 welcome_message() {
 
         while true; do
 
             # No need to display the Header box every time....
-            if [ -z "$HDR" ];then                           # v1.09
+            if [ -z "$HDR" ];then                               # v1.09
 
                 printf '\n+======================================================================+\n'
                 printf '|  Welcome to the %bunbound Manager/Installation script (Asuswrt-Merlin)%b |\n' "$cBGRE" "$cRESET"
@@ -395,21 +410,22 @@ welcome_message() {
 
                     [ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0            # v1.11
 
-                    if [ "$localmd5" != "$remotemd5" ]; then
-                        if [ $REMOTE_VERSION_NUM -ge $LOCAL_VERSION_NUM ];then		# v1.27
-                            if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then	# v1.27
-                                UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"   # v1.21
-                            else
-                                UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Minor) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"
-                            fi
+                    # MD5 Mismatch due to local development?
+                    if { [ "$(awk '{print $1}' /jffs/scripts/unbound_manager.md5)" == "$remotemd5" ]; } && [ "$localmd5" != "$remotemd5" ];then # v1.28
+                        if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then      # v1.09
+                            ALLOWUPGRADE="N"                                                # v1.09
+                            UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b %b update >>>> %b\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")" # v1.21
                         else
-                            if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then      # v1.09
-                                ALLOWUPGRADE="N"                                                # v1.09
-                                UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b %b >>>> %b\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")" # v1.21
-                            else
-                                # MD5 Mismatch due to local development?
-                                if [ "$(awk '{print $1}' /jffs/scripts/unbound_manager.md5)" == "$remotemd5" ];then
-                                    UPDATE_SCRIPT_ALERT="$(printf '%bu  = %bPush to Github PENDING for %b(Minor) %b%s >>>> %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION")" # v11.21
+                            ALLOWUPGRADE="N"
+                            UPDATE_SCRIPT_ALERT="$(printf '%bu  = %bPush to Github PENDING for %b(Minor Hotfix) %b%s update >>>> %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION")" # v11.21
+                        fi
+                    else
+                        if [ "$localmd5" != "$remotemd5" ]; then
+                            if [ $REMOTE_VERSION_NUM -ge $LOCAL_VERSION_NUM ];then      # v1.27
+                                if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then  # v1.27
+                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"   # v1.21
+                                else
+                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Minor Hotfix) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"
                                 fi
                             fi
                         fi
@@ -439,9 +455,15 @@ welcome_message() {
                         fi
                     fi
 
+                    MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
                     MENU_Z="$(printf '%bz %b = Remove Existing unbound Installation\n' "${cBYEL}" "${cRESET}")"
                     MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
                     MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
+                    MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                    MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                    MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                    MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
+                    MENUW_LINKS="$(printf '%blinks%b = Show list of external links URLs\n' "${cBYEL}" "${cRESET}")"  # v1.28
 
                     if [ -n "$(which unbound-control)" ];then
                         if [ -n "$(pidof unbound)" ];then
@@ -469,60 +491,54 @@ welcome_message() {
                         fi
                         MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$EXTENDEDSTATS_OPTION")"
                     fi
+                    MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
 
                     if [ -n "$(which diversion)" ] ;then
                         MENU_AD="$(printf '%bad%b = Analyse Diversion White/Black lists ([ file_name ['type=adblock'] ])\n' "${cBYEL}" "${cRESET}")"
                     fi
 
-                    # v1.08 use horizontal menu!!!! Radical eh?
+                    # v1.08 Use 'context aware' horizontal menu!!!! Radical eh?
                     if [ -z "$EASYMENU" ];then
-                        if [ -z "$ADVANCED_TOOLS" ];then                            # v1.21
+                        if [ -z "$ADVANCED_TOOLS" ];then                           # v1.21
                             printf "%s\t\t%s\n"             "$MENU_I" "$MENU_L"
                         fi
 
-                        if [ -n "$ADVANCED_TOOLS" ];then                            # v1.26
-                            [ -n "$MENU_AD" ] && printf "\n\t\t\t\t\t\t\t\t\t%s\n"           "$MENU_AD" # v1.25
-                            [ -n "$MENU_CA" ] && printf "\n\t\t\t\t\t\t\t\t\t%s\n"           "$MENU_CA" # v1.25
-                        else                                                        # v1.26
-                            printf "%s\t\t\t\t%s\n"         "$MENU_Z" "$MENU_VX"    # v1.11
-                            printf "%s\t\t\t\t\t\t\t%s\n"   "$MENU_3" "$MENU_RL"    # v1.17
-                            printf "%s\t\t\t\t\t\t%s\n"     "$MENU__" "$MENU_OQ"
+                        if [ -n "$ADVANCED_TOOLS" ];then                           # v1.26
+                            Show_Advanced_Menu
+                        else                                                       # v1.26
+                            printf "%s\t\t\t\t%s\n"        "$MENU_Z" "$MENU_VX"    # v1.11
+                            printf "%s\t\t\t\t\t\t\t%s\n"  "$MENU_3" "$MENU_RL"    # v1.17
+                            printf "%s\t\t\t\t\t\t%s\n"    "$MENU__" "$MENU_OQ"
                             echo
-                            printf "%s\t\t\t\t\t\t%s\n"     "$MENU_RS" "$MENU_S"
-                        fi
-                        printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
-                    else
-                        if [ -n "$ADVANCED_TOOLS" ];then                            # v1.21
-                            printf "%s\t\t\t\t%s\n"         "$MENU_Z"
-                            printf "%s\t\t%s\n"             "$MENU_L"
-                            printf "%s\t\t\t\t\t\t%s\n"     "$MENU__"
-                            printf "%s\t\t%s\n"             "$MENU_VX"
-                            printf "%s\t\t%s\n"             "$MENU_RL"
-                            printf "%s\t\t%s\n"             "$MENU_OQ"
-                            printf "%s\t\t%s\n"             "$MENU_S"
-                            [ -n "$MENU_AD" ] && printf "%s\t\t%s\n"             "$MENU_AD"              #v1.25
-                            [ -n "$MENU_CA" ] && printf "%s\t\t%s\n"             "$MENU_CA"              #v1.26
+                            printf "%s\t\t\t\t\t\t%s\n"    "$MENU_RS" "$MENU_S"
                             printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
+                        fi
+                    else
+                        if [ -n "$ADVANCED_TOOLS" ];then                           # v1.21
+                            Show_Advanced_Menu
                         else
-                            printf "%s\t%s\n"             "$MENU_I"
+                            printf "%s\t%s\n"               "$MENU_I"
+                            printf '%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
                         fi
                     fi
-
-                    [ -n "$ADVANCED_TOOLS" ] && printf '\n%b[Enter] %bleave Advanced Tools Menu\n' "${cBGRE}" "${cRESET}" # v1.21
                 fi
-                printf '\n%bOption ==>%b ' "${cBYEL}" "${cRESET}"
+
+                # Show 'aasy'/'adv[anced]' mode?
+                [ -z "$EASYMENU" ] && TXT="A:" || TXT="E:"
+                printf '\n%b%s%bOption ==>%b ' "$cBCYA" "$TXT" "${cBYEL}" "${cRESET}"
                 read -r "menu1"
             fi
-
+            local TXT=
+            unset $TXT
             case "$menu1" in
                 0)
                     HDR=                                            # v1.09
                 ;;
                 1|2|2*|i|iu|i*|"i?")
 
-                KEEPACTIVECONFIG="N"                                    # v1.27
+                KEEPACTIVECONFIG="N"                                # v1.27
                 if [ -n "$(echo "$menu1" | grep -o "keepconfig")" ];then    # v1.27
-                    KEEPACTIVECONFIG="Y"                        # v1,27 Explicitly keep current 'unbound.conf'
+                    KEEPACTIVECONFIG="Y"                            # v1.27 Explicitly keep current 'unbound.conf'
                     menu1="$(echo "$menu1" | sed 's/keepconfig//g')"
                 fi
 
@@ -570,6 +586,8 @@ welcome_message() {
                             fi
                         fi
                     fi
+                    local TXT=
+                    unset $TXT
                     #break
                 ;;
                 3)
@@ -594,7 +612,6 @@ welcome_message() {
                     #break
                 ;;
                 rl|rl*)
-		    local TXT=
                     # 'reset' and 'user' are Recovery aliases
                     #       i.e. 'reset' is rgnldo's config, and 'user' is the customised install version
                     if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
@@ -604,7 +621,7 @@ welcome_message() {
                             local PERFORMRELOAD="Y"
                             [ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"
                             [ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.19
-
+                            local TXT=
                             if [ -f $NEW_CONFIG ];then
                                 cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
                                 #local TXT=" <<== $NEW_CONFIG"
@@ -629,8 +646,7 @@ welcome_message() {
                         CHECK_GITHUB=1                                          # v1.27 force a GitHub version check to see if we are OK
                     fi
                     local TXT=
-		    unset $TXT
-
+                    unset $TXT
                     #break
                 ;;
                 l|ln*|lo|lx)                                                    # v1.16
@@ -667,6 +683,8 @@ welcome_message() {
                             else
                                 echo -e $cBRED"\a\nunbound logging '$LOGFILE' NOT ENABLED?\n"c$RESET
                             fi
+                            local TXT=
+                            unset $TXT
                             #break
                             ;;
                     esac
@@ -729,19 +747,20 @@ welcome_message() {
                     CACHESIZE="$($UNBOUNCTRLCMD get_option rrset-cache-size)";echo -e $cRESET"\t'rrset-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
 
                     echo -e $cBCYA"\n\tSystem Memory/Cache:\n"
-					SYSTEMRAM="$(free -m | sed 's/^[ \t]*//;s/[ \t]*$//')"
-					SYSTEMRAM=$(echo "$SYSTEMRAM" | sed 's/Mem:/\\tMem:/' | sed 's/\-/\\t\-/' | sed "s/Swap:/\\tSwap:/")
+                    SYSTEMRAM="$(free -m | sed 's/^[ \t]*//;s/[ \t]*$//')"
+                    SYSTEMRAM=$(echo "$SYSTEMRAM" | sed 's/Mem:/\\tMem:/' | sed 's/\-/\\t\-/' | sed "s/Swap:/\\tSwap:/")
 
-					echo -e $cRESET"\t             $SYSTEMRAM"
+                    echo -e $cRESET"\t             $SYSTEMRAM"
                     # No of processors/threads
                     #$UNBOUNCTRLCMD get_option thread
+                    echo -e $cBCYA"\n\tClick ${cBYEL}https://rootcanary.org/test.html ${cRESET}to view Web DNSSEC Test"
                 ;;
                 sd|dnsmasqstats)                                            # v1.18
 
                     [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
                     # Is scribe / Diversion running?
                     if grep -q diversion /etc/dnsmasq.conf ;then
-                        SYSLOG="/opt/var/log/dnsmasq.log"                   # v1.22
+                        [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"     # v1.28
                     fi
                     echo -e $cBGRA
                     # cache size 0, 0/0 cache insertions re-used unexpired cache entries.
@@ -751,7 +770,7 @@ welcome_message() {
                     # server 100.120.82.1#53: queries sent 0, retried or failed 0
                     # server 1.1.1.1#53: queries sent 7, retried or failed 0
                     # Host                                     Address                        Flags      Expires
-                    kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -v Host
+                    kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -F dnsmasq
                 ;;
                 easy|advanced)
                     [ "$menu1" == "easy"  ] && EASYMENU="Y" || EASYMENU=        # v1.21 Flip from 'Easy' to 'Advanced'
@@ -816,6 +835,7 @@ EOF
                         Uncomment_config_options "use-syslog:"          "uncomment"     # v1.27
                         Uncomment_config_options "log-local-actions:"   "uncomment"     # v1.27
                         echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe) - Reloading 'unbound.conf' status="$cRESET
+                        local TXT=
                         unset $TXT
                         $UNBOUNCTRLCMD reload
 
@@ -827,6 +847,30 @@ EOF
                     TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"                    # Drop the first word
                     $TESTTHIS
                     set -n
+                ;;
+                dnssec*)
+                # DNSSEC URL/SITE tester
+                #   e.g. https://dnsviz.net/d/www.snbforums.com/dnssec/
+                #   e.g. https://dnsviz.net/d/www.nrsforu.com/dnssec/
+                TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                echo -e $cBCYA"\nClick ${cBYEL}https://dnsviz.net/d/$TESTTHIS/dnssec/ ${cRESET}to view DNSSEC Authentication Chain"
+                ;;
+                dnsinfo|dnsinfo*)
+                #https://mxtoolbox.com/SuperTool.aspx?action=dns%3a9.9.9.9&run=toolpage
+                TESTHIS=
+                if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                    TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                fi
+                if [ -n "$TESTTHIS" ];then
+                    echo -e $cBCYA"\nClick ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3a$TESTTHIS&run=toolpage ${cRESET}to view DNS Server info"
+                else
+                    echo -e $cBCYA"\nClick ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3aquad9.net&run=toolpage ${cRESET}to view Quad9 DNS Server info"
+                    echo -e $cBCYA"Click ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3acloudflare.net&run=toolpage ${cRESET}to view Cloudflare DNS Server info"
+                fi
+                ;;
+                links)
+                echo -e $cBCYA"\nClick ${cBYEL}https://www.quad9.net/faq/#outer-wrap ${cRESET}to view QUAD9 FAQs/servers list etc."
+                echo -e $cBCYA"\nClick ${cBYEL}https://1.1.1.1/help ${cRESET}to view Cloudflare."
                 ;;
                 *)
                     printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
@@ -1153,15 +1197,18 @@ Customise_config() {
      echo -e $cBCYA"Checking IPv6....."$cRESET                              # v1.10
      if [ "$(nvram get ipv6_service)" != "disabled" ];then
          echo -e $cBCYA"Customising unbound IPv6 configuration....."$cRESET
-         # integration IPV6
-         # do-ip6: yes
-         # interface: ::0
-         # iaccess-control: ::0/0 refuse
-         # access-control: ::1 allow
-         # private-address: fd00::/8
-         # private-address: fe80::/10
-         sed -i '/do\-ip6: yes/,/private\-address: fe80::\/10/s/^#//g' ${CONFIG_DIR}unbound.conf    # v1.10
-         sed -i '/do-ip6: no/d' ${CONFIG_DIR}unbound.conf   # v1.12 Remove conflicting IPv6
+            # integration IPV6
+            #do-ip6: no                    # This the default
+            #do-ip6: yes                   #@From:
+            #interface: ::0
+            #access-control: ::0/0 refuse
+            #access-control: ::1 allow
+            #private-address: fd00::/8
+            #private-address: fe80::/10    #@@To:
+         #sed -i '/do\-ip6: yes/,/private\-address: fe80::\/10/s/^#//g' ${CONFIG_DIR}unbound.conf    # v1.10
+         #sed -i '/do-ip6: no/d' ${CONFIG_DIR}unbound.conf   # v1.12 Remove conflicting IPv6
+         Uncomment_config_options "do-ip6: yes" "private-address: fe80::" "uncomment"   # v1.28
+         Uncomment_config_options "do-ip6: no" "comment"                                # v1.28 Remove default IPv6
      fi
 
      echo -e $cBCYA"Customising unbound configuration Options:"$cRESET
@@ -1386,7 +1433,7 @@ update_installer() {
             echo $localmd5 > /jffs/scripts/unbound_manager.md5        # v1.18
             UPDATED=0
         else
-            echo -e $cRED_"\nScript update download DISABLED pending Push request to Github\n"$cRESET 2>&1
+            echo -e $cRED_"\a\nScript update download DISABLED pending Push request to Github"$cRESET >&2
         fi
     else
         printf '\n%bunbound_manager.sh is already the latest version. %s\n' "$cBMAG" "$localmd5"
@@ -1703,6 +1750,8 @@ Check_GUI_NVRAM() {
 
         [ $ERROR_CNT -ne 0 ] && { $ERRORCNT; return 1; } || return 0
 
+        local TXT=
+        unset $TXT
         echo -e $cRESET 2>&1
 }
 exit_message() {
