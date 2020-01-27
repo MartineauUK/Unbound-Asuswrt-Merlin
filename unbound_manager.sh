@@ -681,7 +681,7 @@ welcome_message() {
                                 trap 'welcome_message' INT
                                 tail $NUM -F $LOGFILE
                             else
-                                echo -e $cBRED"\a\nunbound logging '$LOGFILE' NOT ENABLED?\n"c$RESET
+                                echo -e $cBRED"\a\nunbound logging '$LOGFILE' NOT ENABLED?\n"$cRESET
                             fi
                             local TXT=
                             unset $TXT
