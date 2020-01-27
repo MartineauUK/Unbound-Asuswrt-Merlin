@@ -52,12 +52,12 @@ rs = Restart (or Start) unbound                                 s  = Show unboun
 e  = Exit Script
 
 
-Option ==>  ?
+A:Option ==> ?
 
-	Version=1.27
-	Local					md5=d3921aaf37344fca7091c2b60e46cd1e
-	Github					md5=d3921aaf37344fca7091c2b60e46cd1e
-	/jffs/scripts/unbound_manager.md5	md5=d3921aaf37344fca7091c2b60e46cd1e
+	Version=1.28
+	Local					md5=0fec50ed018782ece63a286bf2084eaf
+	Github					md5=0fec50ed018782ece63a286bf2084eaf
+	/jffs/scripts/unbound_manager.md5	md5=0fec50ed018782ece63a286bf2084eaf
 
 
 ```
@@ -189,7 +189,7 @@ unbound (pid 20593) is running... uptime: 0 Days, 16:45:47 version: 1.9.3 (# rgn
 
 e  = Exit Script
 
-Option ==> 
+E:Option ==> 
 
 ```
 
@@ -202,5 +202,5 @@ or you can quickly change modes at the option prompt
 ```
 e  = Exit Script
 
-Option ==> [ easy | advanced ]
+E:Option ==> [ easy | advanced ]
 ```
