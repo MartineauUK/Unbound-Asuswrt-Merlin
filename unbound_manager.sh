@@ -1732,19 +1732,19 @@ Check_GUI_NVRAM() {
             echo -e $cBCYA"\n\tOptions:$TXT\n" 2>&1
 
             if [ -f ${CONFIG_DIR}unbound.conf ];then
-                if [ -n "$(grep -E "[^#]log-replies:" ${CONFIG_DIR}unbound.conf)" ] || [ -n "$(grep -E "[^#]log-queries:" ${CONFIG_DIR}unbound.conf)" ] ;then
+                if [ -n "$(grep -E "^[[:blank:]]*[^#]" ${CONFIG_DIR}unbound.conf | grep -o "log-replies:" ${CONFIG_DIR}unbound.conf)" ] || [ -n "$(grep -E "[^#]log-queries:" ${CONFIG_DIR}unbound.conf)" ] ;then
                     echo -e $cBGRE"\t[✔] unbound Logging" 2>&1
                 fi
-                [ -n "$(grep -E "[^#]forward-zone:" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
+                [ -n "$(grep -E "^[[:blank:]]*[^#]" ${CONFIG_DIR}unbound.conf | grep -o "forward-zone:" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
 
-                if [ -n "$(grep -E "[^#]include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
+                if [ -n "$(grep -E "^[[:blank:]]*[^#]" ${CONFIG_DIR}unbound.conf | grep -o "include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
                     local TXT="No. of Adblock domains="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/adservers),"${cRESET}"Blocked Hosts="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/blockhost),"${cRESET}"Whitelist="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/permlist)"$cRESET
                     # Check if Diversion is also running
                     [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v1.24
                     echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1
                 fi
                 [ -f /jffs/scripts/stuning ] && echo -e $cBGRE"\t[✔] unbound CPU/Memory Performance tweaks" 2>&1
-                [ -n "$(grep -E "[^#]include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker" 2>&1
+                [ -n "$(grep -E "^[[:blank:]]*[^#]" ${CONFIG_DIR}unbound.conf | grep -o "include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ] && echo -e $cBGRE"\t[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker" 2>&1
             fi
         #fi
 
