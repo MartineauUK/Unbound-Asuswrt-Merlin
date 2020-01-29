@@ -62,7 +62,7 @@ A:Option ==> ?
 
 ```
 
-New in **v1.20** is the ability to specify which *User Selectable options* are to be installed without having to _manually_ reply to each individual feature prompt
+##### New in **v1.20** is the ability to specify which *User Selectable options* are to be installed without having to _manually_ reply to each individual feature prompt
 
  e.g. Auto install both options 
 
