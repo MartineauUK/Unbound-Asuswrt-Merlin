@@ -1836,7 +1836,7 @@ Check_GUI_NVRAM() {
                 fi
                 [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" ${CONFIG_DIR}unbound.conf)" != "?" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
 
-                if [ "$(Get_unbound_config_option "include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
+                if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
                     local TXT="No. of Adblock domains="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/adservers),"${cRESET}"Blocked Hosts="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/blockhost),"${cRESET}"Whitelist="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/permlist)"$cRESET
                     # Check if Diversion is also running
                     [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v1.24
