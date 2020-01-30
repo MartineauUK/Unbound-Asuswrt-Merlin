@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.00
+#============================================================================================ © 2019-2020 Martineau v2.01
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -63,7 +63,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH             # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.00"
+VERSION="2.01"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -273,7 +273,7 @@ _quote() {
       shift       # Check next set of parameters.
     done
 
-    [ -z "$MATCH" ] && { echo -e $cBRED"\a\n***ERROR - Missing option name" 2>&1; exit 1; }
+    [ -z "$MATCH" ] && { echo -e $cBRED"\a\n\t***ERROR - Missing option name" 2>&1; exit 1; }
 
     case $ACTION in
         comment)
@@ -313,10 +313,12 @@ Show_Advanced_Menu() {
     printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
     printf '\n%b[Enter] %bLeave %bAdvanced Tools Menu\n' "${cBGRE}" "$cBCYA" "${cRESET}" # v1.21
 }
-Unbound_Installed() {
+Unbound_Installed() {                                           # v2.00
     if [ -f ${CONFIG_DIR}unbound.conf ] && [ -n "$(which unbound-control)" ];then
+        echo "Y"                                                # v2.01
         return 0
     else
+        echo "N"                                                # v2.01
         return 1
     fi
 }
@@ -660,7 +662,7 @@ welcome_message() {
                 ;;
                 l|ln*|lo|lx)                                                    # v1.16
 
-                    [ ! Unbound_Installed ] || { echo -e $cBRED"\a\n\tunbound NOT installed! - option not available"$cRESET; continue; }    # v2.00
+                    [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }
 
                     case $menu1 in
 
@@ -714,8 +716,6 @@ welcome_message() {
                 ;;
                 s|sa|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                        # v1.08
 
-                    [ ! Unbound_Installed ] || { echo -e $cBRED"\a\n\tunbound NOT installed! - option not available"$cRESET; continue; }    # v2.00
-
                     echo
                     unbound_Control "$menu1"                                # v1.16
                     #break
@@ -728,7 +728,7 @@ welcome_message() {
                 ;;
                 rs|rsnouser)                                                # v1.07
 
-                    [ ! Unbound_Installed ] || { echo -e $cBRED"\a\n\tunbound NOT installed! - option not available"$cRESET; continue; }    # v2.00
+                    [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
                     echo
                     [ "$menu1" == "rsnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
@@ -750,7 +750,7 @@ welcome_message() {
                 ;;
                 stop)
 
-                    [ ! Unbound_Installed ] || { echo -e $cBRED"\a\n\tunbound NOT installed! - option not available"$cRESET; continue; }    # v2.00
+                    [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
                     echo
                     /opt/etc/init.d/S61unbound stop
@@ -758,7 +758,7 @@ welcome_message() {
                 ;;
                 dd|ddnouser)                # v1.07
 
-                    [ ! Unbound_Installed ] || { echo -e $cBRED"\a\n\tunbound NOT installed! - option not available"$cRESET; continue; }    # v2.00
+                    [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
                     echo
                     [ "$menu1" == "ddnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
@@ -776,7 +776,7 @@ welcome_message() {
 
                     Check_GUI_NVRAM
 
-                    if Unbound_Installed ;then  # v2.00
+                    if [ "$(Unbound_Installed)" == "Y" ];then  # v2.01
                         echo -e $cBCYA"\n\tunbound Memory/Cache:\n"                         # v2.00
                         CACHESIZE="$($UNBOUNCTRLCMD get_option key-cache-size)";echo -e $cRESET"\t'key-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
                         CACHESIZE="$($UNBOUNCTRLCMD get_option msg-cache-size)";echo -e $cRESET"\t'msg-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
@@ -1392,7 +1392,7 @@ unbound_Control() {
     # Each call to unbound-control takes upto 2 secs;  use the -c' parameter            # v1.27
     #unbound-control -q status
     #if [ "$?" != 0 ]; then
-    [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a***ERROR unbound not running!" 2>&1; return 1; }    # v1.26
+    [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\t***ERROR unbound NOT running! - option unavailable" 2>&1; return 1; }    # v1.26
     #fi
 
     #[ -z "$" ] && { echo -e $cBRED"\a***ERROR unbound not installed!" 2>&1; return 1; }
@@ -1477,17 +1477,18 @@ Install_Entware_opkg() {
 }
 Script_alias() {
 
-        #if [ "$1" == "create" ];then
-            # Create alias 'unbound_manager' for '/jffs/addons/unbound/unbound_manager.sh' # v1.22
+        if [ "$1" == "create" ];then
+            # Create alias 'unbound_manager' for '/jffs/addons/unbound/unbound_manager.sh'  # v1.22
+            rm -rf "/opt/bin/unbound_manager" 2>/dev/null                                   # v2.01
             if [ -d "/opt/bin" ] && [ ! -L "/opt/bin/unbound_manager" ]; then
                 echo -e $cBGRE"Creating 'unbound_manager' alias" 2>&1
                 ln -s /jffs/addons/unbound/unbound_manager.sh /opt/bin/unbound_manager    # v2.00 v1.04
             fi
-        #else
+        else
             # Remove Script alias - why?
-            #echo -e $cBCYA"Removing 'unbound_manager' alias" 2>&1
-            #rm -rf "/opt/bin/unbound_manager" 2>/dev/null
-        #fi
+            echo -e $cBCYA"Removing 'unbound_manager' alias" 2>&1
+            rm -rf "/opt/bin/unbound_manager" 2>/dev/null
+        fi
 }
 Check_SWAP() {
 
@@ -1593,18 +1594,21 @@ remove_existing_installation() {
         echo -en $cBCYA"Restarting dnsmasq....."$cBGRE      # v1.14
         service restart_dnsmasq             # v1.14 relocated - Just in case reboot is skipped!
 
-        #Script_alias "delete"
+        Script_alias "delete"                   # v2.01
 
         Optimise_Performance "del"              # v1.15
 
         # v2.00 now uses /jffs/addons/ but just in case we have a pre v2.00 install...
-        if [ -f /jffs/scripts/unbound.postconf ] || [ -f /jffs/scripts/stuning ] || [ -f /jffs/scripts/unbound_manager.md5 ] || [ -f /jffs/scripts/unbound_manager.sh ];then    # v2.00
+        if [ -f /jffs/scripts/unbound.postconf ] || [ -f /jffs/scripts/stuning ] || [ -f /jffs/scripts/unbound_manager.md5 ] || [ -f /jffs/scripts/unbound_manager.sh ] || [ -n "$(ls /opt/bin/unbound_manager)" ];then    # v2.00
             echo -e $cBCYA"Removing legacy install files from '/jffs/scripts/'"$cBGRE
             [ -f /jffs/scripts/unbound.postconf ]       && rm /jffs/scripts/unbound.postconf        # v2.00
             [ -f /jffs/scripts/stuning ]                && rm /jffs/scripts/stuning                 # v2.00
             [ -f /jffs/scripts/unbound_manager.md5 ]    && rm /jffs/scripts/unbound_manager.md5     # v2.00
             [ -f /jffs/scripts/unbound_manager.sh ]     && rm /jffs/scripts/unbound_manager.sh      # v2.00
+            [ -n "$(ls /opt/bin/unbound_manager)" ]     && { echo -e $cBCYA"Removing 'unbound_manager' alias" 2>&1; rm -rf "/opt/bin/unbound_manager"; }    # v2.01
+
         fi
+
 
         # Reboot router to complete uninstall of unbound
         echo -e $cBGRE"\n\tUninstall of unbound completed.\n"$cRESET
