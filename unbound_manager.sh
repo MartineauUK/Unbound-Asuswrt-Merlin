@@ -1040,7 +1040,7 @@ Check_dnsmasq_postconf() {
          echo -e "${TAB}#       dnsmasq[15203]: cannot reduce cache size from default when DNSSEC enabled" >> /jffs/addons/unbound/unbound.postconf
          echo -e "${TAB}#       dnsmasq[15203]: FAILED to start up"                         >> /jffs/addons/unbound/unbound.postconf
          echo -e "${TAB}if [ -n \"\$(grep \"^dnssec\" \$CONFIG)\" ];then"                   >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.16
-         echo -e "${TAB}${TAB}pc_delete \"dnssec\" \$CONFIG"                                >> /jffs/saddons/unbound/unbound.postconf  # v2.00 v1.16
+         echo -e "${TAB}${TAB}pc_delete \"dnssec\" \$CONFIG"                                >> /jffs/addons/unbound/unbound.postconf  # v2.00 v1.16
          echo -e "${TAB}${TAB}logger -t \"(dnsmasq.postconf)\" \"**Warning: Removing 'dnssec' directive from 'dnsmasq' to allow DISABLE cache (set 'cache-size=0')\""   >> /jffs/addons/unbound/unbound.postconf       # v2.00 v1.16
          echo -e "${TAB}fi"                                                                 >> /jffs/addons/unbound/unbound.postconf   # v2.00
          echo -e "${TAB}pc_replace \"cache-size=1500\" \"cache-size=0\" \$CONFIG"           >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
