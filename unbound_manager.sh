@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.01
+#============================================================================================ © 2019-2020 Martineau v2.02
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -46,7 +46,7 @@
 
 
 # Maintainer: Martineau
-# Last Updated Date: 30-Jan-2020
+# Last Updated Date: 02-Feb-2020
 #
 # Description:
 #
@@ -63,14 +63,15 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH             # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.01"
+VERSION="2.02"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
+GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
 GITHUB_DIR=$GITHUB_MARTINEAU                                # v1.08 default for script
 CONFIG_DIR="/opt/var/lib/unbound/"
 UNBOUNCTRLCMD="unbound-control -c ${CONFIG_DIR}unbound.conf"    # using the '-c' parameter is recommended v1.27
-ENTWARE_UNBOUND="unbound-control-setup unbound-control unbound-anchor unbound-daemon"
+ENTWARE_UNBOUND="unbound-control-setup unbound-control unbound-anchor unbound-daemon unbound-checkconf"         # v2.02
 SILENT="s"                                                  # Default is no progress messages for file downloads # v1.08
 ALLOWUPGRADE="Y"                                            # Default is allow script download from Github      # v1.09
 CHECK_GITHUB=1                                              # Only check Github MD5 every nn times
@@ -147,7 +148,7 @@ Chk_Entware() {
         done
         return "$READY"
 }
-Convert_SECS_to_HHMMSS () {
+Convert_SECS_to_HHMMSS() {
 
     local SECS=$1
 
@@ -374,7 +375,10 @@ welcome_message() {
                 if [ -n "$UNBOUNDPID" ];then
                     # Each call to unbound-control takes 2secs!!!
                     I=1
-                    for LINE in $($UNBOUNCTRLCMD status)           # v1.26 so iterate word by word through the single call
+
+                    # error: SSL handshake failed           # v2.02
+                    # 548130435088:error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:1915:
+                    for LINE in $($UNBOUNCTRLCMD status)    # v1.26 so iterate word by word through the single call
                         do
                             case $I in
                                 2)
@@ -388,8 +392,15 @@ welcome_message() {
                             I=$((I + 1))
                         done
 
-                    UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
-                    # Display 'unbound.conf' header if present
+                    if [ -n "$UNBOUNDUPTIME" ];then         # v2.02
+                        UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
+                    else
+                        echo -e $cBRED"\a\n\t***ERROR unbound-control - Fatal 'error: SSL handshake failed'?\n\tStopping unbound"   # v2.02
+                        /opt/etc/init.d/S61unbound
+                        exit_message
+                    fi
+
+                   # Display 'unbound.conf' header if present
                     UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
                     [ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ] && UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
                     echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET  # v1.19
@@ -685,7 +696,7 @@ welcome_message() {
                             local TXT=
                             # Get LOGFILE location from 'unbound.conf' or via 'unbound-control' if dynamically assigned
                             # logfile: "/opt/var/lib/unbound/unbound.log" or "unbound.log"
-                            LOGFILE="$(Get_unbound_config_option "logfile:"  | tr -d '"')"          # v2.00 v1.25
+                            local LOGFILE="$(Get_unbound_config_option "logfile:"  | tr -d '"')"          # v2.00 v1.25
 
                             if  [ "$LOGFILE" == "?" ] || [ -z "$LOGFILE" ];then
                                 local LOGFILE="$($UNBOUNCTRLCMD get_option log-replies)"    # v2.00
@@ -696,7 +707,7 @@ welcome_message() {
                             fi
                             # syslog-ng/scribe?
                             if [ "$(Get_unbound_config_option "use-syslog:")" == "yes" ] || [ "$($UNBOUNCTRLCMD get_option use-syslog)" == "yes" ];then # v2.00
-                                LOGFILE="/opt/var/log/unbound.log"
+                                local LOGFILE="/opt/var/log/unbound.log"
                                 local TXT=" (syslog-ng)"                        # v2.00 v1.25 syslog-ng/scribe
                             fi
                             NUM=
@@ -748,7 +759,7 @@ welcome_message() {
                     [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
                     #break
                 ;;
-                stop)
+                x|stop)                                                     # v2.01
 
                     [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
@@ -1089,6 +1100,9 @@ download_file() {
             rgnldo)
                 GITHUB_DIR=$GITHUB_RGNLDO
             ;;
+            jackyaz)
+                GITHUB_DIR=$GITHUB_JACKYAZ                      # v2.02
+            ;;
         esac
 
         STATUS="$(curl --retry 3 -L${SILENT} -w '%{http_code}' "$GITHUB_DIR/$FILE" -o "$DIR/$FILE")"    # v1.08
@@ -1112,7 +1126,7 @@ S61unbound_update() {
             rm "$line"
         done
     fi
-    download_file /opt/etc/init.d S61unbound rgnldo                                         # v1.11
+    download_file /opt/etc/init.d S61unbound jackyaz                                         # v 2.02 v1.11
 
     chmod 755 /opt/etc/init.d/S61unbound >/dev/null 2>&1
 }
@@ -1126,7 +1140,7 @@ S02haveged_update() {
         done
     fi
 
-    download_file /opt/etc/init.d S02haveged rgnldo                                         # v1.11
+    download_file /opt/etc/init.d S02haveged jackyaz                                         # v2.02 v1.11
 
     chmod 755 /opt/etc/init.d/S02haveged >/dev/null 2>&1
 
@@ -1157,9 +1171,9 @@ Stubby_Integration() {
     [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}') || FIRMWARE_STUBBY_VER="000000000"
     opkg install stubby ca-bundle
 
-    download_file /opt/etc/init.d S62stubby rgnldo          # v1.10
+    download_file /opt/etc/init.d S62stubby jackyaz         # v2.02 v1.10
     chmod 755 /opt/etc/init.d/S62stubby                     # v1.11
-    download_file /opt/etc/stubby/ stubby.yml rgnldo        # v1.08
+    download_file /opt/etc/stubby/ stubby.yml jackyaz       # v2.02 v1.08
 
     if [ "$(nvram get ipv6_service)" != "disabled" ];then   # v1.13
         echo -e $cBCYA"Customising Stubby IPv6 'stubby.yml' configuration....."$cRESET
@@ -1242,7 +1256,7 @@ Customise_config() {
 
     if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
          echo -e $cBCYA"Retrieving Custom unbound configuration"$cBGRA
-         download_file $CONFIG_DIR unbound.conf rgnldo
+         download_file $CONFIG_DIR unbound.conf jackyaz                 # v2.02
     else
          echo -e $cBCYA"Custom unbound configuration download ${cBRED}skipped$cRESET ('${cBMAG}keepconfig$cRESET' specified)"$cBGRA
     fi
@@ -1307,7 +1321,7 @@ Optimise_Performance() {
 
         if [ "$1" != "del" ];then
             echo -e $cBCYA"Customising unbound Performance/Memory 'proc/sys/net' parameters"$cGRA           # v1.15
-            download_file /jffs/addons/unbound stuning rgnldo       # v2.00
+            download_file /jffs/addons/unbound stuning jackyaz         # v2.02 v2.00
             dos2unix $Tuning_script
             chmod +x $Tuning_script
             [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
@@ -1599,13 +1613,13 @@ remove_existing_installation() {
         Optimise_Performance "del"              # v1.15
 
         # v2.00 now uses /jffs/addons/ but just in case we have a pre v2.00 install...
-        if [ -f /jffs/scripts/unbound.postconf ] || [ -f /jffs/scripts/stuning ] || [ -f /jffs/scripts/unbound_manager.md5 ] || [ -f /jffs/scripts/unbound_manager.sh ] || [ -n "$(ls /opt/bin/unbound_manager)" ];then    # v2.00
+        if [ -f /jffs/scripts/unbound.postconf ] || [ -f /jffs/scripts/stuning ] || [ -f /jffs/scripts/unbound_manager.md5 ] || [ -f /jffs/scripts/unbound_manager.sh ] || [ -f /opt/bin/unbound_manager ];then    # v2.00
             echo -e $cBCYA"Removing legacy install files from '/jffs/scripts/'"$cBGRE
             [ -f /jffs/scripts/unbound.postconf ]       && rm /jffs/scripts/unbound.postconf        # v2.00
             [ -f /jffs/scripts/stuning ]                && rm /jffs/scripts/stuning                 # v2.00
             [ -f /jffs/scripts/unbound_manager.md5 ]    && rm /jffs/scripts/unbound_manager.md5     # v2.00
             [ -f /jffs/scripts/unbound_manager.sh ]     && rm /jffs/scripts/unbound_manager.sh      # v2.00
-            [ -n "$(ls /opt/bin/unbound_manager)" ]     && { echo -e $cBCYA"Removing 'unbound_manager' alias" 2>&1; rm -rf "/opt/bin/unbound_manager"; }    # v2.01
+            [ -f /opt/bin/unbound_manager ]             && { echo -e $cBCYA"Removing 'unbound_manager' alias" 2>&1; rm -rf "/opt/bin/unbound_manager"; }    # v2.01
 
         fi
 
@@ -1709,7 +1723,13 @@ install_unbound() {
         create_required_directories
 
         S61unbound_update
+
         Customise_config                    "$AUTO_REPLY1"
+
+        echo -en $cBCYA"Checking 'unbound.config' for syntax....."$cBGRE
+        local CHK_Config_Syntax="$(unbound-checkconf)"                                      # v2.02
+        [ -n "$(echo "$CHK_Config_Syntax" | grep -F "no errors in" )" ] && echo -e $cBGRE || echo -e $cBRED"a"
+        unbound-checkconf
 
         Option_Optimise_Performance         "$AUTO_REPLY4"
 
@@ -1720,6 +1740,9 @@ install_unbound() {
         echo -en $cRESET
 
         Option_Ad_Tracker_Blocker           "$AUTO_REPLY3"
+
+        # Start unbound
+        [ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart # Will also restart dnsmasq
 
         Option_Disable_Firefox_DoH          "$AUTO_REPLY5"      # v1.18
 
@@ -1877,7 +1900,7 @@ Option_Ad_Tracker_Blocker() {
         [ "$ANS" == "y"  ] && Ad_Tracker_blocking           # v1.06
 
         # ....but just in case ;-)
-        [ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart # Will also restart dnsmasq
+        #[ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart # Will also restart dnsmasq
 }
 Ad_Tracker_blocking() {
 
@@ -1888,9 +1911,9 @@ Ad_Tracker_blocking() {
     #echo -e $cBCYA"Unzipping 'unbound_adblock.tar.bz2'....."$cBGRA
     #tar -jxvf ${CONFIG_DIR}unbound_adblock.tar.bz2 -C ${CONFIG_DIR}    # v1.07
 
-    download_file ${CONFIG_DIR} adblock/gen_adblock.sh  rgnldo          # v1.17
-    download_file ${CONFIG_DIR} adblock/blockhost       rgnldo          # v1.17
-    download_file ${CONFIG_DIR} adblock/permlist        rgnldo          # v1.17
+    download_file ${CONFIG_DIR} adblock/gen_adblock.sh  jackyaz         # v2.02 v1.17
+    download_file ${CONFIG_DIR} adblock/blockhost       jackyaz         # v2.02 v1.17
+    download_file ${CONFIG_DIR} adblock/permlist        jackyaz         # v2.02 v1.17
 
     # FFS! Make sure the downloaded script doesn't use '/jffs'
     if [ -n "$(grep -F "/jffs/" ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then
@@ -1940,7 +1963,7 @@ Option_Disable_Firefox_DoH() {
 Disable_Firefox_DoH() {
 
     echo -e $cBCYA"Installing Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker...."$cRESET
-    download_file ${CONFIG_DIR} adblock/firefox_DOH rgnldo  # v1.18
+    download_file ${CONFIG_DIR} adblock/firefox_DOH jackyaz                                         # v2.02 v1.18
 
     if [ -n "$(grep -E "^#[\s]*include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ];then    # v1.18
         echo -e $cBCYA"Adding Firefox DoH 'include: ${CONFIG_DIR}adblock/firefox_DOH'"$cRESET
@@ -2171,7 +2194,7 @@ else
             [ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
         else
             echo -e $cBCYA"Recovery: Retrieving Custom unbound configuration"$cBGRA
-            download_file $CONFIG_DIR unbound.conf rgnldo
+            download_file $CONFIG_DIR unbound.conf jackyaz           # v2.02
         fi
         TAG="(Date Loaded by unbound_manager "$(date)")"
         [ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
