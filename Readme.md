@@ -14,7 +14,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 #### NOTE: For a standard screen display 1024x768 (or its modern popular equivalent 1366×768), using Xshell6/MobaXterm, you can dynamically change the font size using the CTRL+Mouse-scroll wheel to have a full-screen recommended unbound_manager window 191x37
 #### If using PuTTY I suggest you use PuTTY-url (v0.73) and manually set the unbound_manager window size 191x37 with font 'Terminal 9-point' (unbound_manager can/will display clickable URLs and basic PuTTY won't open the links)
 
-
+### 3rd Feb 2020 Thanks to SNBForums member @Jack Yaz for hosting the auxiliary files on his Github ###
 ```
 +======================================================================+
 |  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
@@ -32,10 +32,8 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 |   z  = Remove Existing unbound Installation                          |
 |   ?  = About Configuration                                           |
 |                                                                      |
-| You can also use this script to uninstall unbound to back out the    |
-| changes made during the installation. See the project repository at  |
-|         https://github.com/rgnldo/unbound-Asuswrt-Merlin             |
-|     for helpful user tips on unbound usage/configuration.            |
+|     See SNBForums thread https://tinyurl.com/s89z3mm for helpful     |
+|         user tips on unbound usage/configuration.                    |
 +======================================================================+
 
 
