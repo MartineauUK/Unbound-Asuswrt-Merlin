@@ -356,10 +356,8 @@ welcome_message() {
                     printf '|   3 = Advanced Tools                                                 |\n'
                 fi
                 printf '|                                                                      |\n'
-                printf '| You can also use this script to uninstall unbound to back out the    |\n'
-                printf '| changes made during the installation. See the project repository at  |\n'
-                printf '|         %bhttps://github.com/rgnldo/unbound-Asuswrt-Merlin%b             |\n' "$cBGRE" "$cRESET"
-                printf '|     for helpful user tips on unbound usage/configuration.            |\n'
+                printf '|     See SNBForums thread %b%s%b for helpful     |\n' "$cBGRE" "https://tinyurl.com/s89z3mm" "$cRESET"
+                printf '|         user tips on unbound usage/configuration.                    |\n'
                 printf '+======================================================================+\n'
 
                 HDR="N"                                     # v1.09
