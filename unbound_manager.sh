@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.02
+#============================================================================================ © 2019-2020 Martineau v2.03
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -46,7 +46,7 @@
 
 
 # Maintainer: Martineau
-# Last Updated Date: 02-Feb-2020
+# Last Updated Date: 04-Feb-2020
 #
 # Description:
 #
@@ -63,7 +63,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH             # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.02"
+VERSION="2.03"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
@@ -332,7 +332,8 @@ welcome_message() {
 
                 printf '\n+======================================================================+\n'
                 printf '|  Welcome to the %bunbound Manager/Installation script (Asuswrt-Merlin)%b |\n' "$cBGRE" "$cRESET"
-                printf '|  Version %s by Martineau                                           |\n' "$VERSION"
+                printf '|                                                                      |\n'
+                printf '|                      Version %b%s%b by Martineau                       |\n' "$cBMAG" "$VERSION" "$cRESET"
                 printf '|                                                                      |\n'
                 printf '| Requirements: USB drive with Entware installed                       |\n'
                 printf '|                                                                      |\n'
@@ -367,43 +368,48 @@ welcome_message() {
             if [ "$1" = "uninstall" ]; then
                 menu1="z"                                   # v1.21
             else
+                if [ -z "$(which unbound-control)" ] || [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.03
+                    # Show unbound uptime
+                    UNBOUNDPID=$(pidof unbound)
+                    if [ -n "$UNBOUNDPID" ];then
+                        # Each call to unbound-control takes 2secs!!!
+                        I=1
 
-                # Show unbound uptime
-                UNBOUNDPID=$(pidof unbound)
-                if [ -n "$UNBOUNDPID" ];then
-                    # Each call to unbound-control takes 2secs!!!
-                    I=1
+                        # error: SSL handshake failed           # v2.02
+                        # 548130435088:error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:1915:
+                        for LINE in $($UNBOUNCTRLCMD status)    # v1.26 so iterate word by word through the single call
+                            do
+                                case $I in
+                                    2)
+                                        UNBOUNDVERS=$LINE
+                                        ;;
+                                    14)
+                                        UNBOUNDUPTIME=$LINE
+                                        ;;
+                                esac
 
-                    # error: SSL handshake failed           # v2.02
-                    # 548130435088:error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:1915:
-                    for LINE in $($UNBOUNCTRLCMD status)    # v1.26 so iterate word by word through the single call
-                        do
-                            case $I in
-                                2)
-                                    UNBOUNDVERS=$LINE
-                                    ;;
-                                14)
-                                    UNBOUNDUPTIME=$LINE
-                                    ;;
-                            esac
+                                I=$((I + 1))
+                            done
 
-                            I=$((I + 1))
-                        done
+                        if [ -n "$UNBOUNDUPTIME" ];then         # v2.02
+                            UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
+                        else
+                            echo -e $cBRED"\a\n\t***ERROR unbound-control - failed'?"   # v2.02
+                            #/opt/etc/init.d/S61unbound
+                            #exit_message
+                        fi
 
-                    if [ -n "$UNBOUNDUPTIME" ];then         # v2.02
-                        UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
+                       # Display 'unbound.conf' header if present
+                        UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
+                        [ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ] && UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
+                        echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET  # v1.19
                     else
-                        echo -e $cBRED"\a\n\t***ERROR unbound-control - Fatal 'error: SSL handshake failed'?\n\tStopping unbound"   # v2.02
-                        /opt/etc/init.d/S61unbound
-                        exit_message
+                        echo
                     fi
-
-                   # Display 'unbound.conf' header if present
-                    UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
-                    [ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ] && UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
-                    echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET  # v1.19
                 else
-                    echo
+                        echo -e $cBRED"\a"
+                        unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
+                        echo -e $cBRED"\n***ERROR INVALID unbound ${cRESET}configuration - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE
                 fi
 
                 if [ $CHECK_GITHUB -eq 1 ];then             # v1.20
@@ -423,7 +429,7 @@ welcome_message() {
 
                     # As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
                     if [ -n "$REMOTE_VERSION_NUMDOT" ];then
-                        [ ! -f /jffs/addons/unbound/unbound_manager.md5 ] && echo $REMOTE_VERSION_NUM $remotemd5 > /jffs/addons/unbound/unbound_manager.md5   # v1.09
+                        [ ! -f /jffs/addons/unbound/unbound_manager.md5 ] && echo $remotemd5 > /jffs/addons/unbound/unbound_manager.md5   # v2.03 v1.09
                     fi
 
                     [ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0            # v1.11
@@ -483,32 +489,37 @@ welcome_message() {
                     MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                     MENUW_LINKS="$(printf '%blinks%b = Show list of external links URLs\n' "${cBYEL}" "${cRESET}")"  # v1.28
 
-                    if [ -n "$(which unbound-control)" ];then
-                        if [ -n "$(pidof unbound)" ];then
-                            if [ "$($UNBOUNCTRLCMD get_option log-replies)" == "yes" ] || [ "$($UNBOUNCTRLCMD get_option log-queries)" == "yes" ] ;then   # v1.16
-                                LOGSTATUS=$cBGRE"LIVE "$cRESET
-                                LOGGING_OPTION="(lx=Disable Logging)"
-                            else
-                                LOGSTATUS=
-                                LOGGING_OPTION="(lo=Enable Logging)"
+                    MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
+
+                    if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.03
+                        if [ -n "$(which unbound-control)" ];then
+                            if [ -n "$(pidof unbound)" ];then
+                                if [ "$($UNBOUNCTRLCMD get_option log-replies)" == "yes" ] || [ "$($UNBOUNCTRLCMD get_option log-queries)" == "yes" ] ;then   # v1.16
+                                    LOGSTATUS=$cBGRE"LIVE "$cRESET
+                                    LOGGING_OPTION="(lx=Disable Logging)"
+                                else
+                                    LOGSTATUS=
+                                    LOGGING_OPTION="(lo=Enable Logging)"
+                                fi
                             fi
+                            MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
+                            MENU_CA="$(printf "%bca%b = Cache Size Optimisation  ([ 'reset' ])\n" "${cBYEL}" "${cRESET}")"
                         fi
-                        MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
-                        MENU_CA="$(printf "%bca%b = Cache Size Optimisation  ([ 'reset' ])\n" "${cBYEL}" "${cRESET}")"
+
+                        if [ -n "$(pidof unbound)" ];then
+                            [ -n "$(which unbound-control)" ] && MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
+
+                            if [ "$($UNBOUNCTRLCMD get_option extended-statistics)" == "yes" ];then    # v1.18
+                                EXTENDEDSTATS=$cBGRE" Extended"$cRESET
+                                EXTENDEDSTATS_OPTION="s-=Disable Extended Stats"
+                            else
+                                EXTENDEDSTATS=
+                                EXTENDEDSTATS_OPTION="s+=Enable Extended Stats"
+                            fi
+                            MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$EXTENDEDSTATS_OPTION")"
+                        fi
                     fi
 
-                    if [ -n "$(pidof unbound)" ];then
-                        [ -n "$(which unbound-control)" ] && MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
-                        MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
-                        if [ "$($UNBOUNCTRLCMD get_option extended-statistics)" == "yes" ];then    # v1.18
-                            EXTENDEDSTATS=$cBGRE" Extended"$cRESET
-                            EXTENDEDSTATS_OPTION="s-=Disable Extended Stats"
-                        else
-                            EXTENDEDSTATS=
-                            EXTENDEDSTATS_OPTION="s+=Enable Extended Stats"
-                        fi
-                        MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$EXTENDEDSTATS_OPTION")"
-                    fi
                     MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
 
                     if [ -n "$(which diversion)" ] ;then
@@ -643,7 +654,16 @@ welcome_message() {
                             [ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.19
                             local TXT=
                             if [ -f $NEW_CONFIG ];then
-                                cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+                                if [ "$(Valid_unbound_config_Syntax "$NEW_CONFIG")" == "Y" ];then # v2.03
+                                    echo -e $cBGRE
+                                    unbound-checkconf $NEW_CONFIG               # v2.03
+                                    cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+                                else
+                                    echo -e $cBRED"\a"
+                                    unbound-checkconf $NEW_CONFIG               # v2.03
+                                    local PERFORMRELOAD="N"
+                                    echo -e $cBRED"\n***ERROR ${cRESET}requested config $cBMAG'$NEW_CONFIG'$cRESET NOT loaded"$cBGRE
+                                fi
                                 #local TXT=" <<== $NEW_CONFIG"
                             else
                                 echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n"$cRESET
@@ -662,7 +682,7 @@ welcome_message() {
                         local TAG="Date Loaded by unbound_manager "$(date)")"
                         sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
                         echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-                        $UNBOUNCTRLCMD reload                                      # v1.08
+                        $UNBOUNCTRLCMD reload                                   # v1.08
                         CHECK_GITHUB=1                                          # v1.27 force a GitHub version check to see if we are OK
                     fi
                     local TXT=
@@ -739,22 +759,31 @@ welcome_message() {
 
                     [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
-                    echo
                     [ "$menu1" == "rsnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
-                    /opt/etc/init.d/S61unbound restart
-                    CHECK_GITHUB=1                                          # v1.27 force a GitHub version check to see if we are OK
-                    echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
-                    WAIT=11     # 16 i.e. 15 secs should be adequate?
-                    INTERVAL=1
-                    I=0
-                     while [ $I -lt $((WAIT-1)) ]
-                        do
-                            sleep 1
-                            I=$((I + 1))
-                            [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET ; break; }
-                        done
-                    [ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
-                    [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
+
+                    if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
+                        echo -e $cBGRE
+                        unbound-checkconf ${CONFIG_DIR}unbound.conf                                     # v2.03
+                        echo -e
+                        /opt/etc/init.d/S61unbound restart
+                        CHECK_GITHUB=1                                      # v1.27 force a GitHub version check to see if we are OK
+                        echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
+                        WAIT=11     # 16 i.e. 15 secs should be adequate?
+                        INTERVAL=1
+                        I=0
+                         while [ $I -lt $((WAIT-1)) ]
+                            do
+                                sleep 1
+                                I=$((I + 1))
+                                [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET ; break; }
+                            done
+                        [ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
+                        [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
+                    else
+                        echo -e $cBRED"\a"
+                        unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
+                        echo -e $cBRED"\n***ERROR ${cRESET}requested re(Start) of unbound ABORTed! - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file"$cBGRE
+                    fi
                     #break
                 ;;
                 x|stop)                                                     # v2.01
@@ -1697,7 +1726,7 @@ install_unbound() {
         fi
 
         if opkg install $ENTWARE_UNBOUND --force-downgrade; then
-            echo -e $cBGRE"unbound Entware packages '$ENTWARE_UNBOUND' successfully installed"$cBGRA
+            echo -e $cBGRE"unbound Entware packages '$ENTWARE_UNBOUND' successfully installed"$cRESET
         else
             echo -e $cBRED"\a\n\n\t***ERROR occurred installing unbound\n"$cRESET
             exit 1
@@ -1706,28 +1735,36 @@ install_unbound() {
         # echo -e $cBCYA"Linking '${CONFIG_DIR}unbound.conf' --> '/opt/var/lib/unbound/unbound.conf'"$cRESET
         # ln -s ${CONFIG_DIR}unbound.conf /opt/var/lib/unbound/unbound.conf 2>/dev/null # Hack to retain '/opt/etc/unbound' for configs
 
+        create_required_directories                             # v2.03
+
         Enable_unbound_statistics                               # Install Entware opkg 'unbound-control'
 
         Install_Entware_opkg "column"
-        Install_Entware_opkg "diffutils"                         #v1.25
+        Install_Entware_opkg "diffutils"                        #v1.25
 
-        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then          # v1.26 AS per dave14305
+        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v1.26 AS per dave14305
             Install_Entware_opkg "haveged"
             S02haveged_update
         fi
 
         Check_dnsmasq_postconf
 
-        create_required_directories
-
         S61unbound_update
 
         Customise_config                    "$AUTO_REPLY1"
 
-        echo -en $cBCYA"Checking 'unbound.config' for syntax....."$cBGRE
-        local CHK_Config_Syntax="$(unbound-checkconf)"                                      # v2.02
-        [ -n "$(echo "$CHK_Config_Syntax" | grep -F "no errors in" )" ] && echo -e $cBGRE || echo -e $cBRED"a"
-        unbound-checkconf
+        if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
+            echo -en $cBGRE
+            unbound-checkconf               # v2.03
+        else
+            echo -en $cBRED"\a"
+            unbound-checkconf               # v2.03
+            echo -en $cBCYA"Restarting dnsmasq....."$cBGRE          # v1.13
+            service restart_dnsmasq                                 # v1.13
+            echo -e $cBRED"\a\n\t***ERROR FATAL...ABORTing!\n"$cRESET
+
+            exit_message                    # v2.03
+        fi
 
         Option_Optimise_Performance         "$AUTO_REPLY4"
 
@@ -1808,6 +1845,22 @@ _quote() {
         local VALUE=$(printf "%s" "$VALUE" | sed 's/^[ \t]*//;s/[ \t]*$//')
 
         [ -z "$LINE" ] && echo "?" || echo "$VALUE"
+}
+Valid_unbound_config_Syntax() {                                     # v2.03
+
+    local CHECKTHIS="$1"
+    [ -z "$1" ] && CHECKTHIS="${CONFIG_DIR}unbound.conf"
+
+    #echo -e $cBCYA"\nChecking $cBMAG'$CHECKTHIS'$cBCYA for valid syntax....."$cBGRE 2>&1
+    local CHK_Config_Syntax="$(unbound-checkconf $CHECKTHIS 2>/dev/null)"           # v2.03
+
+    if [ -n "$(echo "$CHK_Config_Syntax" | grep -o "no errors in" )" ];then         # v2.03
+        echo "Y"
+        return 0
+    else
+        echo "N"
+        return 1
+    fi
 }
 Check_GUI_NVRAM() {
 
