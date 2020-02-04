@@ -2,7 +2,9 @@
 
 ## Installation ##
 
-Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm, PuTTY etc. to copy'n'paste:
+Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm, PuTTY etc. 
+
+(TIP: Triple-click the install command below) to copy'n'paste into your router's SSH session:
 
 	mkdir /jffs/addons 2>/dev/null;mkdir /jffs/addons/unbound 2>/dev/null; curl --retry 3 "https://raw.githubusercontent.com/MartineauUK/Unbound-Asuswrt-Merlin/master/unbound_manager.sh" -o "/jffs/addons/unbound/unbound_manager.sh" && chmod 755 "/jffs/addons/unbound/unbound_manager.sh" && /jffs/addons/unbound/unbound_manager.sh
 
@@ -18,7 +20,8 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 ```
 +======================================================================+
 |  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
-|  Version 2.03 by Martineau                                           |
+|                                                                      |
+|                      Version 2.03 by Martineau                       |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
@@ -173,7 +176,7 @@ Option ==> i?
 |                                                                      |
 | You can also use this script to uninstall unbound to back out the    |
 | changes made during the installation. See the project repository at  |
-|         https://github.com/rgnldo/unbound-Asuswrt-Merlin             |
+|         ** deleted **                                                |
 |     for helpful user tips on unbound usage/configuration.            |
 +======================================================================+
 
