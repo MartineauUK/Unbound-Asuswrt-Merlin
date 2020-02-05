@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.03
+#============================================================================================ © 2019-2020 Martineau v2.04
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -43,17 +43,17 @@
 #
 #
 #  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for additional help/documentation with this script.
-
+#  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 04-Feb-2020
+# Last Updated Date: 05-Feb-2020
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
 #  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow (Xentrk for this script template and thelonelycoder for amtm)
-#  See https://github.com/rgnldo/Unbound-Asuswrt-Merlin for a description of unbound config/usage changes.
+
 #
 #   https://calomel.org/unbound_dns.html
 #   https://wiki.archlinux.org/index.php/unbound
@@ -63,7 +63,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH             # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.03"
+VERSION="2.04"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
@@ -243,6 +243,9 @@ Smart_LineInsert() {
     [ -n "$POS" ] && { awk -v here="$POS" -v newline="$TEXT" 'NR==here{print newline}1' "$FN" > ${FN}a; rm $FN; mv ${FN}a $FN; } || printf "%s\n" "$TEXT" >> "$FN"
 
 }
+Is_HND() {
+    [ -n "$(uname -m | grep "aarch64")" ] && { echo Y; return 0; } || { echo N; return 1; }
+}
 Uncomment_config_options() {                                                # v1.27
 _quote() {
   echo $1 | sed 's/[]\/()$*.^|[]/\\&/g'
@@ -377,19 +380,10 @@ welcome_message() {
 
                         # error: SSL handshake failed           # v2.02
                         # 548130435088:error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:1915:
-                        for LINE in $($UNBOUNCTRLCMD status)    # v1.26 so iterate word by word through the single call
-                            do
-                                case $I in
-                                    2)
-                                        UNBOUNDVERS=$LINE
-                                        ;;
-                                    14)
-                                        UNBOUNDUPTIME=$LINE
-                                        ;;
-                                esac
 
-                                I=$((I + 1))
-                            done
+                        local UNBOUND_STATUS="$($UNBOUNCTRLCMD status)"
+                        UNBOUNDUPTIME="$(echo "$UNBOUND_STATUS" | grep -E "uptime:.*seconds"  | awk '{print $2}')"
+                        UNBOUNDVERS="$(echo "$UNBOUND_STATUS" | grep -E "version:.*$" | awk '{print $2}')"
 
                         if [ -n "$UNBOUNDUPTIME" ];then         # v2.02
                             UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
@@ -399,9 +393,15 @@ welcome_message() {
                             #exit_message
                         fi
 
-                       # Display 'unbound.conf' header if present
+                        # Display 'unbound.conf' header if present
+                        local TAG="Date Loaded by unbound_manager "$(date)")"
                         UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
-                        [ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ] && UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
+                        if [ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ];then  # v2.04
+                            UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
+                        else
+                            sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+                            UNBOUND_CONF_VER_TXT=$(head -n 1 ${CONFIG_DIR}unbound.conf)
+                        fi
                         echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET  # v1.19
                     else
                         echo
@@ -438,10 +438,10 @@ welcome_message() {
                     if { [ "$(awk '{print $1}' /jffs/addons/unbound/unbound_manager.md5)" == "$remotemd5" ]; } && [ "$localmd5" != "$remotemd5" ];then # v1.28
                         if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then      # v1.09
                             ALLOWUPGRADE="N"                                                # v1.09
-                            UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b %b update >>>> %b\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")" # v1.21
+                            UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b UPDATE %b%s%b >>>> %b%s\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBRED" "$cBMAG" "v$VERSION" "$cRESET" "$cBGRE" "v$REMOTE_VERSION_NUMDOT")" # v1.21
                         else
                             ALLOWUPGRADE="N"
-                            UPDATE_SCRIPT_ALERT="$(printf '%bu  = %bPush to Github PENDING for %b(Minor Hotfix) %b%s update >>>> %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION")" # v11.21
+                            UPDATE_SCRIPT_ALERT="$(printf '%bu  = %bPush to Github PENDING for %b(Minor Hotfix) %b%s update >>>> %b%s %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cRESET" "$cBMAG" "v$VERSION")" # v11.21
                         fi
                     else
                         if [ "$localmd5" != "$remotemd5" ]; then
@@ -604,7 +604,7 @@ welcome_message() {
 
                     if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
                         if [ -n "$PREINSTALLCONFIG" ] && [ -f "/opt/share/unbound/configs/"$PREINSTALLCONFIG ] ;then
-                            echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ('${cBMAG}$PREINSTALLCONFIG'$cRESET)\n\n\tReply$cBRED 'y'$cBGRE or press [Enter] $cRESET to skip\n"
+                            echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cBGRE or press [Enter] $cRESET to skip\n"
                             read -r "ANS"
                             if [ "$ANS" == "y"  ];then                      # v1.27
                                 cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf
@@ -905,7 +905,20 @@ log {
 };
 #eof
 EOF
-                            /opt/bin/scribe reload 2>/dev/null
+                            chmod 600 /opt/etc/syslog-ng.d/unbound  >/dev/null  # v2.04
+                            cat > /opt/etc/logrotate.d/unbound << EOF       # Generate the missing unbound logrotate file   #v2.04
+/opt/var/log/unbound.log {
+    minsize 1024K
+    daily
+    rotate 9
+    postrotate
+        /usr/bin/killall -HUP syslog-ng
+    endscript
+}
+EOF
+                            chmod 600 /opt/etc/logrotate.d/unbound  >/dev/null  # v2.04
+                            /opt/bin/scribe reload 2>/dev/null 1>/dev/null      # v2.04
+                            /opt/sbin/logrotate /opt/etc/logrotate.conf 2>/dev/null 1>/dev/null     # v2.04
                             /opt/etc/init.d/S61unbound restart
 
                         fi
@@ -1283,7 +1296,8 @@ Customise_config() {
 
     if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
          echo -e $cBCYA"Retrieving Custom unbound configuration"$cBGRA
-         download_file $CONFIG_DIR unbound.conf jackyaz                 # v2.02
+         #download_file $CONFIG_DIR unbound.conf jackyaz                 # v2.02
+         download_file $CONFIG_DIR unbound.conf martineau               # v2.04
     else
          echo -e $cBCYA"Custom unbound configuration download ${cBRED}skipped$cRESET ('${cBMAG}keepconfig$cRESET' specified)"$cBGRA
     fi
@@ -1311,6 +1325,8 @@ Customise_config() {
             # integration IPV6
             #do-ip6: no                    # This the default
             #do-ip6: yes                   #@From:
+            #module-config: "dns64 validator iterator"      # v1.01 perform a query against AAAA record exists
+            #dns64-prefix: 64:FF9B::/96                     # v1.01
             #interface: ::0
             #access-control: ::0/0 refuse
             #access-control: ::1 allow
@@ -1318,6 +1334,7 @@ Customise_config() {
             #private-address: fe80::/10    #@@To:
          #sed -i '/do\-ip6: yes/,/private\-address: fe80::\/10/s/^#//g' ${CONFIG_DIR}unbound.conf    # v1.10
          #sed -i '/do-ip6: no/d' ${CONFIG_DIR}unbound.conf   # v1.12 Remove conflicting IPv6
+         Uncomment_config_options "module-config: \"validator iterator\"" "comment"         # v2.04
          Uncomment_config_options "do-ip6: yes" "private-address: fe80::" "uncomment"   # v1.28
          Uncomment_config_options "do-ip6: no" "comment"                                # v1.28 Remove default IPv6
      fi
@@ -1357,6 +1374,13 @@ Optimise_Performance() {
             fi
             chmod +x $FN
             echo -e $cBCYA"Applying unbound Performance/Memory tweaks using '$Tuning_script'"$cRESET
+
+            # Enable TCP Fast Open on HND routers
+            if [ "$(Is_HND)" == "Y" ];then                  # v2.04
+                echo -e $cBGRE"TCP Fast Open ENABLED in '$Tuning_script'"$cRESET
+                [ -z "$(grep "tcp_fastopen" "$Tuning_script")" ] && sed -i '/start()/a\\n\t# Enable TCP Fast Open on HND routers \- unbound_manager\n\techo 3 > /proc/sys/net/ipv4/tcp_fastopen\n' $Tuning_script
+            fi
+
             sh $Tuning_script start
         else
              if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_manager" $FN)" ];then
@@ -1439,6 +1463,8 @@ unbound_Control() {
     #[ -z "$" ] && { echo -e $cBRED"\a***ERROR unbound not installed!" 2>&1; return 1; }
 
     local RESET="_noreset"                  # v1.08
+    local RETVAL=$3                         # v2.04
+
 
     case $1 in
         s)
@@ -1474,7 +1500,12 @@ unbound_Control() {
             fi
             if [ "$CONFIG_VARIABLE" != ""  ];then
                 local RESULT="$($UNBOUNCTRLCMD get_option $CONFIG_VARIABLE)"
-                [ -z "$(echo "$RESULT" | grep -ow "error" )" ] && echo -e $cRESET"unbound-control $cBMAG'$CONFIG_VARIABLE'$cRESET $CBGRE'$RESULT'"  2>&1 || echo -e $cRESET"unbound-control get_option $cBMAG'$CONFIG_VARIABLE:'$cBRED $RESULT" 2>&1
+                if [ -z "$RETVAL" ];then                                # v2.04
+                    [ -z "$(echo "$RESULT" | grep -ow "error" )" ] && echo -e $cRESET"unbound-control $cBMAG'$CONFIG_VARIABLE'$cRESET $CBGRE'$RESULT'"  2>&1 || echo -e $cRESET"unbound-control get_option $cBMAG'$CONFIG_VARIABLE:'$cBRED $RESULT" 2>&1
+                else
+                    echo "$RESULT"      # v2.04
+                    return              # v2.04
+                fi
             fi
             echo -en $cRESET 2>&1
         ;;
@@ -1842,6 +1873,8 @@ _quote() {
         [ "$(echo "$LINE" | grep -E "^#" )" ] && local LINE=
 
         local VALUE="$(echo $LINE | awk -F':' '{print $2}')"
+        local VALUE="$(echo $VALUE | awk -F'#' '{print $1}')"       # V2.04
+
         local VALUE=$(printf "%s" "$VALUE" | sed 's/^[ \t]*//;s/[ \t]*$//')
 
         [ -z "$LINE" ] && echo "?" || echo "$VALUE"
@@ -1861,6 +1894,17 @@ Valid_unbound_config_Syntax() {                                     # v2.03
         echo "N"
         return 1
     fi
+}
+Record_CNT() {                                                                      # v2.04
+
+    # Files downloaded from GitHub could be in DOS format, so 'a logically empty file od0a' would appear as 1 record
+
+    local FN="$1"
+
+    dos2unix $FN
+    sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' $FN
+
+    echo "$(wc -l < $FN)"
 }
 Check_GUI_NVRAM() {
 
@@ -1909,13 +1953,17 @@ Check_GUI_NVRAM() {
             echo -e $cBCYA"\n\tOptions:$TXT\n" 2>&1
 
             if [ -f ${CONFIG_DIR}unbound.conf ];then
-                if [ "$(Get_unbound_config_option "log-replies:" ${CONFIG_DIR}unbound.conf)" != "?" ] || [ "$(Get_unbound_config_option "log-queries:" ${CONFIG_DIR}unbound.conf)" != "?" ] ;then
+
+                # Logging is deemed dynamic, so need to check both config and unbound-control??? or just unbound-control???
+                if [ "$(Get_unbound_config_option "log-replies:" ${CONFIG_DIR}unbound.conf)" == "yes" ] || [ "$(Get_unbound_config_option "log-queries:" ${CONFIG_DIR}unbound.conf)" == "yes" ] || \
+                   [ "$(unbound_Control "oq" "log-replies" "value")" == "yes" ] || [ "$(unbound_Control "oq" "log-queries" "value")" == "yes" ];then            # v2.04
                     echo -e $cBGRE"\t[✔] unbound Logging" 2>&1
                 fi
+
                 [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" ${CONFIG_DIR}unbound.conf)" != "?" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
 
                 if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
-                    local TXT="No. of Adblock domains="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/adservers),"${cRESET}"Blocked Hosts="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/blockhost),"${cRESET}"Whitelist="$cBMAG"$(wc -l <${CONFIG_DIR}adblock/permlist)"$cRESET
+                    local TXT="No. of Adblock domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "${CONFIG_DIR}adblock/blockhost"),"${cRESET}"Whitelist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v2.04
                     # Check if Diversion is also running
                     [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v1.24
                     echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1
