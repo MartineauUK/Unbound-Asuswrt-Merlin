@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.04
+#============================================================================================ © 2019-2020 Martineau v2.05
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -46,13 +46,13 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 05-Feb-2020
+# Last Updated Date: 06-Feb-2020
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Cam (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://calomel.org/unbound_dns.html
@@ -63,11 +63,11 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH             # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.04"
+VERSION="2.05"
 GIT_REPO="unbound-Asuswrt-Merlin"
-GITHUB_RGNLDO="https://raw.githubusercontent.com/rgnldo/$GIT_REPO/master"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
+GITHUB_MARTINEAU_DEV="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/dev"
 GITHUB_DIR=$GITHUB_MARTINEAU                                # v1.08 default for script
 CONFIG_DIR="/opt/var/lib/unbound/"
 UNBOUNCTRLCMD="unbound-control -c ${CONFIG_DIR}unbound.conf"    # using the '-c' parameter is recommended v1.27
@@ -79,7 +79,7 @@ MAX_OPTIONS=5                                               # Available Installa
 USER_OPTION_PROMPTS="?"                                     # Global reset if ANY Auto-Options specified
 CURRENT_AUTO_OPTIONS=                                       # List of CURRENT Auto Reply Options
 DIV_DIR="/opt/share/diversion/list/"                        # diversion directory v1.25
-KEEPACTIVECONFIG="N"                                        # During install/update retrieve basic 'unbound.conf' from rgnldo GitHub
+KEEPACTIVECONFIG="N"                                        # During install/update retrieve basic 'unbound.conf' GitHub
 
 
 # Uncomment the line below for debugging
@@ -279,23 +279,26 @@ _quote() {
 
     [ -z "$MATCH" ] && { echo -e $cBRED"\a\n\t***ERROR - Missing option name" 2>&1; exit 1; }
 
+    # When using v1.01+ of unbound.conf, need to exclude the header comments from the search
+    # i.e. 'server:' should be the first non-comment line in 'unbound.conf'
+    local POS="$(grep -Enw "[[:space:]]*server:" ${CONFIG_DIR}unbound.conf | cut -d':' -f1)"    # v2.05                                         # v2.05
+
     case $ACTION in
         comment)
                 if [ -z "$TO" ];then
                     #[ -z "$(grep "#$MATCH" $FN )" ] && sed $SEDACTION "/$MATCH/ s/\($MATCH.*$\)/#\1/" $FN|| echo -e $cRESET"\tAleady commented out '#$MATCH'"
-                    [ -z "$(grep "#[[:space:]]*$MATCH" $FN )" ] && sed $SEDACTION "/$MATCH/ s/\($MATCH.*$\)/#\1/" $FN|| echo -e $cRESET"\tAleady commented out '#$MATCH'"
+                    [ -z "$(grep "#[[:space:]]*$MATCH" $FN )" ] && sed $SEDACTION "$POS,$ {/$MATCH/ s/\($MATCH.*$\)/#\1/}" $FN|| echo -e $cRESET"\tAleady commented out '#$MATCH'"
                 else
-                    sed $SEDACTION "/$MATCH/,/$TO/ s/\(^[[:space:]]*\)\(.\)/\1#\2/" $FN
+                    sed $SEDACTION "$POS,$ {/$MATCH/,/$TO/ s/\(^[[:space:]]*\)\(.\)/\1#\2/}" $FN    # v2.05
                 fi
                 ;;
         uncomment)
                 if [ -z "$TO" ];then
                     #sed $SEDACTION "/#$MATCH/ s/#//1" $FN
-                    sed $SEDACTION "/#[[:space:]]*$MATCH/ s/#//1" $FN
-
+                    sed $SEDACTION "$POS,$ {/#[[:space:]]*$MATCH/ s/#//1}" $FN  # v2.05
                 else
                     #sed $SEDACTION "/#$MATCH/,/#$TO/ s/\(^[[:space:]]*\)\(#\)/\1/" $FN
-                    sed $SEDACTION "/#[[:space:]]*$MATCH/,/#[[:space:]]*$TO/ s/\(^[[:space:]]*\)\(#\)/\1/" $FN
+                    sed $SEDACTION "$POS,$ {/#[[:space:]]*$MATCH/,/#[[:space:]]*$TO/ s/\(^[[:space:]]*\)\(#\)/\1/}" $FN     # v2.05
                 fi
                 ;;
     esac
@@ -396,11 +399,11 @@ welcome_message() {
                         # Display 'unbound.conf' header if present
                         local TAG="Date Loaded by unbound_manager "$(date)")"
                         UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
-                        if [ -z "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ];then  # v2.04
-                            UNBOUND_CONF_VER_TXT= || UNBOUND_CONF_VER_TXT="("$UNBOUND_CONF_VER")"
+                        if [ -n "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ];then  # v2.04                                         # v2.05
+                            UNBOUND_CONF_VER_TXT=$UNBOUND_CONF_VER
                         else
-                            sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
-                            UNBOUND_CONF_VER_TXT=$(head -n 1 ${CONFIG_DIR}unbound.conf)
+                            #sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+                            :
                         fi
                         echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET  # v1.19
                     else
@@ -470,7 +473,8 @@ welcome_message() {
                         fi
 
                         MENU_RS="$(printf '%brs%b = %bRestart%b (or %bStart%b) unbound\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "$cBGRE" "${cRESET}")"
-                        MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit; vh=View Example Configuration) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
+                        #MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit; vh=View Example Configuration) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
+                        MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
                     else
                         if [ -z "$EASYMENU" ] ;then
                             MENU_I="$(printf '%bi %b = Begin unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
@@ -626,10 +630,10 @@ welcome_message() {
                     ;;
                 z)
                     validate_removal
-                    [ $? -eq 1 ] && { exit_message; exit 0; }           # v2.00
-                    break
+                    [ $? -eq 1 ] && { exit_message; exit 0; } || echo -en $cRESET"\nunbound uninstall CANCELled\n"$cRESET           # v2.05 v2.00
+                    #break
                 ;;
-                v|vx|vh|vb)
+                v|vx|vb)
                     case $menu1 in
                         v|vh) ACCESS="--view"                           # v1.11 View/Readonly
                         ;;
@@ -639,12 +643,13 @@ welcome_message() {
                             continue
                         ;;
                     esac
-                    [ "$menu1" != "vh" ] && nano $ACCESS ${CONFIG_DIR}unbound.conf || nano $ACCESS /opt/etc/unbound/unbound.conf.Example    # v1.17
+                    #[ "$menu1" != "vh" ] && nano $ACCESS ${CONFIG_DIR}unbound.conf || nano $ACCESS /opt/etc/unbound/unbound.conf.Example    # v1.17
+                    [ "$menu1" != "vh" ] && nano $ACCESS ${CONFIG_DIR}unbound.conf  # v2.05
                     #break
                 ;;
                 rl|rl*)
                     # 'reset' and 'user' are Recovery aliases
-                    #       i.e. 'reset' is rgnldo's config, and 'user' is the customised install version
+                    #       i.e. 'reset' is Github's config, and 'user' is the customised install version
                     if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
 
                         NEW_CONFIG=$(echo "$menu1" | awk '{print $2}')
@@ -696,7 +701,7 @@ welcome_message() {
                     case $menu1 in
 
                         lo)                                                     # v1.16
-                            $UNBOUNCTRLCMD -q verbosity 2
+                            $UNBOUNCTRLCMD -q verbosity 1                       # v2.05
                             $UNBOUNCTRLCMD -q set_option log-queries: yes
                             $UNBOUNCTRLCMD -q set_option log-replies: yes
                             $UNBOUNCTRLCMD -q set_option log-time-ascii: yes
@@ -704,7 +709,7 @@ welcome_message() {
                             echo -e $cBCYA"\nunbound logging ENABLED"$cRESET
                             ;;
                         lx)                                                     # v1.16
-                            $UNBOUNCTRLCMD -q verbosity 1
+                            $UNBOUNCTRLCMD -q verbosity 0                       # v2.05
                             $UNBOUNCTRLCMD -q set_option log-queries: no
                             $UNBOUNCTRLCMD -q set_option log-replies: no
                             # NOTE: Viewing 'unbound.conf' may now be inaccurate
@@ -923,11 +928,13 @@ EOF
 
                         fi
 
-                        # Assume we have the esy option to uncomment....
+                        # Assume we have the easy option to uncomment....
                         Uncomment_config_options "use-syslog:"          "uncomment"     # v1.27
                         Uncomment_config_options "log-local-actions:"   "uncomment"     # v1.27
-                        [ "$(Get_unbound_config_option "use-syslog")" == "?" ]        && sed -i '/log\-time\-ascii:/ause\-syslog: yes' ${CONFIG_DIR}unbound.conf
-                        [ "$(Get_unbound_config_option "log-local-actions")" == "?" ] && sed -i '/use\-syslog:/alog\-local\-actions: yes' ${CONFIG_DIR}unbound.conf
+                        Uncomment_config_options "log-tag-queryreply:"  "uncomment"     # v2.05
+
+                        #[ "$(Get_unbound_config_option "use-syslog")" == "?" ]        && sed -i '/^log\-time\-ascii:/ause\-syslog: yes' ${CONFIG_DIR}unbound.conf
+                        #[ "$(Get_unbound_config_option "log-local-actions")" == "?" ] && sed -i '/^use\-syslog:/alog\-local\-actions: yes' ${CONFIG_DIR}unbound.conf
 
                         echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe) - Reloading 'unbound.conf' status="$cRESET
                         local TXT=
@@ -1021,33 +1028,24 @@ Kill_Lock() {
         fi
 }
 
-validate_removal () {
+validate_removal() {
 
         local REMOVED=0                                 # v2.00
 
         while true; do
             printf '\n%bIMPORTANT: It is recommended to REBOOT in order to complete the removal of unbound\n             %bYou will be asked to confirm BEFORE proceeding with the REBOOT\n\n' "${cBRED}" "${cBRED}"
-            printf '%by%b = Are you sure you want to uninstall unbound?\n' "${cBYEL}" "${cRESET}"
-            printf '%bn%b = Cancel\n' "${cBYEL}" "${cRESET}"
-            printf '%be%b = Exit Script\n' "${cBYEL}" "${cRESET}"
+            #printf '%by%b = Are you sure you want to uninstall unbound? Reply Y or ENTER to CANCEL\n' "${cBYEL}" "${cRESET}"
+            echo -e $cRESET"Press$cBRED Y$cRESET to${cBRED} REMOVE ${cRESET}unbound ${cRESET}or press$cBGRE [Enter] to CANCEL"
             printf '\n%bOption ==>%b ' "${cBYEL}" "${cRESET}"
             read -r "menu3"
             case "$menu3" in
-                y)
+                Y)
                     remove_existing_installation
                     local REMOVED=1                     # v2.00
                     break
                 ;;
-                n)
-                    welcome_message
-                    break
-                ;;
-                e)
-                    exit_message
-                    break
-                ;;
                 *)
-                    printf '%bInvalid Option%b %s%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu3" "$cRESET"
+                    break
                 ;;
             esac
         done
@@ -1137,11 +1135,11 @@ download_file() {
             martineau)
                 GITHUB_DIR=$GITHUB_MARTINEAU
             ;;
-            rgnldo)
-                GITHUB_DIR=$GITHUB_RGNLDO
-            ;;
             jackyaz)
                 GITHUB_DIR=$GITHUB_JACKYAZ                      # v2.02
+            ;;
+            dev)
+                GITHUB_DIR=$GITHUB_MARTINEAU_DEV
             ;;
         esac
 
@@ -1296,25 +1294,25 @@ Customise_config() {
 
     if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
          echo -e $cBCYA"Retrieving Custom unbound configuration"$cBGRA
-         #download_file $CONFIG_DIR unbound.conf jackyaz                 # v2.02
+         #download_file $CONFIG_DIR unbound.conf jackyaz                # v2.02
          download_file $CONFIG_DIR unbound.conf martineau               # v2.04
     else
          echo -e $cBCYA"Custom unbound configuration download ${cBRED}skipped$cRESET ('${cBMAG}keepconfig$cRESET' specified)"$cBGRA
     fi
 
      # Entware creates a traditional '/opt/etc/unbound' directory structure so spoof it         # v1.07
-     [ -f /opt/etc/unbound/unbound.conf ] && mv /opt/etc/unbound/unbound.conf /opt/etc/unbound/unbound.conf.Example
-     ln -s /opt/var/lib/unbound/unbound.conf /opt/etc/unbound/unbound.conf
+     #[ -f /opt/etc/unbound/unbound.conf ] && mv /opt/etc/unbound/unbound.conf /opt/etc/unbound/unbound.conf.Example    # v2.05
+     ln -s /opt/var/lib/unbound/unbound.conf /opt/etc/unbound/unbound.conf 2>/dev/null
 
      chown nobody /opt/var/lib/unbound                                          # v1.10
 
      if [ "$KEEPACTIVECONFIG" != "Y" ];then                                 # v1.27
-         # Tag the 'unbound.conf' - useful when using multiple configs for testing  # v1.19
 
-         local TAG="# rgnldo Github Version vx.xx (Date Loaded by unbound_manager "$(date)")" # v1.19
+         local TAG="Date Loaded by unbound_manager "$(date)")"
 
-         #echo -e $cBCYA"Tagged 'unbound.conf' '$TAG' and backed up to '/opt/share/unbound/configs/reset.conf'"$cRESET   # v1.19
-         #sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf                                  # v1.19
+         # Timestamp 'unbound.conf'
+         [ -n "$(sed -n '1{/Date Loaded/p};q' /opt/var/lib/unbound/unbound.conf ${CONFIG_DIR}unbound.conf)" ] && sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+
          # Backup the config to easily restore it 'rl reset[.conf]'
          cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf      # v1.19
      fi
@@ -1428,16 +1426,17 @@ Enable_Logging() {                                          # v1.07
      fi
      if [ "$ANS" == "y"  ];then
          if [ -n "$(grep -oE "#[[:space:]]*verbosity:" ${CONFIG_DIR}unbound.conf)" ];then       # v1.27
-            sed -i '/# verbosity:/,/# log-replies: yes/s/^# //' ${CONFIG_DIR}unbound.conf
+            #sed -i '/#verbosity:/,/#log-replies: yes/s/^# //' ${CONFIG_DIR}unbound.conf
             Uncomment_config_options "verbosity:" "log-replies:" "uncomment"                    # v1.27
-            echo -e $cBCYA"unbound Logging enabled - $(grep -F 'verbosity:' ${CONFIG_DIR}unbound.conf)"$cRESET
+
+            echo -e $cBCYA"unbound Logging enabled - 'verbosity:" $(Get_unbound_config_option "verbosity:")"'"$cRESET
          fi
      else
         sed -i '/# logfile:/s/^# //' ${CONFIG_DIR}unbound.conf
      fi
 
      # @dave14305 recommends 'log-time-ascii: yes'                          # v1.16
-     [ -z "$(grep "log-time-ascii:" ${CONFIG_DIR}unbound.conf)" ] && sed -i '/^logfile: /alog-time-ascii: yes' ${CONFIG_DIR}unbound.conf    #v1.19
+     #[ -z "$(grep "log-time-ascii:" ${CONFIG_DIR}unbound.conf)" ] && sed -i '/^logfile: /alog-time-ascii: yes' ${CONFIG_DIR}unbound.conf    #v1.19
 }
 Enable_unbound_statistics() {
 
@@ -1833,14 +1832,14 @@ install_unbound() {
             service restart_dnsmasq >/dev/null      # v1.18 Redundant? - S61unbound now reinstates 'POSTCMD=service restart_dnsmasq'
 
             if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
-                local TAG="# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_manager "$(date)")" # v1.19
+                #local TAG="# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_manager "$(date)")" # v1.19
                 #echo -e $cBCYA"Tagged 'unbound.conf' '$TAG' and backed up to '/opt/share/unbound/configs/user.conf'"$cRESET
                 # Backup the config to easily restore it 'rl user[.conf]'   # v1.19
                 cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/user.conf    # v1.19
 
                 #sed -i "1i$TAG" /opt/share/unbound/configs/user.conf    # v1.19
 
-                cmp -s ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf || sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf # v1.19
+                #cmp -s ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf || sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf # v1.19
                 echo -e $cBGRE"\n\tInstallation of unbound completed\n"     # v1.04
             fi
         else
