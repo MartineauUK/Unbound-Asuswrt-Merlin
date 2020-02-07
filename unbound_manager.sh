@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.05
+#============================================================================================ © 2019-2020 Martineau v2.06
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -46,7 +46,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 06-Feb-2020
+# Last Updated Date: 07-Feb-2020
 #
 # Description:
 #
@@ -61,25 +61,26 @@
 #
 ####################################################################################################
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH             # v1.15 Fix by SNB Forum Member @Cam
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.05"
+VERSION="2.06"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
 GITHUB_MARTINEAU_DEV="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/dev"
-GITHUB_DIR=$GITHUB_MARTINEAU                                # v1.08 default for script
+GITHUB_DIR=$GITHUB_MARTINEAU                       # v1.08 default for script
 CONFIG_DIR="/opt/var/lib/unbound/"
 UNBOUNCTRLCMD="unbound-control -c ${CONFIG_DIR}unbound.conf"    # using the '-c' parameter is recommended v1.27
 ENTWARE_UNBOUND="unbound-control-setup unbound-control unbound-anchor unbound-daemon unbound-checkconf"         # v2.02
-SILENT="s"                                                  # Default is no progress messages for file downloads # v1.08
-ALLOWUPGRADE="Y"                                            # Default is allow script download from Github      # v1.09
-CHECK_GITHUB=1                                              # Only check Github MD5 every nn times
-MAX_OPTIONS=5                                               # Available Installation Options 1 thru 5 see $AUTO_REPLYx
-USER_OPTION_PROMPTS="?"                                     # Global reset if ANY Auto-Options specified
-CURRENT_AUTO_OPTIONS=                                       # List of CURRENT Auto Reply Options
-DIV_DIR="/opt/share/diversion/list/"                        # diversion directory v1.25
-KEEPACTIVECONFIG="N"                                        # During install/update retrieve basic 'unbound.conf' GitHub
+SILENT="s"                                         # Default is no progress messages for file downloads # v1.08
+ALLOWUPGRADE="Y"                                   # Default is allow script download from Github      # v1.09
+CHECK_GITHUB=1                                     # Only check Github MD5 every nn times
+MAX_OPTIONS=5                                      # Available Installation Options 1 thru 5 see $AUTO_REPLYx
+USER_OPTION_PROMPTS="?"                            # Global reset if ANY Auto-Options specified
+CURRENT_AUTO_OPTIONS=                              # List of CURRENT Auto Reply Options
+DIV_DIR="/opt/share/diversion/list/"               # diversion directory v1.25
+KEEPACTIVECONFIG="N"                               # During install/update download 'unbound.conf' from GitHub; "Y" - skip download
+USE_GITHUB_DEV="N"                                 # During install/update download from GitHub 'master'; "Y" - download from 'dev' branch 2.06
 
 
 # Uncomment the line below for debugging
@@ -98,13 +99,11 @@ SayT(){
    echo -e $$ $@ | logger -t "($(basename $0))"
 }
 # shellcheck disable=SC2034
-ANSIColours() {
-
+ANSIColours () {
     cRESET="\e[0m";cBLA="\e[30m";cRED="\e[31m";cGRE="\e[32m";cYEL="\e[33m";cBLU="\e[34m";cMAG="\e[35m";cCYA="\e[36m";cGRA="\e[37m"
     cBGRA="\e[90m";cBRED="\e[91m";cBGRE="\e[92m";cBYEL="\e[93m";cBBLU="\e[94m";cBMAG="\e[95m";cBCYA="\e[96m";cBWHT="\e[97m"
     aBOLD="\e[1m";aDIM="\e[2m";aUNDER="\e[4m";aBLINK="\e[5m";aREVERSE="\e[7m"
-    cRED_="\e[41m";cGRE_="\e[42m"
-
+    cWRED="\e[41m";cWGRE="\e[42m";cWYEL="\e[43m";cWBLU="\e[44m";cWMAG="\e[45m";cWCYA="\e[46m";cWGRA="\e[47m"
 }
 Chk_Entware() {
 
@@ -570,11 +569,17 @@ welcome_message() {
                 ;;
                 1|2|2*|i|iu|i*|"i?")
 
-                KEEPACTIVECONFIG="N"                                # v1.27
-                if [ -n "$(echo "$menu1" | grep -o "keepconfig")" ];then    # v1.27
-                    KEEPACTIVECONFIG="Y"                            # v1.27 Explicitly keep current 'unbound.conf'
-                    menu1="$(echo "$menu1" | sed 's/keepconfig//g')"
-                fi
+                    KEEPACTIVECONFIG="N"                                # v1.27
+                    if [ -n "$(echo "$menu1" | grep -o "keepconfig")" ];then    # v1.27
+                        KEEPACTIVECONFIG="Y"                            # v1.27 Explicitly keep current 'unbound.conf'
+                        menu1="$(echo "$menu1" | sed 's/keepconfig//g')"
+                    fi
+
+                    USE_GITHUB_DEV="N"                                  # v2.06
+                    if [ -n "$(echo "$menu1" | grep -o "dev")" ];then   # v2.06
+                        USE_GITHUB_DEV="Y"                              # v2.06 Use Github 'dev' branch rather than 'master'
+                        menu1="$(echo "$menu1" | sed 's/dev//g')"
+                    fi
 
                     [ "$menu1" == "i?" ] && USER_OPTION_PROMPTS="?" # v1.20 Force Selectable User option prompts
                     [ "$menu1" == "1" ] && menu1="1 none"           # v1.21 EASYMENU unbound ONLY install (NO options)
@@ -608,16 +613,17 @@ welcome_message() {
 
                     if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
                         if [ -n "$PREINSTALLCONFIG" ] && [ -f "/opt/share/unbound/configs/"$PREINSTALLCONFIG ] ;then
-                            echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cBGRE or press [Enter] $cRESET to skip\n"
+                            echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}RESTORE ${cRESET}or press $cBGRE[Enter] to CANCEL$cRESET"
                             read -r "ANS"
                             if [ "$ANS" == "y"  ];then                      # v1.27
-                                cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf
+                                cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf # Restore previous config
                                 local TAG="Date Loaded by unbound_manager "$(date)")"
                                 sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
                                 echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
                                 $UNBOUNCTRLCMD reload
 
                             fi
+                            rm "/opt/share/unbound/configs/$PREINSTALLCONFIG"       # v2.06 Always delete the temp backup 'unbound.conf'
                         fi
                     fi
                     local TXT=
@@ -755,7 +761,7 @@ welcome_message() {
                     #break
                 ;;
                 u|uf)                                                       # v1.07
-                    [ "$menu1" == "uf" ] && echo -e $cRED_"\n"Forced Update"\n"$cRESET  # v1.07
+                    [ "$menu1" == "uf" ] && echo -e ${cRESET}$cWRED"\nForced Update"$cRESET"\n"  # v2.06 v1.07
                     update_installer $menu1
                     [ $? -eq 0 ] && exec "$0"                               # v1.18 Only exit if new script downloaded
 
@@ -1129,9 +1135,15 @@ create_required_directories() {
 }
 download_file() {
 
-        DIR="$1"
-        FILE="$2"
-        case "$3" in                                            # v1.08
+        local DIR="$1"
+        local FILE="$2"
+
+        local GITHUB="$3"                                       # v2.06
+        local GITHUB_BRANCH="$4"                                # v2.06
+
+        [ "$GITHUB_BRANCH" == "dev" ] && GITHUB="dev"           # v2.06
+
+        case $GITHUB in                                         # v1.08
             martineau)
                 GITHUB_DIR=$GITHUB_MARTINEAU
             ;;
@@ -1139,7 +1151,8 @@ download_file() {
                 GITHUB_DIR=$GITHUB_JACKYAZ                      # v2.02
             ;;
             dev)
-                GITHUB_DIR=$GITHUB_MARTINEAU_DEV
+                GITHUB_DIR=$GITHUB_MARTINEAU_DEV                # v2.06
+                printf '\t%bGithub "dev branch"%b\n' "${cRESET}$cWRED" "$cRESET"        # v2.06
             ;;
         esac
 
@@ -1295,7 +1308,11 @@ Customise_config() {
     if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
          echo -e $cBCYA"Retrieving Custom unbound configuration"$cBGRA
          #download_file $CONFIG_DIR unbound.conf jackyaz                # v2.02
-         download_file $CONFIG_DIR unbound.conf martineau               # v2.04
+         if [ "$USE_GITHUB_DEV" != "Y" ];then                           # v2.06
+            download_file $CONFIG_DIR unbound.conf martineau            # v2.04
+         else
+            download_file $CONFIG_DIR unbound.conf martineau dev        # v2.06
+         fi
     else
          echo -e $cBCYA"Custom unbound configuration download ${cBRED}skipped$cRESET ('${cBMAG}keepconfig$cRESET' specified)"$cBGRA
     fi
@@ -1321,18 +1338,13 @@ Customise_config() {
      if [ "$(nvram get ipv6_service)" != "disabled" ];then
          echo -e $cBCYA"Customising unbound IPv6 configuration....."$cRESET
             # integration IPV6
-            #do-ip6: no                    # This the default
+            #do-ip6: no                    # This is the default; must be explicitly commented out if IPv6 group ENABLED
             #do-ip6: yes                   #@From:
-            #module-config: "dns64 validator iterator"      # v1.01 perform a query against AAAA record exists
-            #dns64-prefix: 64:FF9B::/96                     # v1.01
             #interface: ::0
             #access-control: ::0/0 refuse
             #access-control: ::1 allow
             #private-address: fd00::/8
             #private-address: fe80::/10    #@@To:
-         #sed -i '/do\-ip6: yes/,/private\-address: fe80::\/10/s/^#//g' ${CONFIG_DIR}unbound.conf    # v1.10
-         #sed -i '/do-ip6: no/d' ${CONFIG_DIR}unbound.conf   # v1.12 Remove conflicting IPv6
-         Uncomment_config_options "module-config: \"validator iterator\"" "comment"         # v2.04
          Uncomment_config_options "do-ip6: yes" "private-address: fe80::" "uncomment"   # v1.28
          Uncomment_config_options "do-ip6: no" "comment"                                # v1.28 Remove default IPv6
      fi
