@@ -368,7 +368,7 @@ welcome_message() {
 
                 HDR="N"                                     # v1.09
             else
-                [ -z "$SUPPRESSMENU" ] && echo -e $cGRE_"\n"$cRESET 2>&1
+                [ -z "$SUPPRESSMENU" ] && echo -e ${cRESET}$cWGRE"\n"$cRESET 2>&1
             fi
             if [ "$1" = "uninstall" ]; then
                 menu1="z"                                   # v1.21
@@ -611,19 +611,22 @@ welcome_message() {
 
                     install_unbound $menu1
 
-                    if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
-                        if [ -n "$PREINSTALLCONFIG" ] && [ -f "/opt/share/unbound/configs/"$PREINSTALLCONFIG ] ;then
-                            echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}RESTORE ${cRESET}or press $cBGRE[Enter] to CANCEL$cRESET"
-                            read -r "ANS"
-                            if [ "$ANS" == "y"  ];then                      # v1.27
-                                cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf # Restore previous config
-                                local TAG="Date Loaded by unbound_manager "$(date)")"
-                                sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
-                                echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-                                $UNBOUNCTRLCMD reload
+                    # Was the Install/Update successful or CANCElled
+                    if [ $? -eq 0 ];then                            # v2.06 0-Successful;1-CANCElled
+                        if [ "$KEEPACTIVECONFIG" != "Y" ];then                          # v1.27
+                            if [ -n "$PREINSTALLCONFIG" ] && [ -f "/opt/share/unbound/configs/"$PREINSTALLCONFIG ] ;then
+                                echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}RESTORE ${cRESET}or press $cBGRE[Enter] to CANCEL$cRESET"
+                                read -r "ANS"
+                                if [ "$ANS" == "y"  ];then                      # v1.27
+                                    cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf # Restore previous config
+                                    local TAG="Date Loaded by unbound_manager "$(date)")"
+                                    sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+                                    echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
+                                    $UNBOUNCTRLCMD reload
 
+                                fi
+                                rm "/opt/share/unbound/configs/$PREINSTALLCONFIG"       # v2.06 Always delete the temp backup 'unbound.conf'
                             fi
-                            rm "/opt/share/unbound/configs/$PREINSTALLCONFIG"       # v2.06 Always delete the temp backup 'unbound.conf'
                         fi
                     fi
                     local TXT=
@@ -1740,7 +1743,7 @@ install_unbound() {
 
             echo -e "\tPress$cBGRE Y$cRESET to$cBGRE continue unbound $ACTION $cRESET or press$cBRED [Enter] to ABORT"$cRESET
             read -r "CONTINUE_INSTALLATION"
-            [ "$CONTINUE_INSTALLATION" != "Y" ] && { echo -e $cBRED"\a\n\tunbound $ACTION CANCELLED!.....\n"$cRESET; exit 1; }
+            [ "$CONTINUE_INSTALLATION" != "Y" ] && { echo -e $cBRED"\a\n\tunbound $ACTION CANCELLED!....."$cRESET; return 1; }  # v2.06
         fi
 
         echo -en $cBCYA"\n${ACTION}ing unbound"$cRESET
@@ -1868,6 +1871,8 @@ install_unbound() {
         echo -en $cRESET
 
         Check_GUI_NVRAM
+
+        return 0                                                    # v2.06
 
         #exit_message                                               # v1.18
 }
