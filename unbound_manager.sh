@@ -2272,7 +2272,7 @@ fi
 
 Check_Lock "$1"
 
-Script_alias "create"               # v1.08
+[ ! -L "/opt/bin/unbound_manager" ] && Script_alias "create"               # v2.06 Hotfix for amtm v1.08
 
 [ -z "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU= || EASYMENU="Y"
 NEW_CONFIG=$(echo "$@" | sed -n "s/^.*config=//p" | awk '{print $1}')                       # v1.22
