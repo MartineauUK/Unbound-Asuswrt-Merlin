@@ -32,7 +32,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 |       o4. Customise CPU/Memory usage (Advanced Users)                |
 |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
 |                                                                      |
-|   z  = Remove Existing unbound Installation                          |
+|   z  = Remove Existing unbound/unbound_manager Installation          |
 |   ?  = About Configuration                                           |
 |                                                                      |
 |     See SNBForums thread https://tinyurl.com/s89z3mm for helpful     |
