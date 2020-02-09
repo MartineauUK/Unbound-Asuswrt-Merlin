@@ -29,7 +29,7 @@
 #                                    |       o4. Customise CPU/Memory usage (Advanced Users)                |
 #                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
 #                                    |                                                                      |
-#                                    |   z  = Remove Existing unbound Installation                          |
+#                                    |   z  = Remove Existing unbound/unbound_manager Installation          |
 #                                    |   ?  = About Configuration                                           |
 #
 #           unbound_manager    recovery
@@ -304,7 +304,7 @@ _quote() {
 
 }
 Show_Advanced_Menu() {
-    printf "%s\t\t\t\t%s\n"         "$MENU_Z" "$MENU_L"
+    printf "%s\t\t%s\n"             "$MENU_Z" "$MENU_L"
     printf "%s\t\t\t\t\t\t%s\n"     "$MENU__" "$MENU_VX"
     printf "%s\t\t\t\t\t\t\t%s\n"   "$MENUW_X" "$MENU_VB"
     printf "\t\t\t\t\t\t\t\t\t%s\n" "$MENU_RL"
@@ -315,7 +315,7 @@ Show_Advanced_Menu() {
 
     printf "\n%s\\n\n"              "$MENUW_DNSSEC"             # v1.28
     printf "%s\\n\n"                "$MENUW_DNSINFO"            # v1.28
-    printf "%s\\n\n"              "$MENUW_LINKS"              # v1.28
+    printf "%s\\n\n"                "$MENUW_LINKS"              # v1.28
     printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
     printf '\n%b[Enter] %bLeave %bAdvanced Tools Menu\n' "${cBGRE}" "$cBCYA" "${cRESET}" # v1.21
 }
@@ -356,7 +356,7 @@ welcome_message() {
                     printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |\n'
                     printf '|                                                                      |\n'
                 if [ -z "$EASYMENU" ];then
-                    printf '|   z  = Remove Existing unbound Installation                          |\n'
+                    printf '|   z  = Remove Existing unbound/unbound_manager Installation          |\n'
                     printf '|   ?  = About Configuration                                           |\n'
                 else
                     printf '|   3 = Advanced Tools                                                 |\n'
@@ -483,7 +483,7 @@ welcome_message() {
                     fi
 
                     MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
-                    MENU_Z="$(printf '%bz %b = Remove Existing unbound Installation\n' "${cBYEL}" "${cRESET}")"
+                    MENU_Z="$(printf '%bz %b = Remove Existing unbound/unbound_manager Installation\n' "${cBYEL}" "${cRESET}")"			# v2.06 Hotfix for amtm
                     MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
                     MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
                     MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -538,7 +538,7 @@ welcome_message() {
                         if [ -n "$ADVANCED_TOOLS" ];then                           # v1.26
                             Show_Advanced_Menu
                         else                                                       # v1.26
-                            printf "%s\t\t\t\t%s\n"        "$MENU_Z" "$MENU_VX"    # v1.11
+                            printf "%s\t\t%s\n"            "$MENU_Z" "$MENU_VX"    # v1.11
                             printf "%s\t\t\t\t\t\t\t%s\n"  "$MENU_3" "$MENU_RL"    # v1.17
                             printf "%s\t\t\t\t\t\t%s\n"    "$MENU__" "$MENU_OQ"
                             echo
@@ -1164,7 +1164,7 @@ download_file() {
             printf '\t%b%s%b downloaded successfully\n' "$cBGRE" "$FILE" "$cRESET"
         else
             printf '\n%b%s%b download FAILED with curl error %s\n\n' "\n\t\a$cBMAG" "'$FILE'" "$cBRED" "$STATUS"
-            printf '\tRerun %bunbound_manager nochk%b and select the %bRemove Existing unbound Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
+            printf '\tRerun %bunbound_manager nochk%b and select the %bRemove Existing unbound/unbound_manager Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
 
             Check_GUI_NVRAM                                     # v1.17
 
