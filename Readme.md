@@ -152,9 +152,9 @@ e  = Exit Script
 Option ==> i?
 ```
 
-**v1.21** now allows dumbing down of the menus (**'Easy Mode'**) and will be used when invoked from **amtm** 
+### **v1.21** now allows dumbing down of the menus (**'Easy Mode'**) and will be the default when invoked from **amtm** ###
 
-(When invoked direct from the commandline the default is **'Advanced Mode'**)
+### (When invoked direct from the commandline the default is **'Advanced Mode'**) ###
 
 ```
 +======================================================================+
