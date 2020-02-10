@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.06
+#============================================================================================ © 2019-2020 Martineau v2.07
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -8,12 +8,12 @@
 #                              Menu: Allow quick install options (3. Advanced Tools will be shown a separate page)
 #                                    |   1 = Install unbound DNS Server                                     |
 #                                    |                                                                      |
-#                                    |   2 = Install unbound DNS Server - Advanced Mode                     |
-#                                    |       o1. Enable unbound Logging                                     |
-#                                    |       o2. Integrate with Stubby                                      |
-#                                    |       o3. Install Ad and Tracker Blocking                            |
-#                                    |       o4. Customise CPU/Memory usage (Advanced Users)                |
-#                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
+#                                    |   2 = Install unbound DNS Server - Advanced Mode        Auto Install |
+#                                    |       o1. Enable unbound Logging                             YES     |
+#                                    |       o2. Integrate with Stubby                               NO     |
+#                                    |       o3. Install Ad and Tracker Blocking                     NO     |
+#                                    |       o4. Customise CPU/Memory usage (Advanced Users)        YES     |
+#                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)    NO     |
 #                                    |                                                                      |
 #                                    |   3 = Advanced Tools  (e.g '? About' and 'z Remove unbound' etc.)    |
 #
@@ -46,7 +46,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 07-Feb-2020
+# Last Updated Date: 10-Feb-2020
 #
 # Description:
 #
@@ -63,7 +63,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.06"
+VERSION="2.07"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -342,20 +342,22 @@ welcome_message() {
                 printf '|                                                                      |\n'
                 printf '| Requirements: USB drive with Entware installed                       |\n'
                 printf '|                                                                      |\n'
-                if [ -z "$EASYMENU" ];then
+                if [ "$EASYMENU" == "N" ];then                  # v2.07
                     printf '|   i = Install unbound DNS Server - Advanced Mode                     |\n'
                 else
                     printf '|   1 = Install unbound DNS Server                                     |\n'
                     printf '|                                                                      |\n'
-                    printf '|   2 = Install unbound DNS Server - Advanced Mode                     |\n'
+                    printf '|   2 = Install unbound DNS Server - Advanced Mode        Auto Install |\n'
                 fi
-                    printf '|       o1. Enable unbound Logging                                     |\n'
-                    printf '|       o2. Integrate with Stubby                                      |\n'
-                    printf '|       o3. Install Ad and Tracker Blocking                            |\n'
-                    printf '|       o4. Customise CPU/Memory usage (%bAdvanced Users%b)                |\n' "$cBRED" "$cRESET"
-                    printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |\n'
-                    printf '|                                                                      |\n'
-                if [ -z "$EASYMENU" ];then
+                local YES_NO="   "                              # v2.07
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cBGRE}YES";   printf '|       o1. Enable unbound Logging                             %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA} no";    printf '|       o2. Integrate with Stubby                              %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA} no";    printf '|       o3. Install Ad and Tracker Blocking                    %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cBGRE}YES";   printf '|       o4. Customise CPU/Memory usage (%bAdvanced Users%b)        %b    %b |\n' "$cBRED" "$cRESET"  "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA} no";    printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)   %b    %b |\n' "$YES_NO" "$cRESET"
+                printf '|                                                                      |\n'
+
+                if [ "$EASYMENU" == "N" ];then                  # v2.07
                     printf '|   z  = Remove Existing unbound/unbound_manager Installation          |\n'
                     printf '|   ?  = About Configuration                                           |\n'
                 else
@@ -465,17 +467,17 @@ welcome_message() {
 
                     if [ -f ${CONFIG_DIR}unbound.conf ]; then                   # v1.06
 
-                        if [ -z "$EASYMENU" ] ;then
+                        if [ "$EASYMENU" == "N" ] ;then
                             MENU_I="$(printf '%bi %b = Update unbound Installation %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
                         else                                                    # v1.21
-                            [ -z "$ADVANCED_TOOLS" ] && MENU_I="$(printf '%b1 %b = Update unbound Installation  %b%s%b\n%b2 %b = Update unbound Advanced Installation %b%s%b\n%b3 %b = Advanced Tools\n\n ' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET" "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET"  "${cBYEL}" "${cRESET}" )"
+                            [ -z "$ADVANCED_TOOLS" ] && MENU_I="$(printf '%b1 %b = Update unbound Installation  %b%s%b\n%b2 %b = Update unbound Installation Advanced Mode %b%s%b\n%b3 %b = Advanced Tools\n\n ' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET" "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET"  "${cBYEL}" "${cRESET}" )"
                         fi
 
                         MENU_RS="$(printf '%brs%b = %bRestart%b (or %bStart%b) unbound\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "$cBGRE" "${cRESET}")"
                         #MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit; vh=View Example Configuration) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
                         MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
                     else
-                        if [ -z "$EASYMENU" ] ;then
+                        if [ "$EASYMENU" == "N" ] ;then
                             MENU_I="$(printf '%bi %b = Begin unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
                         else
                             [ -z "$ADVANCED_TOOLS" ] && MENU_I="$(printf '%b1 %b = Begin unbound Installation Process %b%s%b\n%b2 %b = Begin unbound Advanced Installation Process %b%s%b\n%b3 %b = Advanced Tools\n\n ' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET" "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET"  "${cBYEL}" "${cRESET}" )"
@@ -483,7 +485,7 @@ welcome_message() {
                     fi
 
                     MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
-                    MENU_Z="$(printf '%bz %b = Remove Existing unbound/unbound_manager Installation\n' "${cBYEL}" "${cRESET}")"			# v2.06 Hotfix for amtm
+                    MENU_Z="$(printf '%bz %b = Remove Existing unbound/unbound_manager Installation\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
                     MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
                     MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
                     MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -530,7 +532,7 @@ welcome_message() {
                     fi
 
                     # v1.08 Use 'context aware' horizontal menu!!!! Radical eh?
-                    if [ -z "$EASYMENU" ];then
+                    if [ "$EASYMENU" == "N" ];then
                         if [ -z "$ADVANCED_TOOLS" ];then                           # v1.21
                             printf "%s\t\t%s\n"              "$MENU_I" "$MENU_L"
                         fi
@@ -555,8 +557,8 @@ welcome_message() {
                     fi
                 fi
 
-                # Show 'aasy'/'adv[anced]' mode?
-                [ -z "$EASYMENU" ] && TXT="A:" || TXT="E:"
+                # Show 'E[asy]'/'A[dvanced]' mode?
+                [ "$EASYMENU" == "N" ] && TXT="A:" || TXT="E:"      # v2.07
                 printf '\n%b%s%bOption ==>%b ' "$cBCYA" "$TXT" "${cBYEL}" "${cRESET}"
                 read -r "menu1"
             fi
@@ -584,7 +586,8 @@ welcome_message() {
                     [ "$menu1" == "i?" ] && USER_OPTION_PROMPTS="?" # v1.20 Force Selectable User option prompts
                     [ "$menu1" == "1" ] && menu1="1 none"           # v1.21 EASYMENU unbound ONLY install (NO options)
                     [ "$menu1" == "2?" ] && USER_OPTION_PROMPTS="?" # v1.21 Force Selectable User option prompts
-                    [ "$menu1" == "2" ] && menu1="2 all"            # v1.21 EASYMENU Force Auto Reply to Selectable User option prompts
+                    #[ "$menu1" == "2" ] && menu1="2 all"            # v1.21 EASYMENU Force Auto Reply to Selectable User option prompts
+                    [ "$menu1" == "2" ] && menu1="2 1 4"            # v2.07 EASYMENU ONLY Auto Reply to options 1 & 4 (logging and Tweaks)
 
                     case "$(echo "$menu1" | awk '{print $2}' )" in
                         all)
@@ -757,7 +760,7 @@ welcome_message() {
                             ;;
                     esac
                 ;;
-                s|sa|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                        # v1.08
+                s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                       # v2.07 v1.08
 
                     echo
                     unbound_Control "$menu1"                                # v1.16
@@ -863,8 +866,24 @@ welcome_message() {
                     # Host                                     Address                        Flags      Expires
                     kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -F dnsmasq
                 ;;
-                easy|advanced)
-                    [ "$menu1" == "easy"  ] && EASYMENU="Y" || EASYMENU=     # v1.21 Flip from 'Easy' to 'Advanced'
+                easy|adv|advanced)                                          # v2.07
+                    # v2.07 When unbound_manager invoked from amtm, 'easy' mode is the default.
+                    #       Allow user to save their preferred mode e.g. 'advanced' as the default across amtm sessions
+                    # @kernol finds it too taxing to type in 8-chars, so add 'adv' as a 3-char alternative
+                    #       https://github.com/RMerl/asuswrt-merlin/wiki/Addons-API#custom-settings
+                    case "$menu1" in                                        # v2.07
+                        easy)
+                            EASYMENU="Y"
+                            am_settings_set unbound_mode "Easy"             # v2.07 Save mode across amtm sessions
+                            echo -en $cRESET"\nEasy Menu mode ${cBGRE}ENABLED"$cRESET
+                        ;;
+                        adv|advanced)
+                            EASYMENU="N"
+                            am_settings_set unbound_mode "Advanced"         # v2.07 Save mode across amtm sessions
+                            echo -en $cRESET"\nAdvanced Menu mode ${cBGRE}ENABLED"$cRESET
+                        ;;
+                    esac
+
                     echo -e $cBGRA
                     ;;
                 e)
@@ -1208,7 +1227,11 @@ Option_Stubby_Integration() {
      fi
 
      if [ "$USER_OPTION_PROMPTS" == "?" ];then
-        echo -e "\nDo you want to integrate Stubby with unbound?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+        # v2.07 Stubby-Integration defeats main selling point of unbound i.e. being your own (secure) Recursive DNS Resolver
+        echo -e "\nWarning: This will DISABLE being able to be your ${aUNDER}own trusted Recursive DNS Resolver\n"$cRESET
+        echo -e "         Click the link below, and read BEFORE answering!\n"
+        echo -e $cBYEL"         https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/blob/master/Readme.md#a-very-succinct-description-of-the-implicationuse-of-the-option-stubby-integration"$cRESET
+        echo -e "\nSo, do you STILL want to integrate Stubby with unbound?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
         read -r "ANS"
      fi
      [ "$ANS" == "y"  ] && Stubby_Integration
@@ -1478,10 +1501,24 @@ unbound_Control() {
 
     local RESET="_noreset"                  # v1.08
     local RETVAL=$3                         # v2.04
+    local ADDFILTER=
 
+    if [ $(echo "$@" | wc -w ) -eq 2 ];then
+        local ADDFILTER=$(echo "$@" | awk '{print $2}')               # v2.07
+    fi
 
     case $1 in
-        s)
+        sa*)                                                            # v2.07
+            if [ -n "$(echo "$@" | sed -n "s/^.*filter=//p")" ];then    # v2.07 allow very basic 'or' 'filtering'
+                local FILTER=$(echo "$@" | sed -n "s/^.*filter=//p" | awk '{print $1}') # v2.07
+                # NOTE: 's+' aka 'extended-stats: yes' must be active if you expect 'sa filter=thread|total' to work!
+                $UNBOUNCTRLCMD stats$RESET  | sort | grep -E "$FILTER" | column # v2.07
+            else
+                $UNBOUNCTRLCMD stats$RESET  | column
+            fi
+
+        ;;
+        s|s*)                                                               # v2.07
             # xxx-cache.count values won't be shown without 'extended-statistics: yes' see 's+'/'s-' menu option
             $UNBOUNCTRLCMD stats$RESET | grep -E "total\.|cache\.count"  | column          # v1.08
             # Calculate %Cache HIT success rate
@@ -1493,10 +1530,15 @@ unbound_Control() {
                 local PCT=0                                             # v2.00
             fi
             printf "\n%bSummary: Cache Hits success=%3.2f%%" "$cRESET" "$PCT"
+
+            if [ -n "$ADDFILTER" ];then                                 # v2.07 allow display of additional stat value(s)
+                # NOTE: 's+' aka 'extended-stats: yes' must be ACTIVE if you expect 's thread' to work!
+                echo -e "\n"
+                $UNBOUNCTRLCMD stats$RESET  | grep -E "$ADDFILTER" | column
+            fi
+
         ;;
-        sa)
-            $UNBOUNCTRLCMD stats$RESET  | column
-        ;;
+
         "s+"|"s-")                                                      # v1.18
             CONFIG_VARIABLE="extended-statistics"
             [ "$1" == "s+" ] && CONFIG_VALUE="yes" || CONFIG_VALUE="no"
@@ -1801,10 +1843,11 @@ install_unbound() {
         if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
             echo -en $cBGRE
             unbound-checkconf               # v2.03
+            echo -en $cRESET
         else
             echo -en $cBRED"\a"
             unbound-checkconf               # v2.03
-            echo -en $cBCYA"Restarting dnsmasq....."$cBGRE          # v1.13
+            echo -en $cBCYA"Restarting dnsmasq....."$cGRE           # v1.13
             service restart_dnsmasq                                 # v1.13
             echo -e $cBRED"\a\n\t***ERROR FATAL...ABORTing!\n"$cRESET
 
@@ -1925,6 +1968,9 @@ Record_CNT() {                                                                  
 Check_GUI_NVRAM() {
 
         local ERROR_CNT=0
+        local HTTP_TYPE="http"                                                          # v2.07
+        local HTTP_PORT=$(nvram get http_lanport)                                       # v2.07
+        [ "$(nvram get le_acme_auth)" == "https" ] && { local HTTP_TYPE="https"; local HTTP_PORT=$(nvram get https_lanport) ; }         # v2.07
 
         echo -e $cBCYA"\n\tRouter Configuration recommended pre-reqs status:\n" 2>&1    # v1.04
         # Check Swap file
@@ -1932,29 +1978,35 @@ Check_GUI_NVRAM() {
 
         #   DNSFilter: ON - mode Router
         if [ $(nvram get dnsfilter_enable_x) -eq 0 ];then
-            echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is OFF! $cRESET \t\t\t\t\t\tsee http://$(nvram get lan_ipaddr)/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering" 2>&1
+            echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering" 2>&1
             ERROR_CNT=$((ERROR_CNT + 1))
         else
             echo -e $cBGRE"\t[✔] DNS Filter=ON" 2>&1
             #   DNSFilter: ON - Mode Router ?
-            [ $(nvram get dnsfilter_mode) != "11" ] && { echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET \t\t\t\tsee http://$(nvram get lan_ipaddr)/DNSFilter.asp ->LAN->DNSFilter"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] DNS Filter=ROUTER" 2>&1
+            [ $(nvram get dnsfilter_mode) != "11" ] && { echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET \t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp ->LAN->DNSFilter"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] DNS Filter=ROUTER" 2>&1
         fi
 
         if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then               # v1.26 HotFix @dave14305
-            [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee http://$(nvram get lan_ipaddr)/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+            [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
         else
             #   Tools/Other WAN DNS local cache: NO # for the FW Merlin development team, it is desirable and safer by this mode.
-            [ $(nvram get dns_local_cache) != "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR WAN: Use local caching DNS server as system resolver=YES $cRESET \t\tsee http://$(nvram get lan_ipaddr)/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO" 2>&1
+            [ $(nvram get dns_local_cache) != "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR WAN: Use local caching DNS server as system resolver=YES $cRESET \t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO" 2>&1
 
-            #   Configure NTP server Merlin
-            [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee http://$(nvram get lan_ipaddr)/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+            #   Originally, a check was made to ensure the native RMerlin NTP server is configured.
+            # v2.07, some wish to use ntpd by @JackYaz
+            #if [ "$(/usr/bin/which ntpd)" == "/opt/sbin/ntpd" ];then
+            if Chk_Entware "ntpd"; then
+                [ -n "$(/opt/etc/init.d/S77ntpd check | grep "dead")" ] && { echo -e $cBYEL"\a\t[✖] ***Warning Entware NTP Server installed but not running? $cRESET \t\t\t\t\t"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Entware NTP server is running" 2>&1
+            else
+                [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+            fi
         fi
 
         # Check GUI 'Enable DNS Rebind protection'          # v1.18
-        [ "$(nvram get dns_norebind)" == "1" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable DNS Rebind protection=YES $cRESET \t\t\t\t\tsee http://$(nvram get lan_ipaddr)/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable DNS Rebind protection=NO" 2>&1
+        [ "$(nvram get dns_norebind)" == "1" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable DNS Rebind protection=YES $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable DNS Rebind protection=NO" 2>&1
 
         # Check GUI 'Enable DNSSEC support'                 # v1.15
-        [ "$(nvram get dnssec_enable)" == "1" ] && echo -e $cBRED"\a\t[✖] Warning Enable DNSSEC support=YES $cRESET \t\t\t\t\t\tsee http://$(nvram get lan_ipaddr)/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1 || echo -e $cBGRE"\t[✔] Enable DNSSEC support=NO" 2>&1
+        [ "$(nvram get dnssec_enable)" == "1" ] && echo -e $cBRED"\a\t[✖] Warning Enable DNSSEC support=YES $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1 || echo -e $cBGRE"\t[✔] Enable DNSSEC support=NO" 2>&1
 
         #if [ "$1" != "install" ];then                      # v1.18 Don't bother reporting the options on "install"
             [ "$USER_OPTION_PROMPTS" != "?" ] && local TXT="$cRESET Auto Reply='y' for User Selectable Options ('$CURRENT_AUTO_OPTIONS')" || local TEXT=        # v1.20
@@ -2187,15 +2239,22 @@ _quote() {
                 awk -F# '{print $1}' $FN | cut -d' ' -f2- | sed 's/ /\n/g' | grep . | sort > ${DIVERSION}X
                 if [ "$TYPE" == "adblock" ];then
                     awk '{print "local-zone: \""$1"\" always_nxdomain"}' ${DIVERSION}X > $DIVERSION
-                    /opt/bin/diff -uZ --suppress-common-lines $UNBOUNDADBLOCK $DIVERSION  | sed '/^\+/!d s/^\+//' | grep -vF "++"  > $UNBOUND   # v1.25
+
+                    if [ -f $UNBOUNDADBLOCK ];then                  # v2.07
+                        /opt/bin/diff -uZ --suppress-common-lines $UNBOUNDADBLOCK $DIVERSION  | sed '/^\+/!d s/^\+//' | grep -vF "++"  > $UNBOUND   # v1.25
+                    fi
                 else
                     # Pixelserv redirect records, but at this stage we only want to see if a site entry already exists,
                     #           rather than a 'redirect' pair
                     awk '{print "local-zone: \""$1"\" always_nxdomain"}' ${DIVERSION}X > $DIVERSION
-                    /opt/bin/diff -uZ --suppress-common-lines $UNBOUNDADBLOCK $DIVERSION  | sed '/^\+/!d s/^\+//' | grep -vF "++" > $UNBOUND    # v1.25
-                    # Now convert the new unbound entries in the 'redirect' pairs
-                    awk -F'"' '{print $2}' $UNBOUND > ${DIVERSION}X
-                    awk -v pixelservip=${IP} '{print "local-zone: \""$1"\" redirect\nlocal-data: \""$1"\" A "pixelservip}' ${DIVERSION}X > $UNBOUND
+
+                    if [ -f $UNBOUNDADBLOCK ];then                  # v2.07
+                        /opt/bin/diff -uZ --suppress-common-lines $UNBOUNDADBLOCK $DIVERSION  | sed '/^\+/!d s/^\+//' | grep -vF "++" > $UNBOUND    # v1.25
+
+                        # Now convert the new unbound entries in the 'redirect' pairs
+                        awk -F'"' '{print $2}' $UNBOUND > ${DIVERSION}X
+                        awk -v pixelservip=${IP} '{print "local-zone: \""$1"\" redirect\nlocal-data: \""$1"\" A "pixelservip}' ${DIVERSION}X > $UNBOUND
+                    fi
                 fi
             else
                 # Whitelist of URLs
@@ -2203,8 +2262,10 @@ _quote() {
                 awk -F# '{print $1}' $FN | grep . | sort > $DIVERSION
                 # diff -uZ --suppress-common-lines /opt/var/lib/unbound/adblock/permlist  /opt/share/diversion/list/whitelist  | sed '/^\+/ s/^\+//' | sort
                 # Only extract lines that start with '+' and delete the '+'
-                /opt/bin/diff -uZ --suppress-common-lines $UNBOUNDADBLOCK $DIVERSION | sed '/^\+/ s/^\+//' | sort > $UNBOUND
-                sed -i '1,/^@@.*/d' $UNBOUND    # Remove the DIFF info lines for the first file $UNBOUNDADBLOCK
+                if [ -f $UNBOUNDADBLOCK ];then
+                    /opt/bin/diff -uZ --suppress-common-lines $UNBOUNDADBLOCK $DIVERSION | sed '/^\+/ s/^\+//' | sort > $UNBOUND
+                    sed -i '1,/^@@.*/d' $UNBOUND    # Remove the DIFF info lines for the first file $UNBOUNDADBLOCK
+                fi
             fi
 
         done
@@ -2226,13 +2287,17 @@ _quote() {
                 DESC="URLs"
             fi
 
-            local CNT_UNBOUNDADBLOCK=$(wc -l < $UNBOUNDADBLOCK )
-            if [ "$TYPE" == "adblock" ] || [ "$TYPE" == "URL" ] ;then
-                local CNT_DIVERSION=$(sort $UNBOUNDADBLOCK $UNBOUND | uniq | wc -l)
+            [ -f $UNBOUNDADBLOCK ] && local CNT_UNBOUNDADBLOCK=$(wc -l < $UNBOUNDADBLOCK ) || CNT_UNBOUNDADBLOCK=0  # v2.07
+
+            if [ "$TYPE" == "adblock" ] || [ "$TYPE" == "URL" ];then
+                [ -f $UNBOUNDADBLOCK ] && local CNT_DIVERSION=$(sort $UNBOUNDADBLOCK $UNBOUND | uniq | wc -l) || local CNT_DIVERSION=$(awk -F# '{print $1}' ${DIV_DIR}$FN | cut -d' ' -f2- | sed 's/ /\n/g' | grep .  | wc -l)      # v2.07
             else
-                cp $UNBOUND ${UNBOUND}X
-                sed -i 's/redirect/always_nxdomain/; '/local-data:/d'' ${UNBOUND}X
-                local CNT_DIVERSION=$(sort $UNBOUNDADBLOCK ${UNBOUND}X | uniq | wc -l)
+                if [ -f $UNBOUND ];then                     # v2.07
+                    cp $UNBOUND ${UNBOUND}X
+                    sed -i 's/redirect/always_nxdomain/; '/local-data:/d'' ${UNBOUND}X
+                fi
+
+                [ -f $UNBOUNDADBLOCK ] && local CNT_DIVERSION=$(sort $UNBOUNDADBLOCK ${UNBOUND}X | uniq | wc -l) || local CNT_DIVERSION=$(awk -F# '{print $1}' ${DIV_DIR}$FN | cut -d' ' -f2- | sed 's/ /\n/g' | grep . | wc -l)    # v2.07
                 rm ${UNBOUND}X  2>/dev/null
             fi
 
@@ -2258,6 +2323,8 @@ Main() { true; } # Syntax that is Atom Shellchecker compatible!
 
 ANSIColours
 
+source /usr/sbin/helper.sh                                  # v2.07 Required for external 'am_settings_set()/am_settings_get()'
+
 # Need assistance ?
 if [ "$1" == "-h" ] || [ "$1" == "help" ];then
     clear                                                   # v1.21
@@ -2272,9 +2339,19 @@ fi
 
 Check_Lock "$1"
 
-[ ! -L "/opt/bin/unbound_manager" ] && Script_alias "create"               # v2.06 Hotfix for amtm v1.08
+[ ! -L "/opt/bin/unbound_manager" ] && Script_alias "create"                # v2.06 Hotfix for amtm v1.08
 
-[ -z "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU= || EASYMENU="Y"
+[ -n "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU="Y" || EASYMENU="N"                    # v2.07
+CUSTOM_NVRAM="$(am_settings_get unbound_mode)"                              # v2.07 Retrieve value saved across amtm sessions
+case "$CUSTOM_NVRAM" in                                                     # v2.07
+    Advanced)
+        EASYMENU="N"
+    ;;
+    Easy)
+        EASYMENU="Y"
+    ;;
+esac
+
 NEW_CONFIG=$(echo "$@" | sed -n "s/^.*config=//p" | awk '{print $1}')                       # v1.22
 if [    -n "$NEW_CONFIG" ];then
     [ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"     # v1.22
