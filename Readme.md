@@ -21,7 +21,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 +======================================================================+
 |  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
 |                                                                      |
-|                      Version 2.06 by Martineau                       |
+|                      Version 2.07 by Martineau                       |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
@@ -158,26 +158,25 @@ Option ==> i?
 
 ```
 +======================================================================+
-|  Welcome to the unbound-Manager/Installation-Asuswrt-Merlin script   |
-|  Version 1.21 by Martineau                                           |
+|  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
+|                                                                      |
+|                      Version 2.07 by Martineau                       |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
 |   1 = Install unbound DNS Server                                     |
 |                                                                      |
-|   2 = Install unbound DNS Server - Advanced Mode                     |
-|       o1. Enable unbound Logging                                     |
-|       o2. Integrate with Stubby                                      |
-|       o3. Install Ad and Tracker Blocking                            |
-|       o4. Customise CPU/Memory usage (Advanced Users)                |
-|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
+|   2 = Install unbound DNS Server - Advanced Mode        Auto Install |
+|       o1. Enable unbound Logging                             YES     |
+|       o2. Integrate with Stubby                               no     |
+|       o3. Install Ad and Tracker Blocking                     no     |
+|       o4. Customise CPU/Memory usage (Advanced Users)        YES     |
+|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)    no     |
 |                                                                      |
 |   3 = Advanced Tools                                                 |
 |                                                                      |
-| You can also use this script to uninstall unbound to back out the    |
-| changes made during the installation. See the project repository at  |
-|         ** deleted **                                                |
-|     for helpful user tips on unbound usage/configuration.            |
+|     See SNBForums thread https://tinyurl.com/s89z3mm for helpful     |
+|         user tips on unbound usage/configuration.                    |
 +======================================================================+
 
 unbound (pid 20593) is running... uptime: 0 Days, 16:45:47 version: 1.9.3 (# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer Mon Jan 13 19:42:33 GMT 2020))
