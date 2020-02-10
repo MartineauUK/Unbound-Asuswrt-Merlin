@@ -206,3 +206,13 @@ e  = Exit Script
 
 E:Option ==> [ easy | advanced ]
 ```
+
+# A very succinct description of the implication/use of the option Stubby-Integration #
+
+Courtesty of SNB Forum member @dave14305 [post _1177_](https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/page-59#post-549312 "SNB Forums")
+
+Instead of relying on a Google DNS, Cloudflare, Quad9 or NextDNS, Unbound will let you perform the same DNS functions as those public resolvers. Unbound will deal directly with the authoritative name server (i.e. domain owner) instead of relying on a third-party to do that. You cut out that middle-man. If you only want to use Unbound as another forwarder, it's won't really offer much benefit over the built-in dnsmasq.
+
+When Unbound gets a DNS request from a client, it will not use a single upstream server like you may be used to. Say it gets a request to lookup www.snbforums.com. First it will query the root DNS servers to see what server is the owner of the .com top-level domain. Once it knows that server identity, it will query that one to see which DNS nameserver owns snbforums.com within the .com domain. Once it gets that response, it will query the snbforums.com DNS server to get the IP for www within snbforums.com.
+
+It does all that directly between you and those servers, without sharing your DNS query data with a third-party DNS resolver like the ones I mentioned earlier. 
