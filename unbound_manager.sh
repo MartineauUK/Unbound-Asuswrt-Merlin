@@ -1995,7 +1995,7 @@ Check_GUI_NVRAM() {
             #   Originally, a check was made to ensure the native RMerlin NTP server is configured.
             # v2.07, some wish to use ntpd by @JackYaz
             #if [ "$(/usr/bin/which ntpd)" == "/opt/sbin/ntpd" ];then
-            if Chk_Entware "ntpd"; then
+            if [ -f /opt/etc/init.d/S77ntpd ];then
                 [ -n "$(/opt/etc/init.d/S77ntpd check | grep "dead")" ] && { echo -e $cBYEL"\a\t[✖] ***Warning Entware NTP Server installed but not running? $cRESET \t\t\t\t\t"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Entware NTP server is running" 2>&1
             else
                 [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
