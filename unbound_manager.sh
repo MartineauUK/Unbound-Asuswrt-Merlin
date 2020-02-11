@@ -817,6 +817,23 @@ EOF
 
                     fi
                 ;;
+                sd|dnsmasqstats)                                            # v1.18
+
+                    [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
+                    # Is scribe / Diversion running?
+                    if grep -q diversion /etc/dnsmasq.conf ;then
+                        [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"     # v1.28
+                    fi
+                    echo -e $cBGRA
+                    # cache size 0, 0/0 cache insertions re-used unexpired cache entries.
+                    # queries forwarded 4382, queries answered locally 769
+                    # pool memory in use 0, max 0, allocated 0
+                    # server 127.0.0.1#53535: queries sent 4375, retried or failed 29
+                    # server 100.120.82.1#53: queries sent 0, retried or failed 0
+                    # server 1.1.1.1#53: queries sent 7, retried or failed 0
+                    # Host                                     Address                        Flags      Expires
+                    kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -F dnsmasq
+                ;;
                 s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                       # v2.07 v1.08
 
                     echo
@@ -905,23 +922,6 @@ EOF
                     # No of processors/threads
                     #$UNBOUNCTRLCMD get_option thread
                     echo -e $cBCYA"\n\tClick ${cBYEL}https://rootcanary.org/test.html ${cRESET}to view Web DNSSEC Test"
-                ;;
-                sd|dnsmasqstats)                                            # v1.18
-
-                    [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
-                    # Is scribe / Diversion running?
-                    if grep -q diversion /etc/dnsmasq.conf ;then
-                        [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"     # v1.28
-                    fi
-                    echo -e $cBGRA
-                    # cache size 0, 0/0 cache insertions re-used unexpired cache entries.
-                    # queries forwarded 4382, queries answered locally 769
-                    # pool memory in use 0, max 0, allocated 0
-                    # server 127.0.0.1#53535: queries sent 4375, retried or failed 29
-                    # server 100.120.82.1#53: queries sent 0, retried or failed 0
-                    # server 1.1.1.1#53: queries sent 7, retried or failed 0
-                    # Host                                     Address                        Flags      Expires
-                    kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -F dnsmasq
                 ;;
                 easy|adv|advanced)                                          # v2.07
                     # v2.07 When unbound_manager invoked from amtm, 'easy' mode is the default.
