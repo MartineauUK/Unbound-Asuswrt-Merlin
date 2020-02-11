@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.07
+#============================================================================================ © 2019-2020 Martineau v2.08
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -46,7 +46,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 10-Feb-2020
+# Last Updated Date: 11-Feb-2020
 #
 # Description:
 #
@@ -63,7 +63,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.07"
+VERSION="2.08"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -71,7 +71,7 @@ GITHUB_MARTINEAU_DEV="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/de
 GITHUB_DIR=$GITHUB_MARTINEAU                       # v1.08 default for script
 CONFIG_DIR="/opt/var/lib/unbound/"
 UNBOUNCTRLCMD="unbound-control -c ${CONFIG_DIR}unbound.conf"    # using the '-c' parameter is recommended v1.27
-ENTWARE_UNBOUND="unbound-control-setup unbound-control unbound-anchor unbound-daemon unbound-checkconf"         # v2.02
+ENTWARE_UNBOUND="unbound-checkconf unbound-control-setup unbound-control unbound-anchor unbound-daemon"         # v2.02
 SILENT="s"                                         # Default is no progress messages for file downloads # v1.08
 ALLOWUPGRADE="Y"                                   # Default is allow script download from Github      # v1.09
 CHECK_GITHUB=1                                     # Only check Github MD5 every nn times
@@ -760,6 +760,63 @@ welcome_message() {
                             ;;
                     esac
                 ;;
+                scribe)                                                     # v1.27
+                    local TXT=
+                    if [ -d /opt/etc/syslog-ng.d ];then
+                        if [ ! -f /opt/etc/syslog-ng.d/unbound ];then
+                            local TXT="Created scribe 'unbound' file: "
+                            cat > /opt/etc/syslog-ng.d/unbound << EOF       # Generate the missing unbound scribe file
+# log all unbound logs to /opt/var/log/unbound.log and stop processing unbound logs
+
+destination d_unbound {
+    file("/opt/var/log/unbound.log");
+};
+
+filter f_unbound {
+    program("unbound");
+};
+
+log {
+    source(src);
+    filter(f_unbound);
+    destination(d_unbound);
+    flags(final);
+};
+#eof
+EOF
+                            chmod 600 /opt/etc/syslog-ng.d/unbound  >/dev/null  # v2.04
+                            cat > /opt/etc/logrotate.d/unbound << EOF       # Generate the missing unbound logrotate file   #v2.04
+/opt/var/log/unbound.log {
+    minsize 1024K
+    daily
+    rotate 9
+    postrotate
+        /usr/bin/killall -HUP syslog-ng
+    endscript
+}
+EOF
+                            chmod 600 /opt/etc/logrotate.d/unbound  >/dev/null  # v2.04
+                            /opt/bin/scribe reload 2>/dev/null 1>/dev/null      # v2.04
+                            /opt/sbin/logrotate /opt/etc/logrotate.conf 2>/dev/null 1>/dev/null     # v2.04
+                            /opt/etc/init.d/S61unbound restart
+
+                        fi
+
+                        # Assume we have the easy option to uncomment....
+                        Uncomment_config_options "use-syslog:"          "uncomment"     # v1.27
+                        Uncomment_config_options "log-local-actions:"   "uncomment"     # v1.27
+                        Uncomment_config_options "log-tag-queryreply:"  "uncomment"     # v2.05
+
+                        #[ "$(Get_unbound_config_option "use-syslog")" == "?" ]        && sed -i '/^log\-time\-ascii:/ause\-syslog: yes' ${CONFIG_DIR}unbound.conf
+                        #[ "$(Get_unbound_config_option "log-local-actions")" == "?" ] && sed -i '/^use\-syslog:/alog\-local\-actions: yes' ${CONFIG_DIR}unbound.conf
+
+                        echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe) - Reloading 'unbound.conf' status="$cRESET
+                        local TXT=
+                        unset $TXT
+                        /opt/etc/init.d/S61unbound restart                              # v2.00
+
+                    fi
+                ;;
                 s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                       # v2.07 v1.08
 
                     echo
@@ -913,63 +970,6 @@ welcome_message() {
                     # optional 'reset' will reset to minimum sizes
                     echo
                     [ "$(echo "$menu1" | awk '{print $2}')" == "reset" ] && Optimise_CacheSize "reset" || Optimise_CacheSize
-                ;;
-                scribe)                                                     # v1.27
-                    local TXT=
-                    if [ -d /opt/etc/syslog-ng.d ];then
-                        if [ ! -f /opt/etc/syslog-ng.d/unbound ];then
-                            local TXT="Created scribe 'unbound' file: "
-                            cat > /opt/etc/syslog-ng.d/unbound << EOF       # Generate the missing unbound scribe file
-# log all unbound logs to /opt/var/log/unbound.log and stop processing unbound logs
-
-destination d_unbound {
-    file("/opt/var/log/unbound.log");
-};
-
-filter f_unbound {
-    program("unbound");
-};
-
-log {
-    source(src);
-    filter(f_unbound);
-    destination(d_unbound);
-    flags(final);
-};
-#eof
-EOF
-                            chmod 600 /opt/etc/syslog-ng.d/unbound  >/dev/null  # v2.04
-                            cat > /opt/etc/logrotate.d/unbound << EOF       # Generate the missing unbound logrotate file   #v2.04
-/opt/var/log/unbound.log {
-    minsize 1024K
-    daily
-    rotate 9
-    postrotate
-        /usr/bin/killall -HUP syslog-ng
-    endscript
-}
-EOF
-                            chmod 600 /opt/etc/logrotate.d/unbound  >/dev/null  # v2.04
-                            /opt/bin/scribe reload 2>/dev/null 1>/dev/null      # v2.04
-                            /opt/sbin/logrotate /opt/etc/logrotate.conf 2>/dev/null 1>/dev/null     # v2.04
-                            /opt/etc/init.d/S61unbound restart
-
-                        fi
-
-                        # Assume we have the easy option to uncomment....
-                        Uncomment_config_options "use-syslog:"          "uncomment"     # v1.27
-                        Uncomment_config_options "log-local-actions:"   "uncomment"     # v1.27
-                        Uncomment_config_options "log-tag-queryreply:"  "uncomment"     # v2.05
-
-                        #[ "$(Get_unbound_config_option "use-syslog")" == "?" ]        && sed -i '/^log\-time\-ascii:/ause\-syslog: yes' ${CONFIG_DIR}unbound.conf
-                        #[ "$(Get_unbound_config_option "log-local-actions")" == "?" ] && sed -i '/^use\-syslog:/alog\-local\-actions: yes' ${CONFIG_DIR}unbound.conf
-
-                        echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe) - Reloading 'unbound.conf' status="$cRESET
-                        local TXT=
-                        unset $TXT
-                        /opt/etc/init.d/S61unbound restart                              # v2.00
-
-                    fi
                 ;;
                 test|test*)
                     set -x
@@ -1228,9 +1228,10 @@ Option_Stubby_Integration() {
 
      if [ "$USER_OPTION_PROMPTS" == "?" ];then
         # v2.07 Stubby-Integration defeats main selling point of unbound i.e. being your own (secure) Recursive DNS Resolver
-        echo -e "\nWarning: This will DISABLE being able to be your ${aUNDER}own trusted Recursive DNS Resolver\n"$cRESET
-        echo -e "         Click the link below, and read BEFORE answering!\n"
-        echo -e $cBYEL"         https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/blob/master/Readme.md#a-very-succinct-description-of-the-implicationuse-of-the-option-stubby-integration"$cRESET
+        echo -e "\nDo you want to integrate Stubby with unbound?"
+        echo -e $cBRED"\n\tWarning: This will DISABLE being able to be your ${aUNDER}own trusted Recursive DNS Resolver\n"$cRESET
+        echo -e "\tClick the link below, and read BEFORE answering!\n"
+        echo -e $cBYEL"\thttps://github.com/MartineauUK/Unbound-Asuswrt-Merlin/blob/master/Readme.md#a-very-succinct-description-of-the-implicationuse-of-the-option-stubby-integration"$cRESET
         echo -e "\nSo, do you STILL want to integrate Stubby with unbound?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
         read -r "ANS"
      fi
@@ -1239,62 +1240,90 @@ Option_Stubby_Integration() {
 Stubby_Integration() {
 
     echo -e $cBCYA"Integrating Stubby with unbound....."$cBGRA
-    # Firmware may already contain stubby i.e. which stubby --> /usr/sbin/stubby '0.2.9' aka spoof 100002009
-    ENTWARE_STUBBY_MAJVER=$(opkg info stubby | grep "^Version" | cut -d' ' -f2 | cut -d'-' -f1)
-    [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V) || FIRMWARE_STUBBY_VER="n/a"
 
-    echo -e $cBCYA"Entware stubby Major version="$ENTWARE_STUBBY_MAJVER", Firmware stubby Major version="${FIRMWARE_STUBBY_MAJVER}$cBGRA
-    ENTWARE_STUBBY_MAJVER=$(opkg info stubby | grep "^Version" | cut -d' ' -f2 | tr '-' ' ' | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}')
-    [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}') || FIRMWARE_STUBBY_VER="000000000"
-    opkg install stubby ca-bundle
+    # Check for firmware support of Stubby (Merlin "dnspriv" or John's fork "stubby")       # v2.08 **Pull Request @dave14305**
+    if nvram get rc_support | tr ' ' '\n' | grep -qE "dnspriv|stubby"; then
+        # router supports stubby natively
+        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ]; then
+            # Merlin firmware
+            if [ "$(nvram get dnspriv_enable)" -eq "1" ]; then
+                # set Unbound forward address to 127.0.1.1:53
+                echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
+                if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
+                    sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf
+                    sed -i 's/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.1\.1\@53/' ${CONFIG_DIR}unbound.conf
+                fi
+            else
+                echo -e $cBRED"\a\n\tERROR: DNS Privacy not enabled in GUI.\n"$cRESET       # v2.08 Martineau add message attributes
+            fi
+        elif [ "$(nvram get stubby_proxy)" -eq "1" ]; then
+            # John's fork
+            # set Unbound forward address to 127.0.0.1 and port determined in nvram stubby_port
+            echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
+            if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
+                sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf
+                sed -i "s/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.0\.1\@$(nvram get stubby_port)/" ${CONFIG_DIR}unbound.conf
+            fi
+        else
+            echo -e $cBRED"\a\n\tERROR: Stubby not enabled in GUI.\n"$cRESET                # v2.08 Martineau add message attributes
+        fi                                                                                  # v2.08 **Pull Request @dave14305**
+    else
+        # Firmware may already contain stubby i.e. which stubby --> /usr/sbin/stubby '0.2.9' aka spoof 100002009
+        ENTWARE_STUBBY_MAJVER=$(opkg info stubby | grep "^Version" | cut -d' ' -f2 | cut -d'-' -f1)
+        [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V) || FIRMWARE_STUBBY_VER="n/a"
 
-    download_file /opt/etc/init.d S62stubby jackyaz         # v2.02 v1.10
-    chmod 755 /opt/etc/init.d/S62stubby                     # v1.11
-    download_file /opt/etc/stubby/ stubby.yml jackyaz       # v2.02 v1.08
+        echo -e $cBCYA"Entware stubby Major version="$ENTWARE_STUBBY_MAJVER", Firmware stubby Major version="${FIRMWARE_STUBBY_MAJVER}$cBGRA
+        ENTWARE_STUBBY_MAJVER=$(opkg info stubby | grep "^Version" | cut -d' ' -f2 | tr '-' ' ' | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}')
+        [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}') || FIRMWARE_STUBBY_VER="000000000"
+        opkg install stubby ca-bundle
 
-    if [ "$(nvram get ipv6_service)" != "disabled" ];then   # v1.13
-        echo -e $cBCYA"Customising Stubby IPv6 'stubby.yml' configuration....."$cRESET
-        #  # - 0::1@5453 ## required IPV6 enabled
-        sed -i '/  # - 0::1@5453/s/^  # /  /' /opt/etc/stubby/stubby.yml            # v1.13
-        # Cloudflare Primary IPv6
-        #  - address_data: 2606:4700:4700::1111
-        #    tls_auth_name: "cloudflare-dns.com"
-        # Cloudflare Secondary IPv6
-        #  - address_data: 2606:4700:4700::1001
-        #    tls_auth_name: "cloudflare-dns.com"
-        sed -i '/address_data: 2606:4700:4700::1111/,/tls_auth_name:/s/^#//' /opt/etc/stubby/stubby.yml # v1.13
-        sed -i '/address_data: 2606:4700:4700::1001/,/tls_auth_name:/s/^#//' /opt/etc/stubby/stubby.yml # v1.13
-        # dns.sb IPv6
-        #  - address_data: 2a09::0
-        #    tls_auth_name: "dns.sb"
-        #    tls_pubkey_pinset:
-        #      - digest: "sha256"
-        #        value: /qCm+kZoAyouNBtgd1MPMS/cwpN4KLr60bAtajPLt0k=
-        # dns.sb IPv6
-        #  - address_data: 2a09::1
-        #    tls_auth_name: "dns.sb"
-        #    tls_pubkey_pinset:
-        #      - digest: "sha256"
-        #        value: /qCm+kZoAyouNBtgd1MPMS/cwpN4KLr60bAtajPLt0k=
-        sed -i '/address_data: 2a09::0/,/value:/s/^#//' /opt/etc/stubby/stubby.yml  # v1.13
-        sed -i '/address_data: 2a09::1/,/value:/s/^#//' /opt/etc/stubby/stubby.yml  # v1.13
+        download_file /opt/etc/init.d S62stubby jackyaz         # v2.02 v1.10
+        chmod 755 /opt/etc/init.d/S62stubby                     # v1.11
+        download_file /opt/etc/stubby/ stubby.yml jackyaz       # v2.02 v1.08
+
+        if [ "$(nvram get ipv6_service)" != "disabled" ];then   # v1.13
+            echo -e $cBCYA"Customising Stubby IPv6 'stubby.yml' configuration....."$cRESET
+            #  # - 0::1@5453 ## required IPV6 enabled
+            sed -i '/  # - 0::1@5453/s/^  # /  /' /opt/etc/stubby/stubby.yml            # v1.13
+            # Cloudflare Primary IPv6
+            #  - address_data: 2606:4700:4700::1111
+            #    tls_auth_name: "cloudflare-dns.com"
+            # Cloudflare Secondary IPv6
+            #  - address_data: 2606:4700:4700::1001
+            #    tls_auth_name: "cloudflare-dns.com"
+            sed -i '/address_data: 2606:4700:4700::1111/,/tls_auth_name:/s/^#//' /opt/etc/stubby/stubby.yml # v1.13
+            sed -i '/address_data: 2606:4700:4700::1001/,/tls_auth_name:/s/^#//' /opt/etc/stubby/stubby.yml # v1.13
+            # dns.sb IPv6
+            #  - address_data: 2a09::0
+            #    tls_auth_name: "dns.sb"
+            #    tls_pubkey_pinset:
+            #      - digest: "sha256"
+            #        value: /qCm+kZoAyouNBtgd1MPMS/cwpN4KLr60bAtajPLt0k=
+            # dns.sb IPv6
+            #  - address_data: 2a09::1
+            #    tls_auth_name: "dns.sb"
+            #    tls_pubkey_pinset:
+            #      - digest: "sha256"
+            #        value: /qCm+kZoAyouNBtgd1MPMS/cwpN4KLr60bAtajPLt0k=
+            sed -i '/address_data: 2a09::0/,/value:/s/^#//' /opt/etc/stubby/stubby.yml  # v1.13
+            sed -i '/address_data: 2a09::1/,/value:/s/^#//' /opt/etc/stubby/stubby.yml  # v1.13
+        fi
+
+        /opt/etc/init.d/S62stubby restart                       # v1.11
+
+        echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
+        if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
+            #sed -i '/forward\-zone:/,/forward\-first: yes/s/^#//' ${CONFIG_DIR}unbound.conf     # v1.04
+            sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf     # v2.00
+        fi
+
+        if [ "$(nvram get ipv6_service)" != "disabled" ];then                       # v1.10
+            echo -e $cBCYA"Customising unbound IPv6 Stubby configuration....."$cRESET
+            # Options for integration with TCP/TLS Stubby
+            #udp-upstream-without-downstream: yes
+            sed -i '/udp\-upstream\-without\-downstream: yes/s/^#//g' ${CONFIG_DIR}unbound.conf
+        fi
     fi
-
-    /opt/etc/init.d/S62stubby restart                       # v1.11
-
-    echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-    if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
-        #sed -i '/forward\-zone:/,/forward\-first: yes/s/^#//' ${CONFIG_DIR}unbound.conf     # v1.04
-        sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf     # v2.00
-    fi
-
-    if [ "$(nvram get ipv6_service)" != "disabled" ];then                       # v1.10
-        echo -e $cBCYA"Customising unbound IPv6 Stubby configuration....."$cRESET
-        # Options for integration with TCP/TLS Stubby
-        #udp-upstream-without-downstream: yes
-        sed -i '/udp\-upstream\-without\-downstream: yes/s/^#//g' ${CONFIG_DIR}unbound.conf
-    fi
-
 }
 Get_RootDNS() {
      # https://www.iana.org/domains/root/servers
@@ -1508,6 +1537,14 @@ unbound_Control() {
     fi
 
     case $1 in
+
+        "s+"|"s-")                                                      # v1.18
+            CONFIG_VARIABLE="extended-statistics"
+            [ "$1" == "s+" ] && CONFIG_VALUE="yes" || CONFIG_VALUE="no"
+            local RESULT="$($UNBOUNCTRLCMD set_option $CONFIG_VARIABLE $CONFIG_VALUE)"
+            [ "$RESULT" == "ok" ] && local COLOR=$cBGRE || COLOR=$cBRED
+            echo -e $cRESET"$UNBOUNCTRLCMD set_option $cBMAG'$CONFIG_VARIABLE $CONFIG_VALUE'$COLOR $RESULT"  2>&1
+        ;;
         sa*)                                                            # v2.07
             if [ -n "$(echo "$@" | sed -n "s/^.*filter=//p")" ];then    # v2.07 allow very basic 'or' 'filtering'
                 local FILTER=$(echo "$@" | sed -n "s/^.*filter=//p" | awk '{print $1}') # v2.07
@@ -1516,7 +1553,6 @@ unbound_Control() {
             else
                 $UNBOUNCTRLCMD stats$RESET  | column
             fi
-
         ;;
         s|s*)                                                               # v2.07
             # xxx-cache.count values won't be shown without 'extended-statistics: yes' see 's+'/'s-' menu option
@@ -1537,14 +1573,6 @@ unbound_Control() {
                 $UNBOUNCTRLCMD stats$RESET  | grep -E "$ADDFILTER" | column
             fi
 
-        ;;
-
-        "s+"|"s-")                                                      # v1.18
-            CONFIG_VARIABLE="extended-statistics"
-            [ "$1" == "s+" ] && CONFIG_VALUE="yes" || CONFIG_VALUE="no"
-            local RESULT="$($UNBOUNCTRLCMD set_option $CONFIG_VARIABLE $CONFIG_VALUE)"
-            [ "$RESULT" == "ok" ] && local COLOR=$cBGRE || COLOR=$cBRED
-            echo -e $cRESET"$UNBOUNCTRLCMD set_option $cBMAG'$CONFIG_VARIABLE $CONFIG_VALUE'$COLOR $RESULT"  2>&1
         ;;
         oq|oq*)
             local CONFIG_VARIABLE
@@ -1679,7 +1707,7 @@ remove_existing_installation() {
         Chk_Entware unbound
         if [ "$READY" -eq "0" ]; then
             echo -e $cBCYA"Existing unbound package found. Removing unbound"$cBGRA
-            if opkg remove $ENTWARE_UNBOUND; then echo -e $cBGRE"unbound Entware packages '$ENTWARE_UNBOUND' successfully removed"; else echo -e $cBRED"\a\t***Error occurred when removing unbound"$cRESET; fi # v1.15
+            if opkg --force-depends --force-removal-of-dependent-packages remove $ENTWARE_UNBOUND; then echo -e $cBGRE"unbound Entware packages '$ENTWARE_UNBOUND' successfully removed"; else echo -e $cBRED"\a\t***Error occurred when removing unbound"$cRESET; fi # v2.07 v1.15
             #if opkg remove haveged; then echo "haveged successfully removed"; else echo "Error occurred when removing haveged"; fi
             #if opkg remove coreutils-nproc; then echo "coreutils-nproc successfully removed"; else echo "Error occurred when removing coreutils-nproc"; fi
         else
