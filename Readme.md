@@ -60,9 +60,6 @@ A:Option ==> ?
 	Github						md5=256a1e0ab0c2725308610b4cfaf3b9f2
 	/jffs/addons/unbound/unbound_manager.md5	md5=256a1e0ab0c2725308610b4cfaf3b9f2
 
-
-
-
 ```
 
 ##### New in **v1.20** is the ability to specify which *User Selectable options* are to be installed without having to _manually_ reply to each individual feature prompt
