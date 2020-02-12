@@ -1023,8 +1023,8 @@ EOF
                         TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                         if [ "$(which dig)" == "/opt/bin/dig" ];then
                             echo -e $cBGRA
-                            dig txt $THIS
-                            dig $THIS @127.0.0.1 -p 53535
+                            dig txt $TESTTHIS                                   # v2.09 Hotfix
+                            dig $TESTTHIS @127.0.0.1 -p 53535                   # v2.09 Hotfix
                         else
                             echo -e $cBRED"\a\n\t***ERROR Entware 'dig' utility not installed."
                         fi
