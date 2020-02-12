@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.08
+#============================================================================================ © 2019-2020 Martineau v2.09
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -39,14 +39,14 @@
 #           unbound_manager    nochk
 #                              The script on start-up attempts to check GitHub for any version update/md5 mismatch, but a
 #                              failed install will look as if the script has stalled until cURL time-out expires (3 mins).
-#                              Use of nochk disables the 'stall' to quickly allow access to the 'z  = Remove Existing unbound Installation' option
+#                              Use of nochk disables the 'stall' to quickly allow access to the 'z  = Remove unbound Installation' option
 #
 #
 #  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for additional help/documentation with this script.
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 11-Feb-2020
+# Last Updated Date: 12-Feb-2020
 #
 # Description:
 #
@@ -63,7 +63,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.08"
+VERSION="2.09"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -313,6 +313,7 @@ Show_Advanced_Menu() {
     [ -n "$MENU_AD" ] && printf "\n%s\t\t\t%s\n"  "$MENUW_SCRIBE" "$MENU_AD"       # # v2.00 v1.25
     [ -n "$MENU_CA" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"    "$MENU_CA"         #v1.26
 
+    printf "\n%s"                   "$MENUW_DIG"                # v2.09
     printf "\n%s\\n\n"              "$MENUW_DNSSEC"             # v1.28
     printf "%s\\n\n"                "$MENUW_DNSINFO"            # v1.28
     printf "%s\\n\n"                "$MENUW_LINKS"              # v1.28
@@ -358,7 +359,7 @@ welcome_message() {
                 printf '|                                                                      |\n'
 
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
-                    printf '|   z  = Remove Existing unbound/unbound_manager Installation          |\n'
+                    printf '|   z  = Remove unbound/unbound_manager Installation                   |\n'
                     printf '|   ?  = About Configuration                                           |\n'
                 else
                     printf '|   3 = Advanced Tools                                                 |\n'
@@ -485,7 +486,7 @@ welcome_message() {
                     fi
 
                     MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
-                    MENU_Z="$(printf '%bz %b = Remove Existing unbound/unbound_manager Installation\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
+                    MENU_Z="$(printf '%bz %b = Remove unbound/unbound_manager Installation\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
                     MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
                     MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
                     MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -493,6 +494,8 @@ welcome_message() {
                     MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                     MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                     MENUW_LINKS="$(printf '%blinks%b = Show list of external links URLs\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                    MENUW_DIG="$(printf '%bdig%b = {domain} Show dig info e.g. dig qnamemintest.internet.nl \n' "${cBYEL}" "${cRESET}")"    # v2.09
+
 
                     MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
 
@@ -540,7 +543,7 @@ welcome_message() {
                         if [ -n "$ADVANCED_TOOLS" ];then                           # v1.26
                             Show_Advanced_Menu
                         else                                                       # v1.26
-                            printf "%s\t\t%s\n"            "$MENU_Z" "$MENU_VX"    # v1.11
+                            printf "%s\t\t\t%s\n"          "$MENU_Z" "$MENU_VX"    # v1.11
                             printf "%s\t\t\t\t\t\t\t%s\n"  "$MENU_3" "$MENU_RL"    # v1.17
                             printf "%s\t\t\t\t\t\t%s\n"    "$MENU__" "$MENU_OQ"
                             echo
@@ -641,7 +644,9 @@ welcome_message() {
                     menu1=""
                     ;;
                 z)
-                    validate_removal
+                    local UNINSTALL_TYPE="full"                         # v2.09 Force deletion of scribe logs for uiscribe
+                    #[ "$menu1" == "zl" ] && UNINSTALL_TYPE="full"
+                    validate_removal "$UNINSTALL_TYPE"                  # v2.09
                     [ $? -eq 1 ] && { exit_message; exit 0; } || echo -en $cRESET"\nunbound uninstall CANCELled\n"$cRESET           # v2.05 v2.00
                     #break
                 ;;
@@ -817,23 +822,6 @@ EOF
 
                     fi
                 ;;
-                sd|dnsmasqstats)                                            # v1.18
-
-                    [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
-                    # Is scribe / Diversion running?
-                    if grep -q diversion /etc/dnsmasq.conf ;then
-                        [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"     # v1.28
-                    fi
-                    echo -e $cBGRA
-                    # cache size 0, 0/0 cache insertions re-used unexpired cache entries.
-                    # queries forwarded 4382, queries answered locally 769
-                    # pool memory in use 0, max 0, allocated 0
-                    # server 127.0.0.1#53535: queries sent 4375, retried or failed 29
-                    # server 100.120.82.1#53: queries sent 0, retried or failed 0
-                    # server 1.1.1.1#53: queries sent 7, retried or failed 0
-                    # Host                                     Address                        Flags      Expires
-                    kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -F dnsmasq
-                ;;
                 s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                       # v2.07 v1.08
 
                     echo
@@ -883,6 +871,9 @@ EOF
 
                     echo
                     /opt/etc/init.d/S61unbound stop
+                    echo -en $cBCYA"\nRestarting dnsmasq....."$cBGRE        # v2.09
+                    service restart_dnsmasq
+                    echo -en $cBCYA"\nunbound STOPPED."$cBGRE
                     break
                 ;;
                 dd|ddnouser)                # v1.07
@@ -921,7 +912,25 @@ EOF
                     echo -e $cRESET"\t             $SYSTEMRAM"
                     # No of processors/threads
                     #$UNBOUNCTRLCMD get_option thread
-                    echo -e $cBCYA"\n\tClick ${cBYEL}https://rootcanary.org/test.html ${cRESET}to view Web DNSSEC Test"
+
+                    echo -e $cBCYA"\n\tAbout unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ ${cRESET}"
+                ;;
+                sd|dnsmasqstats)                                            # v1.18
+
+                    [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
+                    # Is scribe / Diversion running?
+                    if grep -q diversion /etc/dnsmasq.conf ;then
+                        [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"     # v1.28
+                    fi
+                    echo -e $cBGRA
+                    # cache size 0, 0/0 cache insertions re-used unexpired cache entries.
+                    # queries forwarded 4382, queries answered locally 769
+                    # pool memory in use 0, max 0, allocated 0
+                    # server 127.0.0.1#53535: queries sent 4375, retried or failed 29
+                    # server 100.120.82.1#53: queries sent 0, retried or failed 0
+                    # server 1.1.1.1#53: queries sent 7, retried or failed 0
+                    # Host                                     Address                        Flags      Expires
+                    kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -F dnsmasq
                 ;;
                 easy|adv|advanced)                                          # v2.07
                     # v2.07 When unbound_manager invoked from amtm, 'easy' mode is the default.
@@ -979,28 +988,58 @@ EOF
                     set -n
                 ;;
                 dnssec*)
-                # DNSSEC URL/SITE tester
-                #   e.g. https://dnsviz.net/d/www.snbforums.com/dnssec/
-                #   e.g. https://dnsviz.net/d/www.nrsforu.com/dnssec/
-                TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
-                echo -e $cBCYA"\nClick ${cBYEL}https://dnsviz.net/d/$TESTTHIS/dnssec/ ${cRESET}to view DNSSEC Authentication Chain"
-                ;;
-                dnsinfo|dnsinfo*)
-                #https://mxtoolbox.com/SuperTool.aspx?action=dns%3a9.9.9.9&run=toolpage
-                TESTHIS=
-                if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                    # DNSSEC URL/SITE tester
+                    #   e.g. https://dnsviz.net/d/www.snbforums.com/dnssec/
+                    #   e.g. https://dnsviz.net/d/www.nrsforu.com/dnssec/
                     TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
-                fi
-                if [ -n "$TESTTHIS" ];then
-                    echo -e $cBCYA"\nClick ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3a$TESTTHIS&run=toolpage ${cRESET}to view DNS Server info"
-                else
-                    echo -e $cBCYA"\nClick ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3aquad9.net&run=toolpage ${cRESET}to view Quad9 DNS Server info"
-                    echo -e $cBCYA"Click ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3acloudflare.net&run=toolpage ${cRESET}to view Cloudflare DNS Server info"
-                fi
+                    echo -e $cBCYA"\nClick ${cBYEL}https://dnsviz.net/d/$TESTTHIS/dnssec/ ${cRESET}to view DNSSEC Authentication Chain"
+                    ;;
+                    dnsinfo|dnsinfo*)
+                    #https://mxtoolbox.com/SuperTool.aspx?action=dns%3a9.9.9.9&run=toolpage
+                    TESTHIS=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                    fi
+                    if [ -n "$TESTTHIS" ];then
+                        echo -e $cBCYA"\nClick ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3a$TESTTHIS&run=toolpage ${cRESET}to view DNS Server info"
+                    else
+                        echo -e $cBCYA"\nClick ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3aquad9.net&run=toolpage ${cRESET}to view Quad9 DNS Server info"
+                        echo -e $cBCYA"Click ${cBYEL}https://mxtoolbox.com/SuperTool.aspx?action=dns%3acloudflare.net&run=toolpage ${cRESET}to view Cloudflare DNS Server info"
+                    fi
                 ;;
                 links)
-                echo -e $cBCYA"\nClick ${cBYEL}https://www.quad9.net/faq/#outer-wrap ${cRESET}to view QUAD9 FAQs/servers list etc."
-                echo -e $cBCYA"\nClick ${cBYEL}https://1.1.1.1/help ${cRESET}to view Cloudflare."
+                    echo -en $cBCYA"\nClick ${cBYEL}https://rootcanary.org/test.html ${cRESET}to view Web DNSSEC Test"
+                    echo -e  $cBCYA"\t\tClick ${cBYEL}https://www.quad9.net/faq/#outer-wrap ${cRESET}to view QUAD9 FAQs/servers list etc."
+                    echo -en $cBCYA"Click ${cBYEL}https://1.1.1.1/help ${cRESET}to view Cloudflare."
+                    echo -e  $cBCYA"\t\t\t\tClick ${cBYEL}https://cmdns.dev.dns-oarc.net/ ${cRESET}to view Check My DNS."   # v2.09 Credit @rgnldo
+                    echo -e  $cBCYA"Click ${cBYEL}https://root-servers.org/ ${cRESET}to view Live Root Server status"
+                ;;
+                dig*|di*)                                                       # v2.09
+
+                    # dig txt qnamemintest.internet.nl                          # @rgnldo
+                    # dig qnamemintest.internet.nl @127.0.0.1 -p 53535          # @rgnldo
+                    # dig +short txt qnamemintest.internet.nl                   # @rgnldo - should see 'HOORAY' if QNAME working
+                    if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
+                        TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                        if [ "$(which dig)" == "/opt/bin/dig" ];then
+                            echo -e $cBGRA
+                            dig txt $THIS
+                            dig $THIS @127.0.0.1 -p 53535
+                        else
+                            echo -e $cBRED"\a\n\t***ERROR Entware 'dig' utility not installed."
+                        fi
+                    else
+                        echo -e $cBRED"\a\n\t***ERROR Please specify valid domain for 'dig'"
+                    fi
+                ;;
+                logtrace*)                                                      # v2.09
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                        # Turn on logging; perform the lookup;then turn off logging!
+
+                    else
+                        echo -e $cBRED"\a\n\t***ERROR Please specify valid domain for logtrace"
+                    fi
                 ;;
                 option?*)
                 if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
@@ -1068,7 +1107,7 @@ validate_removal() {
             read -r "menu3"
             case "$menu3" in
                 Y)
-                    remove_existing_installation
+                    remove_existing_installation "$1"   # v2.09
                     local REMOVED=1                     # v2.00
                     break
                 ;;
@@ -1183,7 +1222,7 @@ download_file() {
             printf '\t%b%s%b downloaded successfully\n' "$cBGRE" "$FILE" "$cRESET"
         else
             printf '\n%b%s%b download FAILED with curl error %s\n\n' "\n\t\a$cBMAG" "'$FILE'" "$cBRED" "$STATUS"
-            printf '\tRerun %bunbound_manager nochk%b and select the %bRemove Existing unbound/unbound_manager Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
+            printf '\tRerun %bunbound_manager nochk%b and select the %bRemove unbound/unbound_manager Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
 
             Check_GUI_NVRAM                                     # v1.17
 
@@ -1409,6 +1448,19 @@ Customise_config() {
      Enable_Logging "$1"                                            # v1.16 Always create the log file, but ask user if it should be ENABLED
 
 }
+Skynet_BANNED_Countries() {
+
+    # @skeal identified Skynet's Country blocks can hinder unbound performance and in some cases block sites e.g. Hulu etc.
+    #   [URL="https://www.snbforums.com/threads/release-unbound_manager-manager-installer-utility-for-unbound-recursive-dns-server.61669/page-18#post-550376"]post #346[/URL]
+    if [ -f /jffs/scripts/firewall ]; then                          # v2.09 @dave14305 Pull-request
+        skynetloc="$(grep -ow "skynetloc=.* # Skynet" /jffs/scripts/firewall-start 2>/dev/null | grep -vE "^#" | awk '{print $1}' | cut -c 11-)"
+        skynetcfg="${skynetloc}/skynet.cfg"
+        if [ -f "$skynetcfg" ]; then
+            . "$skynetcfg"
+            [ -n "$countrylist" ] && echo "Y" || echo "N"           # v2.09
+        fi
+    fi
+}
 Option_Optimise_Performance() {
 
      local ANS=$1                                           # v1.20
@@ -1505,7 +1557,7 @@ Enable_Logging() {                                          # v1.07
      # @dave14305 recommends 'log-time-ascii: yes'                          # v1.16
      #[ -z "$(grep "log-time-ascii:" ${CONFIG_DIR}unbound.conf)" ] && sed -i '/^logfile: /alog-time-ascii: yes' ${CONFIG_DIR}unbound.conf    #v1.19
 }
-Enable_unbound_statistics() {
+Generate_unbound_SSL_Keys() {
 
     # unbound-control-setup uses 'setup in directory /opt/var/lib/unbound' ???
     # generating unbound_server.key
@@ -1514,9 +1566,8 @@ Enable_unbound_statistics() {
     # .......................................................................................................................................................................++++
     # e is 65537 (0x10001)
     # generating unbound_control.key-file
-    echo -e $cBCYA"Initialising 'unbound-control-setup'"$cBGRA
+    echo -e $cBCYA"Initialising 'unbound-control-setup' to generate SSL Keys"$cBGRA
     unbound-control-setup
-    #echo -e $cBMAG"Use '$UNBOUNCTRLCMD stats_noreset' to monitor unbound performance"$cRESET
 }
 unbound_Control() {
 
@@ -1765,6 +1816,11 @@ remove_existing_installation() {
 
         fi
 
+        if [ "$1" == "full" ];then                  # v2.09
+            echo -e $cBCYA"Removing scribe logs"$cBGRE
+            rm /opt/etc/syslog-ng.d/unbound /opt/var/log/unbound.log
+            /opt/bin/scribe reload 2>/dev/null 1>/dev/null
+        fi
 
         # Reboot router to complete uninstall of unbound
         echo -e $cBGRE"\n\tUninstall of unbound completed.\n"$cRESET
@@ -1852,12 +1908,16 @@ install_unbound() {
 
         create_required_directories                             # v2.03
 
-        Enable_unbound_statistics                               # Install Entware opkg 'unbound-control'
+        Generate_unbound_SSL_Keys                               # Execute 'unbound-control'
+        # Unfortunately 'openssl-util' is a dependency for 'unbound-control-setup' and Entware 'openssl-util' conflicts with 'diversion' Thanks @dave14305
+        opkg remove unbound-control-setup                       # v2.09 - @dave14305
+        opkg remove openssl-util                                # v2.09 - @dave14305
 
         Install_Entware_opkg "column"
-        Install_Entware_opkg "diffutils"                        #v1.25
+        Install_Entware_opkg "diffutils"                        # v1.25
+        Install_Entware_opkg "bind-dig"                         # v2.09
 
-        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v1.26 AS per dave14305
+        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v1.26 As per dave14305
             Install_Entware_opkg "haveged"
             S02haveged_update
         fi
@@ -2046,6 +2106,8 @@ Check_GUI_NVRAM() {
                 local TXT="${cRESET}$cBGRE unbound Advanced install$cRESET - User will be prompted to install options"
             fi
 
+            [ "$(Skynet_BANNED_Countries)" == "Y" ] && echo -e $cBRED"\a\t[✖] Warning Skynet's Country BAN feature is currently ACTIVE and may significantly reduce unbound performance and in some cases block sites" 2>&1         # v2.09
+
             echo -e $cBCYA"\n\tOptions:$TXT\n" 2>&1
 
             if [ -f ${CONFIG_DIR}unbound.conf ];then
@@ -2067,6 +2129,8 @@ Check_GUI_NVRAM() {
                 [ -f /jffs/addons/unbound/stuning ] && echo -e $cBGRE"\t[✔] unbound CPU/Memory Performance tweaks" 2>&1     # v2.00
                 [ "$(Get_unbound_config_option "adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" != "?" ] && echo -e $cBGRE"\t[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker" 2>&1
             fi
+
+
         #fi
 
         [ $ERROR_CNT -ne 0 ] && { $ERRORCNT; return 1; } || return 0
@@ -2074,6 +2138,7 @@ Check_GUI_NVRAM() {
         local TXT=
         unset $TXT
         echo -e $cRESET 2>&1
+
 }
 exit_message() {
 
