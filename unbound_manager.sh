@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.09
+#============================================================================================ © 2019-2020 Martineau v2.10
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
@@ -46,7 +46,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 12-Feb-2020
+# Last Updated Date: 13-Feb-2020
 #
 # Description:
 #
@@ -63,7 +63,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.09"
+VERSION="2.10"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
@@ -105,6 +105,16 @@ ANSIColours () {
     aBOLD="\e[1m";aDIM="\e[2m";aUNDER="\e[4m";aBLINK="\e[5m";aREVERSE="\e[7m"
     cWRED="\e[41m";cWGRE="\e[42m";cWYEL="\e[43m";cWBLU="\e[44m";cWMAG="\e[45m";cWCYA="\e[46m";cWGRA="\e[47m"
 }
+Get_Router_Model() {                                # v2.10
+
+    # Contribution by @thelonelycoder as odmpid is blank for non SKU hardware,
+    local HARDWARE_MODEL
+    [ -z "$(nvram get odmpid)" ] && HARDWARE_MODEL=$(nvram get productid) || HARDWARE_MODEL=$(nvram get odmpid)
+
+    echo $HARDWARE_MODEL
+
+    return 0
+}
 Chk_Entware() {
 
         # ARGS [wait attempts] [specific_entware_utility]
@@ -129,15 +139,15 @@ Chk_Entware() {
             if [ -f "/opt/bin/opkg" ]; then
                 if [ -n "$ENTWARE_UTILITY" ]; then            # Specific Entware utility installed?
                     if [ -n "$(opkg list-installed "$ENTWARE_UTILITY")" ]; then
-                        READY="0"                                 # Specific Entware utility found
+                        READY="0"                             # Specific Entware utility found
                     else
                         # Not all Entware utilities exists as a stand-alone package e.g. 'find' is in package 'findutils'
                         if [ -d /opt ] && [ -n "$(find /opt/ -name "$ENTWARE_UTILITY")" ]; then
-                            READY="0"                               # Specific Entware utility found
+                            READY="0"                         # Specific Entware utility found
                         fi
                     fi
                 else
-                    READY="0"                                     # Entware utilities ready
+                    READY="0"                                 # Entware utilities ready
                 fi
                 break
             fi
@@ -620,23 +630,31 @@ welcome_message() {
                     # Was the Install/Update successful or CANCElled
                     if [ $? -eq 0 ];then                            # v2.06 0-Successful;1-CANCElled
                         if [ "$KEEPACTIVECONFIG" != "Y" ];then                          # v1.27
-                            if [ -n "$PREINSTALLCONFIG" ] && [ -f "/opt/share/unbound/configs/"$PREINSTALLCONFIG ] ;then
-                                echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}RESTORE ${cRESET}or press $cBGRE[Enter] to CANCEL$cRESET"
-                                read -r "ANS"
-                                if [ "$ANS" == "y"  ];then                      # v1.27
-                                    cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf # Restore previous config
-                                    local TAG="Date Loaded by unbound_manager "$(date)")"
-                                    sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
-                                    echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-                                    $UNBOUNCTRLCMD reload
 
+                            if [ -n "$PREINSTALLCONFIG" ] && [ -f "/opt/share/unbound/configs/"$PREINSTALLCONFIG ] ;then
+
+                                # If either of the two customising files exist then no point in prompting the restore
+                                if [ ! -f /opt/share/unbound/configs/unbound.conf.add ] && [ -f /opt/share/unbound/configs/unbound.postconf ];then      # v2.10
+
+                                        echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}RESTORE ${cRESET}or press $cBGRE[Enter] to CANCEL$cRESET"
+                                        read -r "ANS"
+                                        if [ "$ANS" == "y"  ];then                      # v1.27
+                                            cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf # Restore previous config
+                                            local TAG="Date Loaded by unbound_manager "$(date)")"
+                                            sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+                                            echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
+                                            $UNBOUNCTRLCMD reload
+
+                                        fi
                                 fi
+
                                 rm "/opt/share/unbound/configs/$PREINSTALLCONFIG"       # v2.06 Always delete the temp backup 'unbound.conf'
                             fi
                         fi
                     fi
                     local TXT=
                     unset $TXT
+
                     #break
                 ;;
                 3)
@@ -1283,7 +1301,7 @@ Stubby_Integration() {
     # Check for firmware support of Stubby (Merlin "dnspriv" or John's fork "stubby")       # v2.08 **Pull Request @dave14305**
     if nvram get rc_support | tr ' ' '\n' | grep -qE "dnspriv|stubby"; then
         # router supports stubby natively
-        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ]; then
+        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ $FIRMWARE -ge 38406 ];then        # v2.10
             # Merlin firmware
             if [ "$(nvram get dnspriv_enable)" -eq "1" ]; then
                 # set Unbound forward address to 127.0.1.1:53
@@ -1383,6 +1401,20 @@ Backup_unbound_config() {                                                       
     fi
     return 0
 }
+Check_config_add_and_postconf() {                                           # v2.10
+
+    # If the 'server:' directives are to be included add the 'include $FN' directive
+    local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"
+    if [ -f $CONFIG_ADD ];then
+        echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf)'"$cBGRA
+        [ -z "$(grep "^include \"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && sed -i "/^server:/ainclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n\n" ${CONFIG_DIR}unbound.conf    # v2.10
+    fi
+    local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
+    if [ -f $POSTCONF_SCRIPT ];then
+        echo -e $cBCYA"Executing $cBGRE'$POSTCONF_SCRIPT'"$cBGRA
+        sh $POSTCONF_SCRIPT "${CONFIG_DIR}unbound.conf"
+    fi
+}
 Customise_config() {
 
      echo -e $cBCYA"Generating unbound-anchor 'root.key'....."$cBGRA            # v1.07
@@ -1446,6 +1478,8 @@ Customise_config() {
      echo -e $cBCYA"Customising unbound configuration Options:"$cRESET
 
      Enable_Logging "$1"                                            # v1.16 Always create the log file, but ask user if it should be ENABLED
+
+     Check_config_add_and_postconf                              # Allow users to customise 'unbound.conf'
 
 }
 Skynet_BANNED_Countries() {
@@ -1917,7 +1951,7 @@ install_unbound() {
         Install_Entware_opkg "diffutils"                        # v1.25
         Install_Entware_opkg "bind-dig"                         # v2.09
 
-        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v1.26 As per dave14305
+        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v2.10 v1.26 As per dave14305
             Install_Entware_opkg "haveged"
             S02haveged_update
         fi
@@ -2075,10 +2109,12 @@ Check_GUI_NVRAM() {
         fi
 
         if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then               # v1.26 HotFix @dave14305
-            [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
-        else
-            #   Tools/Other WAN DNS local cache: NO # for the FW Merlin development team, it is desirable and safer by this mode.
-            [ $(nvram get dns_local_cache) != "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR WAN: Use local caching DNS server as system resolver=YES $cRESET \t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO" 2>&1
+                [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+       else
+            if [ $FIRMWARE -ne 38406 ] && [ "$HARDWARE_MODEL" != "RT-AC56U" ] ;then     # v2.10
+                #   Tools/Other WAN DNS local cache: NO # for the FW Merlin development team, it is desirable and safer by this mode.
+                [ $(nvram get dns_local_cache) != "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR WAN: Use local caching DNS server as system resolver=YES $cRESET \t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO" 2>&1
+            fi
 
             #   Originally, a check was made to ensure the native RMerlin NTP server is configured.
             # v2.07, some wish to use ntpd by @JackYaz
@@ -2086,7 +2122,13 @@ Check_GUI_NVRAM() {
             if [ -f /opt/etc/init.d/S77ntpd ];then
                 [ -n "$(/opt/etc/init.d/S77ntpd check | grep "dead")" ] && { echo -e $cBYEL"\a\t[✖] ***Warning Entware NTP Server installed but not running? $cRESET \t\t\t\t\t"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Entware NTP server is running" 2>&1
             else
-                [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+                if [ "$HARDWARE_MODEL" != "RT-AC56U" ] && [ $FIRMWARE -ne 38406 ];then  # v2.10
+                    [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+                else
+                    if [ ! -f /opt/etc/init.d/S77ntpd ];then                                # v2.10
+                        echo -e $cBRED"\a\t[✖] Warning Entware NTP server not installed"$cRESET
+                    fi
+                fi
             fi
         fi
 
@@ -2413,6 +2455,8 @@ _quote() {
 # shellcheck disable=SC2068
 Main() { true; } # Syntax that is Atom Shellchecker compatible!
 
+FIRMWARE=$(echo $(nvram get buildno) | awk 'BEGIN { FS = "." } {printf("%03d%02d",$1,$2)}')     # v2.10
+HARDWARE_MODEL=$(Get_Router_Model)                                                              # v2.10
 
 ANSIColours
 
@@ -2435,7 +2479,10 @@ Check_Lock "$1"
 [ ! -L "/opt/bin/unbound_manager" ] && Script_alias "create"                # v2.06 Hotfix for amtm v1.08
 
 [ -n "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU="Y" || EASYMENU="N"                    # v2.07
-CUSTOM_NVRAM="$(am_settings_get unbound_mode)"                              # v2.07 Retrieve value saved across amtm sessions
+if [ $FIRMWARE  -ge 38415 ];then                                            # v2.10
+    CUSTOM_NVRAM="$(am_settings_get unbound_mode)"                          # v2.07 Retrieve value saved across amtm sessions
+fi
+
 case "$CUSTOM_NVRAM" in                                                     # v2.07
     Advanced)
         EASYMENU="N"
