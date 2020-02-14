@@ -99,7 +99,7 @@ SayT(){
    echo -e $$ $@ | logger -t "($(basename $0))"
 }
 # shellcheck disable=SC2034
-ANSIColours () {
+ANSIColours() {
     cRESET="\e[0m";cBLA="\e[30m";cRED="\e[31m";cGRE="\e[32m";cYEL="\e[33m";cBLU="\e[34m";cMAG="\e[35m";cCYA="\e[36m";cGRA="\e[37m"
     cBGRA="\e[90m";cBRED="\e[91m";cBGRE="\e[92m";cBYEL="\e[93m";cBBLU="\e[94m";cBMAG="\e[95m";cBCYA="\e[96m";cBWHT="\e[97m"
     aBOLD="\e[1m";aDIM="\e[2m";aUNDER="\e[4m";aBLINK="\e[5m";aREVERSE="\e[7m"
@@ -323,8 +323,8 @@ Show_Advanced_Menu() {
     [ -n "$MENU_AD" ] && printf "\n%s\t\t\t%s\n"  "$MENUW_SCRIBE" "$MENU_AD"       # # v2.00 v1.25
     [ -n "$MENU_CA" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"    "$MENU_CA"         #v1.26
 
-    printf "\n%s"                   "$MENUW_DIG"                # v2.09
-    printf "\n%s\\n\n"              "$MENUW_DNSSEC"             # v1.28
+    printf "\n%s\t\t%s\n"           "$MENUW_DIG" "$MENUW_LOOKUP" # v2.11
+    printf "%s\\n\n"                "$MENUW_DNSSEC"             # v1.28
     printf "%s\\n\n"                "$MENUW_DNSINFO"            # v1.28
     printf "%s\\n\n"                "$MENUW_LINKS"              # v1.28
     printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
@@ -484,7 +484,7 @@ welcome_message() {
                             [ -z "$ADVANCED_TOOLS" ] && MENU_I="$(printf '%b1 %b = Update unbound Installation  %b%s%b\n%b2 %b = Update unbound Installation Advanced Mode %b%s%b\n%b3 %b = Advanced Tools\n\n ' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET" "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET"  "${cBYEL}" "${cRESET}" )"
                         fi
 
-                        MENU_RS="$(printf '%brs%b = %bRestart%b (or %bStart%b) unbound\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "$cBGRE" "${cRESET}")"
+                        MENU_RS="$(printf '%brs%b = %bRestart%b (or %bStart%b) unbound (%b)\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "$cBGRE" "${cRESET}" "use $cBGRE'rs nocache'$cRESET to flush cache" )"
                         #MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit; vh=View Example Configuration) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
                         MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
                     else
@@ -505,7 +505,7 @@ welcome_message() {
                     MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                     MENUW_LINKS="$(printf '%blinks%b = Show list of external links URLs\n' "${cBYEL}" "${cRESET}")"  # v1.28
                     MENUW_DIG="$(printf '%bdig%b = {domain} Show dig info e.g. dig qnamemintest.internet.nl \n' "${cBYEL}" "${cRESET}")"    # v2.09
-
+                    MENUW_LOOKUP="$(printf '%blookup%b = {domain} Show the name servers used for domain e.g. lookup asciiart.eu \n' "${cBYEL}" "${cRESET}")"
 
                     MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
 
@@ -557,7 +557,7 @@ welcome_message() {
                             printf "%s\t\t\t\t\t\t\t%s\n"  "$MENU_3" "$MENU_RL"    # v1.17
                             printf "%s\t\t\t\t\t\t%s\n"    "$MENU__" "$MENU_OQ"
                             echo
-                            printf "%s\t\t\t\t\t\t%s\n"    "$MENU_RS" "$MENU_S"
+                            printf "%s\t%s\n"          "$MENU_RS" "$MENU_S"    # v2.11
                             printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
                         fi
                     else
@@ -625,10 +625,17 @@ welcome_message() {
                         local PREINSTALLCONFIG="$(Backup_unbound_config)"               # v1.27 Preserve any custom config.conf
                     fi
 
+                    Manage_cache_stats "save"                               # v2.11
+
                     install_unbound $menu1
+
+
 
                     # Was the Install/Update successful or CANCElled
                     if [ $? -eq 0 ];then                            # v2.06 0-Successful;1-CANCElled
+
+                        Manage_cache_stats "restore"                                # v2.11
+
                         if [ "$KEEPACTIVECONFIG" != "Y" ];then                          # v1.27
 
                             if [ -n "$PREINSTALLCONFIG" ] && [ -f "/opt/share/unbound/configs/"$PREINSTALLCONFIG ] ;then
@@ -636,7 +643,7 @@ welcome_message() {
                                 # If either of the two customising files exist then no point in prompting the restore
                                 if [ ! -f /opt/share/unbound/configs/unbound.conf.add ] && [ -f /opt/share/unbound/configs/unbound.postconf ];then      # v2.10
 
-                                        echo -e "\a\nDo you want to restore the pre-update 'unbound.conf'? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}RESTORE ${cRESET}or press $cBGRE[Enter] to CANCEL$cRESET"
+                                        echo -e "\a\nDo you want to KEEP your current unbound configuration? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}KEEP ${cRESET}or press $cBGRE[Enter] to use new downloaded 'unbound.conf'$cRESET"
                                         read -r "ANS"
                                         if [ "$ANS" == "y"  ];then                      # v1.27
                                             cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf # Restore previous config
@@ -661,6 +668,16 @@ welcome_message() {
                     ADVANCED_TOOLS="Y"                                  # v1.21
                     menu1=""
                     ;;
+                lookup*)                                                    # v2.11
+                    if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
+                        TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                        echo -e $cBGRA
+                        unbound_Control "lookup" "$TESTTHIS"
+                    else
+                        echo -e $cBRED"\a\n\t***ERROR Please specify valid domain for 'lookup'"
+                    fi
+
+                ;;
                 z)
                     local UNINSTALL_TYPE="full"                         # v2.09 Force deletion of scribe logs for uiscribe
                     #[ "$menu1" == "zl" ] && UNINSTALL_TYPE="full"
@@ -840,7 +857,7 @@ EOF
 
                     fi
                 ;;
-                s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                       # v2.07 v1.08
+                s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                      # v2.07 v1.08
 
                     echo
                     unbound_Control "$menu1"                                # v1.16
@@ -852,17 +869,32 @@ EOF
                     [ $? -eq 0 ] && exec "$0"                               # v1.18 Only exit if new script downloaded
 
                 ;;
-                rs|rsnouser)                                                # v1.07
+                rs*)                                                # v1.07
 
                     [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
-
-                    [ "$menu1" == "rsnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
 
                     if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
                         echo -e $cBGRE
                         unbound-checkconf ${CONFIG_DIR}unbound.conf                                     # v2.03
                         echo -e
+
+                        if [ "$(echo "$menu1" | wc -w)" -gt 1 ];then                                    # v2.11
+                            local NOCACHE=$(echo "$menu1" | awk '{print $2}')
+                            [ "$NOCACHE" != "nocache" ] && { echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'nocache'$cBRED is valid"$cRESET; continue; }
+                        fi
+
+                        # Don't save the cache if unbound is UP and 'rs nocache' requested.
+                        if [ -n "$(pidof unbound)" ] && [ "$NOCACHE" != "nocache" ];then                # v2.11
+                            Manage_cache_stats "save"                       # v2.11
+                        else
+                            # If unbound is DOWN and 'rs nocache' specified then ensure that the cache is not restored
+                            :
+                        fi
+
                         /opt/etc/init.d/S61unbound restart
+
+                        Manage_cache_stats "restore"                        # v2.11
+
                         CHECK_GITHUB=1                                      # v1.27 force a GitHub version check to see if we are OK
                         echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
                         WAIT=11     # 16 i.e. 15 secs should be adequate?
@@ -888,6 +920,7 @@ EOF
                     [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
                     echo
+                    Manage_cache_stats "save"                               # v2.11
                     /opt/etc/init.d/S61unbound stop
                     echo -en $cBCYA"\nRestarting dnsmasq....."$cBGRE        # v2.09
                     service restart_dnsmasq
@@ -1164,6 +1197,12 @@ Check_dnsmasq_postconf() {
          echo -e "#!/bin/sh"                                                                >  /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
          echo -e "CONFIG=\$1"                                                               >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
          echo -e "source /usr/sbin/helper.sh"                                               >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
+         echo -e "######################################################################"   >> /jffs/addons/unbound/unbound.postconf   # v2.11
+         echo -e "#####            DO NOT EDIT THIS FILE MANUALLY                #######"   >> /jffs/addons/unbound/unbound.postconf   # v2.11
+         echo -e "#####             You are probably looking for                 #######"   >> /jffs/addons/unbound/unbound.postconf   # v2.11
+         echo -e "#####               your customising script                    #######"   >> /jffs/addons/unbound/unbound.postconf   # v2.11
+         echo -e "#####     '/opt/share/unbound/configs/unbound.postconf'        #######"   >> /jffs/addons/unbound/unbound.postconf   # v2.11
+         echo -e "######################################################################"   >> /jffs/addons/unbound/unbound.postconf   # v2.11
          echo -e "logger -t \"(dnsmasq.postconf)\" \"Updating \$CONFIG for unbound.....\"\t\t\t\t\t\t# unbound_manager"   >> /jffs/addons/unbound/unbound.postconf  # v2.00
          echo -e "if [ -n \"\$(pidof unbound)\" ];then"                                     >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.12
          echo -e "${TAB}pc_delete \"servers-file\" \$CONFIG"                                >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
@@ -1406,7 +1445,7 @@ Check_config_add_and_postconf() {                                           # v2
     # If the 'server:' directives are to be included add the 'include $FN' directive
     local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"
     if [ -f $CONFIG_ADD ];then
-        echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf)'"$cBGRA
+        echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA
         [ -z "$(grep "^include \"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && sed -i "/^server:/ainclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n\n" ${CONFIG_DIR}unbound.conf    # v2.10
     fi
     local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
@@ -1623,6 +1662,34 @@ unbound_Control() {
 
     case $1 in
 
+        dump|save|load|delete)          # v2.11
+
+            local FN="/opt/share/unbound/configs/cache.txt"
+
+            case "$1" in
+                dump|save)
+                    $UNBOUNCTRLCMD dump_cache > $FN
+                    [ "$1" == "save" ] && echo -e $cRESET"unbound cache SAVED to $cBGRE'/opt/share/unbound/configs/cache.txt'$cRESET"$cRESET  1>/dev/null
+
+                ;;
+                load)
+                    if [ -f /opt/share/unbound/configs/cache.txt ];then
+                        $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
+                        rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
+                    fi
+                ;;
+                delete)
+                    if [ -f $FN ];then
+                        rm $FN
+                        echo -e $cRESET"unbound cache file $cBGRE'$FN'$cRESET DELETED"$cRESET  2>&1
+                    fi
+                ;;
+            esac
+        ;;
+        lookup*)                                                        # v2.11
+            local DOMAIN=$(echo "$@" | awk '{print $2}')
+            $UNBOUNCTRLCMD lookup $DOMAIN
+        ;;
         "s+"|"s-")                                                      # v1.18
             CONFIG_VARIABLE="extended-statistics"
             [ "$1" == "s+" ] && CONFIG_VALUE="yes" || CONFIG_VALUE="no"
@@ -1852,7 +1919,7 @@ remove_existing_installation() {
 
         if [ "$1" == "full" ];then                  # v2.09
             echo -e $cBCYA"Removing scribe logs"$cBGRE
-            rm /opt/etc/syslog-ng.d/unbound /opt/var/log/unbound.log
+            rm /opt/etc/syslog-ng.d/unbound /opt/var/log/unbound.log 2>/dev/null    # v2.11
             /opt/bin/scribe reload 2>/dev/null 1>/dev/null
         fi
 
@@ -2086,6 +2153,21 @@ Record_CNT() {                                                                  
     sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' $FN
 
     echo "$(wc -l < $FN)"
+}
+
+Manage_cache_stats() {                                                              # v2.11
+
+    case "$1" in
+        save)
+            unbound_Control "dump"
+        ;;
+        restore)
+            unbound_Control "load"
+        ;;
+        delete)
+            unbound_Control "flush"
+        ;;
+    esac
 }
 Check_GUI_NVRAM() {
 
