@@ -847,9 +847,9 @@ EOF
                         fi
 
                         # Assume we have the easy option to uncomment....
-                        Uncomment_config_options "use-syslog:"          "uncomment"     # v1.27
-                        Uncomment_config_options "log-local-actions:"   "uncomment"     # v1.27
-                        Uncomment_config_options "log-tag-queryreply:"  "uncomment"     # v2.05
+                        Edit_config_options "use-syslog:"          "uncomment"     # v1.27
+                        Edit_config_options "log-local-actions:"   "uncomment"     # v1.27
+                        Edit_config_options "log-tag-queryreply:"  "uncomment"     # v2.05
 
                         #[ "$(Get_unbound_config_option "use-syslog")" == "?" ]        && sed -i '/^log\-time\-ascii:/ause\-syslog: yes' ${CONFIG_DIR}unbound.conf
                         #[ "$(Get_unbound_config_option "log-local-actions")" == "?" ] && sed -i '/^use\-syslog:/alog\-local\-actions: yes' ${CONFIG_DIR}unbound.conf
