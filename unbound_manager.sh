@@ -643,7 +643,7 @@ welcome_message() {
                             if [ -n "$PREINSTALLCONFIG" ] && [ -f "/opt/share/unbound/configs/"$PREINSTALLCONFIG ] ;then
 
                                 # If either of the two customising files exist then no point in prompting the restore
-                                if [ ! -f /opt/share/unbound/configs/unbound.conf.add ] && [ -f /opt/share/unbound/configs/unbound.postconf ];then      # v2.10
+                                if [ ! -f /opt/share/unbound/configs/unbound.conf.add ] && [ ! -f /opt/share/unbound/configs/unbound.postconf ];then      # V2.12 Hotfix v2.10
 
                                         echo -e "\a\nDo you want to KEEP your current unbound configuration? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}KEEP ${cRESET}or press $cBGRE[Enter] to use new downloaded 'unbound.conf'$cRESET"
                                         read -r "ANS"
@@ -1117,6 +1117,8 @@ EOF
                     fi
 
                     [ $RC -eq 0 ] && Restart_unbound
+
+                    Check_GUI_NVRAM
                 ;;
                 *)
                     printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
