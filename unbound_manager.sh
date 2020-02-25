@@ -339,18 +339,52 @@ Unbound_Installed() {
         return 1
     fi
 }
+Show_credits() {
+    printf '\n+======================================================================+\n'
+    printf '|  Welcome to the %bunbound Manager/Installation script (Asuswrt-Merlin)%b |\n' "$cBGRE" "$cRESET"
+    printf '|                                                                      |\n'
+    printf '|                      Version %b%s%b by Martineau                       |\n' "$cBMAG" "$VERSION" "$cRESET"
+    printf '|                                                                      |\n'
+}
 welcome_message() {
 
+        # No need to recreate the STATIC menu items on each invocation
+        if [ -z "$MENU_Z" ];then                                # v2.12
+                MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
+                MENU_Z="$(printf '%bz %b = Remove unbound/unbound_manager Installation\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
+                MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
+                MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
+                MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
+                MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                MENUW_DIG="$(printf '%bdig%b = {domain} Show dig info e.g. dig qnamemintest.internet.nl \n' "${cBYEL}" "${cRESET}")"    # v2.09
+                MENUW_LOOKUP="$(printf '%blookup%b = {domain} Show the name servers used for domain e.g. lookup asciiart.eu \n' "${cBYEL}" "${cRESET}")"
+                MENUW_DUMPCACHE="$(printf '%bdumpcache%b = Manually use %brestorecache%b after REBOOT\n' "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}" )"  # v2.12
+                MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
+                MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
+
+        fi
+
+        Show_credits
+
+        if [ "$(Unbound_Installed)" == "Y" ];then   # v2.12
+            HDR="N"
+            printf '+======================================================================+'   # 2.13
+        fi
+
         while true; do
+
+            # If unbound already installed then no need to display FULL HDR - stops confusing idiot users ;-:
+            if [ "$HDR" == "ForceDisplay" ];then            # v2.12
+                HDR=                                        # v2.12 Show the header Splash box in FULL
+                Show_credits
+            fi
 
             # No need to display the Header box every time....
             if [ -z "$HDR" ];then                               # v1.09
 
-                printf '\n+======================================================================+\n'
-                printf '|  Welcome to the %bunbound Manager/Installation script (Asuswrt-Merlin)%b |\n' "$cBGRE" "$cRESET"
-                printf '|                                                                      |\n'
-                printf '|                      Version %b%s%b by Martineau                       |\n' "$cBMAG" "$VERSION" "$cRESET"
-                printf '|                                                                      |\n'
                 printf '| Requirements: USB drive with Entware installed                       |\n'
                 printf '|                                                                      |\n'
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
@@ -380,22 +414,6 @@ welcome_message() {
                 printf '+======================================================================+\n'
 
                 HDR="N"                                     # v1.09
-
-                # No need to recreate the STATIC menu items on every loop
-                MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
-                MENU_Z="$(printf '%bz %b = Remove unbound/unbound_manager Installation\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
-                MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
-                MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
-                MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_DIG="$(printf '%bdig%b = {domain} Show dig info e.g. dig qnamemintest.internet.nl \n' "${cBYEL}" "${cRESET}")"    # v2.09
-                MENUW_LOOKUP="$(printf '%blookup%b = {domain} Show the name servers used for domain e.g. lookup asciiart.eu \n' "${cBYEL}" "${cRESET}")"
-                MENUW_DUMPCACHE="$(printf '%bdumpcache%b = Manually use %brestorecache%b after REBOOT\n' "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}" )"  # v2.12
-                MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
-                MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
 
             else
                 echo -e ${cRESET}$cWGRE"\n"$cRESET 2>&1     # Separator line
@@ -583,8 +601,8 @@ welcome_message() {
             unset $TXT
 
             case "$menu1" in
-                0)
-                    HDR=                                            # v1.09
+                0|splash)                                           # v2.12
+                    HDR="ForceDisplay"                                            # v1.09
                 ;;
                 1|2|2*|i|iu|i*|"i?")
 
@@ -953,7 +971,8 @@ EOF
                     # No of processors/threads
                     #$UNBOUNCTRLCMD get_option thread
 
-                    echo -e $cBCYA"\n\tAbout unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ ${cRESET}"
+                    echo -e $cBCYA"\n\tAbout ${cRESET}unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ ${cRESET}"
+                    echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
                 ;;
                 easy|adv|advanced)                                          # v2.07
                     # v2.07 When unbound_manager invoked from amtm, 'easy' mode is the default.
