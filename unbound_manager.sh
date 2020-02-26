@@ -2418,6 +2418,9 @@ Ad_Tracker_blocking() {
     #tar -jxvf ${CONFIG_DIR}unbound_adblock.tar.bz2 -C ${CONFIG_DIR}    # v1.07
 
     download_file ${CONFIG_DIR} adblock/gen_adblock.sh  jackyaz         # v2.02 v1.17
+ 	if [ -n "$(grep -F "adblock/sites" ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then  # v2.13 @juched rewrote 'gen_adblock.sh' to reference this file	
+		download_file ${CONFIG_DIR} adblock/sites           jackyaz        
+    fi
     download_file ${CONFIG_DIR} adblock/blockhost       jackyaz         # v2.02 v1.17
     download_file ${CONFIG_DIR} adblock/permlist        jackyaz         # v2.02 v1.17
 
