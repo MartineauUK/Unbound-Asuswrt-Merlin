@@ -1888,7 +1888,7 @@ unbound_Control() {
             if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                 local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
             fi
-            if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "extended-stats" ${CONFIG_DIR}unbound.conf)" ];then
+            if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "extended-statistics" ${CONFIG_DIR}unbound.conf)" ];then
                 if [ "$ARG" != "uninstall" ];then
                     AUTO_REPLY7="y"
                     Option_GUI_Stats_TAB          "$AUTO_REPLY7"
@@ -1906,7 +1906,7 @@ unbound_Control() {
         sa*)                                                            # v2.07
             if [ -n "$(echo "$@" | sed -n "s/^.*filter=//p")" ];then    # v2.07 allow very basic 'or' 'filtering'
                 local FILTER=$(echo "$@" | sed -n "s/^.*filter=//p" | awk '{print $1}') # v2.07
-                # NOTE: 's+' aka 'extended-stats: yes' must be active if you expect 'sa filter=thread|total' to work!
+                # NOTE: 's+' aka 'extended-statistics: yes' must be active if you expect 'sa filter=thread|total' to work!
                 $UNBOUNCTRLCMD stats$RESET  | sort | grep -E "$FILTER" | column # v2.07
             else
                 $UNBOUNCTRLCMD stats$RESET  | column
@@ -1926,7 +1926,7 @@ unbound_Control() {
             printf "\n%bSummary: Cache Hits success=%3.2f%%" "$cRESET" "$PCT"
 
             if [ -n "$ADDFILTER" ];then                                 # v2.07 allow display of additional stat value(s)
-                # NOTE: 's+' aka 'extended-stats: yes' must be ACTIVE if you expect 's thread' to work!
+                # NOTE: 's+' aka 'extended-statistic[CODE][/CODE]s: yes' must be ACTIVE if you expect 's thread' to work!
                 echo -e "\n"
                 $UNBOUNCTRLCMD stats$RESET  | grep -E "$ADDFILTER" | column
             fi
