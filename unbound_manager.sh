@@ -1,8 +1,8 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.13
+#============================================================================================ © 2019-2020 Martineau v2.14
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
-# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['config='config_file]
+# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['restart'] ['config='config_file]
 #
 #           unbound_manager    easy
 #                              Menu: Allow quick install options (3. Advanced Tools will be shown a separate page)
@@ -41,12 +41,14 @@
 #                              failed install will look as if the script has stalled until cURL time-out expires (3 mins).
 #                              Use of nochk disables the 'stall' to quickly allow access to the 'z  = Remove unbound Installation' option
 #
+#           unbound_manager    restart
+#                              Allows saving of the cache (Called by daily cron job 'gen_adblock.sh')
 #
 #  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for additional help/documentation with this script.
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 25-Feb-2020
+# Last Updated Date: 01-Mar-2020
 #
 # Description:
 #
@@ -63,9 +65,10 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.13"
+VERSION="2.14"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
+GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
 GITHUB_MARTINEAU_DEV="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/dev"
 GITHUB_DIR=$GITHUB_MARTINEAU                       # v1.08 default for script
@@ -552,14 +555,14 @@ welcome_message() {
                                     MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
 
                                     # Takes 0.75 - 2 secs :-(
-                                    if [ "$($UNBOUNCTRLCMD get_option extended-statistics)" == "yes" ];then    # v1.18
+                                    if [ "$($UNBOUNCTRLCMD get_option extended-statistics)" == "yes" ] || [ "$(Get_unbound_config_option "extended-statistics:")" == "yes" ] ;then    # v 2.14 v1.18
                                         EXTENDEDSTATS=$cBGRE" Extended"$cRESET
                                         EXTENDEDSTATS_OPTION="s-=Disable Extended Stats"
                                     else
                                         EXTENDEDSTATS=
                                         EXTENDEDSTATS_OPTION="s+=Enable Extended Stats"
                                     fi
-                                    MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$EXTENDEDSTATS_OPTION")"
+                                    MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; sgui=Install GUI TAB; %s)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$EXTENDEDSTATS_OPTION")"
                                 fi
 
                             fi
@@ -1299,6 +1302,9 @@ download_file() {
             jackyaz)
                 GITHUB_DIR=$GITHUB_JACKYAZ                      # v2.02
             ;;
+            juched)
+                GITHUB_DIR=$GITHUB_JUCHED                       # v2.14
+            ;;
             dev)
                 GITHUB_DIR=$GITHUB_MARTINEAU_DEV                # v2.06
                 printf '\t%bGithub "dev branch"%b\n' "${cRESET}$cWRED" "$cRESET"        # v2.06
@@ -1313,6 +1319,8 @@ download_file() {
             printf '\tRerun %bunbound_manager nochk%b and select the %bRemove unbound/unbound_manager Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
 
             Check_GUI_NVRAM                                     # v1.17
+
+            echo -e $cRESET"\a\n"
 
             exit 1
         fi
@@ -1500,6 +1508,40 @@ DoT_Forwarder() {
         echo -e $cBCYA"\n\tunbound DoT disabled."$cBGRA
     fi
 }
+Option_GUI_Stats_TAB() {
+
+     local ANS=$1                                           # v2.14
+     if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+        echo -en $cBYEL"Option Auto Reply 'y'\t"
+     fi
+
+     if [ "$USER_OPTION_PROMPTS" == "?" ];then
+        # v2.14 @juched wrote  GUI TAB to display stats
+        echo -e "\nDo you want to add router GUI TAB to display stats?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+        read -r "ANS"
+     fi
+     [ "$ANS" == "y"  ] && { GUI_Stats_TAB; return 0; } || return 1                     # v2.14
+}
+GUI_Stats_TAB(){
+
+    if [ "$1" != "uninstall" ];then
+        echo -e $cBCYA"\n\tInstalling @juched's GUI TAB to display unbound stats....."$cRESET     # v2.14
+        download_file /jffs/addons/unbound/ unbound_stats.sh        juched
+        download_file /jffs/addons/unbound/ unboundstats_www.asp    juched
+        chmod +x /jffs/addons/unbound/unbound_stats.sh
+        echo -en $cBCYA"\n\t"
+        sh /jffs/addons/unbound/unbound_stats.sh "install"
+    else
+        if [ -f /jffs/addons/unbound/unboundstats_www.asp ];then
+            echo -en $cBCYA"\n\tunboundGUI stats TAB uninstalled - "$cRESET
+            sh /jffs/addons/unbound/unbound_stats.sh "uninstall"
+            rm /jffs/addons/unbound/unboundstats_www.asp
+            rm /jffs/addons/unbound/unbound_stats.sh
+        else
+            echo -e $cBRED"\a\n\t***ERROR unbound GUI TAB NOT installed"$cRESET
+        fi
+    fi
+}
 Get_RootDNS() {
      # https://www.iana.org/domains/root/servers
      # https://root-servers.org/ for live status
@@ -1635,7 +1677,11 @@ Restart_unbound() {
             do
                 sleep 1
                 I=$((I + 1))
-                [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET ; break; }
+                if [ -z "$(pidof unbound)" ];then
+                    echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET
+                    SayT "***ERROR unbound went AWOL after $I seconds.... Try debug mode and check for unbound.conf or runtime errors!"
+                    break
+                fi
             done
         [ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
         [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
@@ -1643,6 +1689,7 @@ Restart_unbound() {
         echo -e $cBRED"\a"
         unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
         echo -e $cBRED"\n***ERROR ${cRESET}requested re(Start) of unbound ABORTed! - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file"$cBGRE
+        SayT "***ERROR requested re(Start) of unbound ABORTed! - use option 'vx'$cRESET to correct 'unbound.conf' or ${cBMAG}'rl' to load a valid configuration file"   # v2.14
     fi
 }
 Skynet_BANNED_Countries() {
@@ -1818,10 +1865,44 @@ unbound_Control() {
         "s+"|"s-")                                                      # v1.18
             CONFIG_VARIABLE="extended-statistics"
             [ "$1" == "s+" ] && CONFIG_VALUE="yes" || CONFIG_VALUE="no"
+
             local RESULT="$($UNBOUNCTRLCMD set_option $CONFIG_VARIABLE $CONFIG_VALUE)"
             [ "$RESULT" == "ok" ] && local COLOR=$cBGRE || COLOR=$cBRED
             echo -e $cRESET"$UNBOUNCTRLCMD set_option $cBMAG'$CONFIG_VARIABLE $CONFIG_VALUE'$COLOR $RESULT"  2>&1
+
+            if [ "$(Get_unbound_config_option "extended-statistics")" == "yes" ];then # v2.14
+                if [ "$1" == "s-" ];then
+                    Edit_config_options "extended-statistics:"  "comment"
+                    #echo -e $cBMAG"\n\t'unbound.conf' set '$CONFIG_VARIABLE: $CONFIG_VALUE'"$cRESET
+                fi
+            else
+                if [ "$1" == "s+" ];then                                # v2.14
+                    Edit_config_options "extended-statistics:"  "uncomment"
+                    #echo -e $cBMAG"\n\t'unbound.conf' set '$CONFIG_VARIABLE: $CONFIG_VALUE'"$cRESET
+                fi
+            fi
+
         ;;
+        sgui*)                                                          # v2.14
+            local ARG=
+            if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+            fi
+            if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "extended-stats" ${CONFIG_DIR}unbound.conf)" ];then
+                if [ "$ARG" != "uninstall" ];then
+                    AUTO_REPLY7="y"
+                    Option_GUI_Stats_TAB          "$AUTO_REPLY7"
+                    local RC=$?
+
+                    Check_GUI_NVRAM
+                else
+                    GUI_Stats_TAB "uninstall"
+                    local RC=0
+                fi
+            else
+                echo -e $cBRED"\a\n\tunbound NOT installed! or 'extended-stats:' template NOT defined in 'unbound.conf'?"$cRESET
+            fi
+            ;;
         sa*)                                                            # v2.07
             if [ -n "$(echo "$@" | sed -n "s/^.*filter=//p")" ];then    # v2.07 allow very basic 'or' 'filtering'
                 local FILTER=$(echo "$@" | sed -n "s/^.*filter=//p" | awk '{print $1}') # v2.07
@@ -2241,7 +2322,9 @@ _quote() {
 
         local KEYWORD="$(_quote "$1")"  # v2.00
 
-        local LINE="$(grep -E "^[[:blank:]]*[^#]" ${CONFIG_DIR}unbound.conf | grep -E "$KEYWORD" ${CONFIG_DIR}unbound.conf)"
+        # Ignore the comment/header entries                         # v2.14
+        local POS="$(grep -Enw "[[:space:]]*server:" ${CONFIG_DIR}unbound.conf | cut -d':' -f1)"        # v2.14
+        local LINE="$(tail -n +$POS ${CONFIG_DIR}unbound.conf | grep -E "^[[:blank:]]*[^#]" | grep -E "$KEYWORD")"  # v2.14
 
         [ "$(echo "$LINE" | grep -E "^#" )" ] && local LINE=
 
@@ -2387,6 +2470,9 @@ Check_GUI_NVRAM() {
                         done
                 fi
 
+                if [ -f /jffs/addons/unbound/unboundstats_www.asp ];then                                                    # v2.14
+                    echo -e $cBGRE"\t[✔] Router GUI statistics TAB installed" 2>&1
+                fi
             fi
 
         #fi
@@ -2712,7 +2798,7 @@ case "$CUSTOM_NVRAM" in                                                     # v2
 esac
 
 NEW_CONFIG=$(echo "$@" | sed -n "s/^.*config=//p" | awk '{print $1}')                       # v1.22
-if [    -n "$NEW_CONFIG" ];then
+if [  -n "$NEW_CONFIG" ];then
     [ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"     # v1.22
     [ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.22
     if [ -f  $NEW_CONFIG ];then
@@ -2737,8 +2823,10 @@ if [    -n "$NEW_CONFIG" ];then
         rm -rf /tmp/unbound.lock
         exit 1
     fi
-else
-    if [ "$1" == "recovery" ];then                              # v1.22
+fi
+
+case "$1" in
+    recovery)              # v1.22
         NEW_CONFIG="/opt/share/unbound/configs/reset.conf"
         if [ -f  $NEW_CONFIG ];then
             TXT=" <<== $NEW_CONFIG"
@@ -2755,8 +2843,13 @@ else
         TXT=
         unset $TXT
         unset $NEW_CONFIG
-    fi
-fi
+        ;;
+    restart)                # v2.14
+        # Allow saving of cache - i.e. when called by '/adblock/gen_adblock.sh'
+        Restart_unbound
+        exit 0
+        ;;
+esac
 
 clear
 welcome_message "$@"
