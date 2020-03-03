@@ -1616,14 +1616,14 @@ GUI_Stats_TAB(){
             #   tab: [
             # <snip>
             #{url: "userX.asp", tabName: "Unbound"},
-        if [ ! -f /tmp/menuTree.js ] || [ -z "$(grep -i "Unbound" /tmp/menuTree.js)" ];then      # v2.15
+        #if [ ! -f /tmp/menuTree.js ] || [ -z "$(grep -i "Unbound" /tmp/menuTree.js)" ];then      # v2.15
             echo -en $cBGRA
             sh /jffs/addons/unbound/unbound_stats.sh "install"
             echo -en $cRESET
-        else
-            echo -en $cBRED"\a\n\tunbound GUI graphical stats TAB already installed!\n"$cRESET
-            STATUS=1                                                # v2.15
-        fi
+        #else
+            #echo -en $cBRED"\a\n\tunbound GUI graphical stats TAB already installed!\n"$cRESET
+            #STATUS=1                                                # v2.15
+        #fi
     else
         if [ -f /jffs/addons/unbound/unbound_stats.sh ];then
             echo -en $cBCYA"\n\tunbound GUI graphical stats TAB uninstalled - "$cRESET
