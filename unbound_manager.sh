@@ -1789,23 +1789,28 @@ Restart_unbound() {
 
         Manage_cache_stats "restore"                        # v2.11
 
-        CHECK_GITHUB=1                                      # v1.27 force a GitHub version check to see if we are OK
-        echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
-        WAIT=11     # 11 i.e. 10 secs should be adequate?
-        INTERVAL=1
-        I=0
-         while [ $I -lt $((WAIT-1)) ]
-            do
-                sleep 1
-                I=$((I + 1))
-                if [ -z "$(pidof unbound)" ];then
-                    echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET
-                    SayT "***ERROR unbound went AWOL after $I seconds.... Try debug mode and check for unbound.conf or runtime errors!"
-                    break
-                fi
-            done
-        [ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
-        [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
+        if [ -z "$1" ];then                                 # v2.15 If called by 'gen_adblock.sh' then skip the status check
+            CHECK_GITHUB=1                                  # v1.27 force a GitHub version check to see if we are OK
+            echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
+            WAIT=11     # 11 i.e. 10 secs should be adequate?
+            INTERVAL=1
+            I=0
+             while [ $I -lt $((WAIT-1)) ]
+                do
+                    sleep 1
+                    I=$((I + 1))
+                    if [ -z "$(pidof unbound)" ];then
+                        echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET
+                        SayT "***ERROR unbound went AWOL after $I seconds.... Try debug mode and check for unbound.conf or runtime errors!"
+                        break
+                    fi
+                    #[ $I -eq 2 ] && Manage_cache_stats "restore"
+                done
+            [ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
+            [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
+        else
+            echo -en $cBCYA
+        fi
     else
         echo -e $cBRED"\a"
         unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
@@ -1962,7 +1967,9 @@ unbound_Control() {
     # Each call to unbound-control takes upto 2 secs;  use the -c' parameter            # v1.27
     #unbound-control -q status
     #if [ "$?" != 0 ]; then
-    [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\t***ERROR unbound NOT running! - option unavailable" 2>&1; return 1; }    # v1.26
+    if [ -z "$(pidof unbound)" ];then
+        [ "$NOMSG" != "NOMSG" ] && { echo -e $cBRED"\a\t***ERROR unbound NOT running! - option unavailable" 2>&1; return 1; }    # v2.15 v1.26
+    fi
     #fi
 
     #[ -z "$" ] && { echo -e $cBRED"\a***ERROR unbound not installed!" 2>&1; return 1; }
@@ -1988,7 +1995,7 @@ unbound_Control() {
 
                 ;;
                 load|rest)
-                    if [ -s /opt/share/unbound/configs/cache.txt ];then # v2.13 Change '-f' ==> 's' (Exists AND NOT Empty!)
+                    if [ -s /opt/share/unbound/configs/cache.txt ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
                         $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
                         [ "$1" == "rest" ] && echo -e $cRESET"\a\n\tunbound cache RESTORED from $cBGRE'/opt/share/unbound/configs/cache.txt'$cRESET"    # v2.12
                         rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
@@ -2393,12 +2400,14 @@ install_unbound() {
         service restart_dnsmasq                                 # v1.13
         echo -en $cRESET
 
-        Option_Ad_Tracker_Blocker           "$AUTO_REPLY3"
-
-        # Start unbound
-        [ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart # Will also restart dnsmasq
-
         Option_Disable_Firefox_DoH          "$AUTO_REPLY5"      # v1.18
+
+        # v2.15 Ad Block MUST be last Option installed because    .....
+        Option_Ad_Tracker_Blocker           "$AUTO_REPLY3"      # If installed, invokes 'unbound_manager restart'
+        if [ $? -eq 1 ];then                                    # if 'unbound_manager restart' wasn't executed then
+            # Start/restart unbound
+            [ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart # Will also restart dnsmasq
+        fi
 
         local END_TIME=$(date +%s)
         local DIFFTIME=$((END_TIME-START_TIME))
@@ -2415,30 +2424,30 @@ install_unbound() {
                 sleep 1
                 I=$((I + 1))
                 [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n"$cRESET ; break; }
-            done                                                                            # v1.06
+            done                                                         # v1.06
 
         if pidof unbound >/dev/null 2>&1; then
             service restart_dnsmasq >/dev/null      # v1.18 Redundant? - S61unbound now reinstates 'POSTCMD=service restart_dnsmasq'
 
-            if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
+            if [ "$KEEPACTIVECONFIG" != "Y" ];then                       # v1.27
                 #local TAG="# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_manager "$(date)")" # v1.19
                 #echo -e $cBCYA"Tagged 'unbound.conf' '$TAG' and backed up to '/opt/share/unbound/configs/user.conf'"$cRESET
-                # Backup the config to easily restore it 'rl user[.conf]'   # v1.19
-                cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/user.conf    # v1.19
+                # Backup the config to easily restore it 'rl user[.conf]'                 # v1.19
+                cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/user.conf      # v1.19
 
                 #sed -i "1i$TAG" /opt/share/unbound/configs/user.conf    # v1.19
 
                 #cmp -s ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf || sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf # v1.19
-                echo -e $cBGRE"\n\tInstallation of unbound completed\n"     # v1.04
+                echo -e $cBGRE"\n\tInstallation of unbound completed\n"  # v1.04
             fi
         else
-            echo -e $cBRED"\a\n\t***ERROR Unsuccessful installation of unbound detected\n"      # v1.04
+            echo -e $cBRED"\a\n\t***ERROR Unsuccessful installation of unbound detected\n" # v1.04
             echo -en ${cRESET}$cRED_
-            grep unbound /tmp/syslog.log | tail -n 5                # v1.07
+            grep unbound /tmp/syslog.log | tail -n 5                     # v1.07
             unbound -dvvv          # v1.06
             echo -e $cRESET"\n"
             printf '\n\tRerun %bunbound_manager nochk%b and select the %bRemove%b option to backout changes\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"
-            exit_message                                            # v1.18
+            exit_message                                                 # v1.18
 
         fi
 
@@ -2641,10 +2650,8 @@ Option_Ad_Tracker_Blocker() {
             echo -e "\nDo you want to install Ad and Tracker blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
             read -r "ANS"
         fi
-        [ "$ANS" == "y"  ] && Ad_Tracker_blocking           # v1.06
+        [ "$ANS" == "y"  ] && { Ad_Tracker_blocking; return 0; } || return 1   # v2.15
 
-        # ....but just in case ;-)
-        #[ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart # Will also restart dnsmasq
 }
 Ad_Tracker_blocking() {
 
@@ -2677,19 +2684,14 @@ Ad_Tracker_blocking() {
         echo -e $cBCYA"Custom '/opt/share/unbound/configs/allowhost' already exists - ${cBGRE}'adblock/allowhost'$cRESET download skipped"$cBGRA
     fi
 
-    rmdir /opt/share/unbound/configs/adblock                            # v2.15 Hack
-
-    echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
-    chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
-    sh ${CONFIG_DIR}adblock/gen_adblock.sh              # Apparently requests '/opt/etc/init.d/S61unbound restart'
-                                                        # and deletes '/opt/var/lib/unbound/unbound.log' WTF!
+    rmdir /opt/share/unbound/configs/adblock                                       # v2.15 Hack
 
     if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then              # v1.07
         echo -e $cBCYA"Adding Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
         sed -i "/adblock\/adservers/s/^#//" ${CONFIG_DIR}unbound.conf                                       # v1.11
     fi
 
-    # Create cron job to refresh the Ads/Tracker lists      # v1.07
+    # Create cron job to refresh the Ads/Tracker lists  # v1.07
     echo -e $cBCYA"Creating Daily cron job for Ad and Tracker update"$cBGRA
     cru d adblock 2>/dev/null
     cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh       # EVERY day Deletes '/opt/var/lib/unbound/unbound.log'
@@ -2701,7 +2703,11 @@ Ad_Tracker_blocking() {
 
     chmod +x $FN                                            # v1.11 Hack????
 
-    echo -e $cRESET
+    echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
+    chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
+    sh ${CONFIG_DIR}adblock/gen_adblock.sh                  # v2.15 now invokes 'unbound_manager restart' to save/restore cache
+
+    echo -e $cBCYA
 }
 Option_Disable_Firefox_DoH() {
 
@@ -2930,13 +2936,13 @@ fi
 
 #exit
 
-Check_Lock "$1"
+
 
 [ ! -L "/opt/bin/unbound_manager" ] && Script_alias "create"                # v2.06 Hotfix for amtm v1.08
 
 [ -n "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU="Y" || EASYMENU="N"                    # v2.07
 
-# Does the firmware support addons?                                            # v2.10
+# Does the firmware support addons?                                         # v2.10
 if [ -n $(nvram get rc_support | grep -o am_addons) ];then
     CUSTOM_NVRAM="$(am_settings_get unbound_mode)"                          # v2.07 Retrieve value saved across amtm sessions
 fi
@@ -2997,14 +3003,18 @@ case "$1" in
         unset $TXT
         unset $NEW_CONFIG
         ;;
-    restart)                # v2.14
+    restart)                        # v2.14
         # Allow saving of cache - i.e. when called by '/adblock/gen_adblock.sh'
-        Restart_unbound
+        NOMSG="NOMSG"               # v2.15 if unbound isn't running then suppress errors/messages i.e. 'unbound-control dump_cache'
+        Restart_unbound "nochk"     # v2.15 skip the unbound restart status check
         exit 0
         ;;
 esac
 
 clear
+
+Check_Lock "$1"                     # v2.15 moved to allow 'gen_adblock.sh' to invoke 'unbound_manager restart'
+
 welcome_message "$@"
 
 echo -e $cRESET
