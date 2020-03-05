@@ -1315,9 +1315,6 @@ Check_dnsmasq_postconf() {
          echo -e "logger -t \"(dnsmasq.postconf)\" \"Updating \$CONFIG for unbound.....\"\t\t\t\t\t\t# unbound_manager"   >> /jffs/addons/unbound/unbound.postconf  # v2.00
          echo -e "if [ -n \"\$(pidof unbound)\" ];then"                                     >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.12
          echo -e "${TAB}pc_delete \"servers-file\" \$CONFIG"                                >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
-         echo -e "${TAB}pc_delete \"no-negcache\" \$CONFIG"                                 >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
-         echo -e "${TAB}pc_delete \"domain-needed\" \$CONFIG"                               >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
-         echo -e "${TAB}pc_delete \"bogus-priv\" \$CONFIG"                                  >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
          echo -e "${TAB}# By design, if GUI DNSSEC ENABLED then attempt to modify 'cache-size=0' results in dnsmasq start-up fail loop" >> /jffs/addons/unbound/unbound.postconf    # v2.00
          echo -e "${TAB}#       dnsmasq[15203]: cannot reduce cache size from default when DNSSEC enabled" >> /jffs/addons/unbound/unbound.postconf
          echo -e "${TAB}#       dnsmasq[15203]: FAILED to start up"                         >> /jffs/addons/unbound/unbound.postconf
