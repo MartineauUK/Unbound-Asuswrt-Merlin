@@ -2546,6 +2546,8 @@ Manage_cache_stats() {
 }
 Check_GUI_NVRAM() {
 
+        local ERROR_CNT=0                           # v2.16 Hotfix
+
         echo -e $cBCYA"\n\tRouter Configuration recommended pre-reqs status:\n" 2>&1    # v1.04
         # Check Swap file
         [ $(Check_SWAP) -eq 0 ] && echo -e $cBRED"\t[✖] Warning SWAP file is not configured $cRESET - use amtm to create one!" 2>&1 || echo -e $cBGRE"\t[✔] Swapfile="$(grep "SwapTotal" /proc/meminfo | awk '{print $2" "$3}')$cRESET  2>&1    # v1.04
@@ -2643,7 +2645,7 @@ Check_GUI_NVRAM() {
 
         #fi
 
-        [ $ERROR_CNT -ne 0 ] && { $ERRORCNT; return 1; } || return 0
+        [ $ERROR_CNT -ne 0 ] && { return 1; } || return 0   # v2.16 Hotfix
 
         local TXT=
         unset $TXT
