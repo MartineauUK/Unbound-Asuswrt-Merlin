@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.15
+#============================================================================================ © 2019-2020 Martineau v2.16
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['restart'] ['config='config_file]
@@ -48,7 +48,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 03-Mar-2020
+# Last Updated Date: 05-Mar-2020
 #
 # Description:
 #
@@ -65,7 +65,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.15"
+VERSION="2.16"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -365,7 +365,7 @@ welcome_message() {
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_DIG="$(printf '%bdig%b = {domain} Show dig info e.g. dig qnamemintest.internet.nl \n' "${cBYEL}" "${cRESET}")"    # v2.09
+                MENUW_DIG="$(printf '%bdig%b = {domain} [time] Show dig info e.g. dig asciiart.com\n' "${cBYEL}" "${cRESET}")"    # v2.09
                 MENUW_LOOKUP="$(printf '%blookup%b = {domain} Show the name servers used for domain e.g. lookup asciiart.eu \n' "${cBYEL}" "${cRESET}")"
                 MENUW_DUMPCACHE="$(printf '%bdumpcache%b = Manually use %brestorecache%b after REBOOT\n' "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}" )"  # v2.12
                 MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
@@ -567,9 +567,13 @@ welcome_message() {
                                     fi
 
                                     GUI_TAB="sgui=Install GUI TAB; "                                # v2.15
-                                    [ -f /jffs/addons/unbound/unboundstats_www.asp ] && GUI_TAB=    # v2.15 'sgui uninstall=' ?
 
-                                    MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s%s)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$GUI_TAB" "$EXTENDEDSTATS_OPTION")"   # v2.15
+                                    if [ -f /jffs/addons/unbound/unboundstats_www.asp ];then
+                                        GUI_TAB=                                                    # v2.15 'sgui uninstall=' ?
+                                        EXTENDEDSTATS_OPTION=$cBYEL"$HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/"$(grep -i unbound /tmp/menuTree.js  | grep -Eo "(user.*\.asp)")$cRESET # v2.16
+                                    fi
+
+                                    MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s%b)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$GUI_TAB" "$EXTENDEDSTATS_OPTION")"   # v2.16
 
                                     MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blacklist; ec=Config; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"   # v2.15
                                     [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" == "?" ] && MENU_EL=     # v2.15
@@ -1111,19 +1115,34 @@ EOF
                     echo -e  $cBCYA"\t\t\t\tClick ${cBYEL}https://cmdns.dev.dns-oarc.net/ ${cRESET}to view Check My DNS."   # v2.09 Credit @rgnldo
                     echo -e  $cBCYA"Click ${cBYEL}https://root-servers.org/ ${cRESET}to view Live Root Server status"
                 ;;
-                dig*|di*)                                                       # v2.09
+                dig*|di*)                                                       # v2.09 'dig {domain} ['time']'
 
                     # dig txt qnamemintest.internet.nl                          # @rgnldo
                     # dig qnamemintest.internet.nl @127.0.0.1 -p 53535          # @rgnldo
                     # dig +short txt qnamemintest.internet.nl                   # @rgnldo - should see 'HOORAY' if QNAME working
-                    if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
+                    local ARG2=                                                 # v2.16
+                    if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then                # v2.16
+                        local ARG2="$(printf "%s" "$menu1" | cut -d' ' -f3)"
+                    fi
+
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then                # v2.16
                         TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                         if [ "$(which dig)" == "/opt/bin/dig" ];then
-                            echo -e $cBGRA
-                            dig txt $TESTTHIS                                   # v2.09 Hotfix
-                            dig $TESTTHIS @127.0.0.1 -p 53535                   # v2.09 Hotfix
+                            if [ "$ARG2" != "time" ];then                       # v2.16
+                                echo -e $cBGRA
+                                dig txt $TESTTHIS                               # v2.09 Hotfix
+                                dig $TESTTHIS @127.0.0.1 -p 53535               # v2.09 Hotfix
+                            else
+                                # Test dig {domain} five times and print duration       # v2.16 testing for extended-statistic histogram
+                                local I=0
+                                echo -e $cBCYA"\n\tResponse time\n"$cBGRA
+                                while [ $I -lt 5 ]
+                                    do (time dig $TESTTHIS) 2>&1 | grep real
+                                        I=$((I+1))
+                                    done
+                            fi
                         else
-                            echo -e $cBRED"\a\n\t***ERROR Entware 'dig' utility not installed."
+                                echo -e $cBRED"\a\n\t***ERROR Entware 'dig' utility not installed."
                         fi
                     else
                         echo -e $cBRED"\a\n\t***ERROR Please specify valid domain for 'dig'"
@@ -1315,6 +1334,9 @@ Check_dnsmasq_postconf() {
          echo -e "logger -t \"(dnsmasq.postconf)\" \"Updating \$CONFIG for unbound.....\"\t\t\t\t\t\t# unbound_manager"   >> /jffs/addons/unbound/unbound.postconf  # v2.00
          echo -e "if [ -n \"\$(pidof unbound)\" ];then"                                     >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.12
          echo -e "${TAB}pc_delete \"servers-file\" \$CONFIG"                                >> /jffs/addons/unbound/unbound.postconf   # v2.00 v1.11
+         echo -e "${TAB}#pc_delete \"no-negcache\" \$CONFIG"                                 >> /jffs/addons/unbound/unbound.postconf   # v2.16 v2.00 v1.11
+         echo -e "${TAB}#pc_delete \"domain-needed\" \$CONFIG"                               >> /jffs/addons/unbound/unbound.postconf   # v2.16 v2.00 v1.11
+         echo -e "${TAB}#pc_delete \"bogus-priv\" \$CONFIG"                                  >> /jffs/addons/unbound/unbound.postconf   # v2.16 v2.00 v1.11
          echo -e "${TAB}# By design, if GUI DNSSEC ENABLED then attempt to modify 'cache-size=0' results in dnsmasq start-up fail loop" >> /jffs/addons/unbound/unbound.postconf    # v2.00
          echo -e "${TAB}#       dnsmasq[15203]: cannot reduce cache size from default when DNSSEC enabled" >> /jffs/addons/unbound/unbound.postconf
          echo -e "${TAB}#       dnsmasq[15203]: FAILED to start up"                         >> /jffs/addons/unbound/unbound.postconf
@@ -1445,10 +1467,6 @@ Option_Stubby_Integration() {
      [ "$ANS" == "y"  ] && Stubby_Integration
 }
 Stubby_Integration() {
-
-        local HTTP_TYPE="http"                                                          # v2.13
-        local HTTP_PORT=$(nvram get http_lanport)                                       # v2.13
-        [ "$(nvram get le_acme_auth)" == "https" ] && { local HTTP_TYPE="https"; local HTTP_PORT=$(nvram get https_lanport) ; }         # v2.13
 
     echo -e $cBCYA"Integrating Stubby with unbound....."$cBGRA
 
@@ -2013,10 +2031,16 @@ unbound_Control() {
         "s+"|"s-")                                                      # v1.18
             Manage_Extended_stats "$menu1"                              # v2.15
         ;;
-        sgui*)                                                          # v2.14
+        sgui*)                                                          # v2.14 [uninstall [stats]]
+
+            local ARG2=                                                 # v2.16
+            if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then                # v2.16
+                local ARG2="$(printf "%s" "$menu1" | cut -d' ' -f3)"
+            fi
+
             local ARG=
             if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
-                local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                local ARG="$(printf "%s" "$menu1"  | cut -d' ' -f2)"    # v2.16
             fi
 
             # @juched's GUI stats Graphical TAB requires 'extended-statistics: yes' and firmware must support 'addons'
@@ -2036,6 +2060,7 @@ unbound_Control() {
                         echo -e $cBRED"\a\n\tFirmware does NOT support GUI TAB 'addons'?"$cRESET   # v2.15
                     fi
                 else
+                    [ "$ARG2" == "stats" ] && Manage_Extended_stats "s-"        # v2.16 DISABLE requested
                     GUI_Stats_TAB "uninstall"
                     local RC=0
                 fi
@@ -2521,11 +2546,6 @@ Manage_cache_stats() {
 }
 Check_GUI_NVRAM() {
 
-        local ERROR_CNT=0
-        local HTTP_TYPE="http"                                                          # v2.07
-        local HTTP_PORT=$(nvram get http_lanport)                                       # v2.07
-        [ "$(nvram get le_acme_auth)" == "https" ] && { local HTTP_TYPE="https"; local HTTP_PORT=$(nvram get https_lanport) ; }         # v2.07
-
         echo -e $cBCYA"\n\tRouter Configuration recommended pre-reqs status:\n" 2>&1    # v1.04
         # Check Swap file
         [ $(Check_SWAP) -eq 0 ] && echo -e $cBRED"\t[✖] Warning SWAP file is not configured $cRESET - use amtm to create one!" 2>&1 || echo -e $cBGRE"\t[✔] Swapfile="$(grep "SwapTotal" /proc/meminfo | awk '{print $2" "$3}')$cRESET  2>&1    # v1.04
@@ -2915,7 +2935,12 @@ _quote() {
 Main() { true; } # Syntax that is Atom Shellchecker compatible!
 
 FIRMWARE=$(echo $(nvram get buildno) | awk 'BEGIN { FS = "." } {printf("%03d%02d",$1,$2)}')     # v2.10
-HARDWARE_MODEL=$(Get_Router_Model)                                                              # v2.10
+HARDWARE_MODEL=$(Get_Router_Model)
+
+# Global Router URL
+HTTP_TYPE="http"                                                          # v2.16 v2.13
+HTTP_PORT=$(nvram get http_lanport)                                       # v2.16 v2.13
+[ "$(nvram get le_acme_auth)" == "https" ] && { HTTP_TYPE="https"; HTTP_PORT=$(nvram get https_lanport) ; } # v2.16 v2.13
 
 ANSIColours
 
@@ -2929,11 +2954,6 @@ if [ "$1" == "-h" ] || [ "$1" == "help" ];then
     echo -e $cRESET
     exit 0
 fi
-#echo -e $cBGRE"⚛️"
-
-#exit
-
-
 
 [ ! -L "/opt/bin/unbound_manager" ] && Script_alias "create"                # v2.06 Hotfix for amtm v1.08
 
