@@ -2942,7 +2942,7 @@ HARDWARE_MODEL=$(Get_Router_Model)
 # Global Router URL
 HTTP_TYPE="http"                                                          # v2.16 v2.13
 HTTP_PORT=$(nvram get http_lanport)                                       # v2.16 v2.13
-[ "$(nvram get le_acme_auth)" == "https" ] && { HTTP_TYPE="https"; HTTP_PORT=$(nvram get https_lanport) ; } # v2.16 v2.13
+[ "$(nvram get http_enable)" == "1" ] && { HTTP_TYPE="https"; HTTP_PORT=$(nvram get https_lanport) ; } # v2.16 Hotfix  v2.16 v2.13
 
 ANSIColours
 
