@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.16
+#============================================================================================ © 2019-2020 Martineau v2.17
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['restart'] ['config='config_file]
@@ -48,13 +48,13 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 05-Mar-2020
+# Last Updated Date: 13-Mar-2020
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Cam (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Cam,juched (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://calomel.org/unbound_dns.html
@@ -65,7 +65,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.16"
+VERSION="2.17"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -327,7 +327,7 @@ Show_Advanced_Menu() {
     [ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v2.15
     [ -n "$MENU_AD" ] && printf "%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v2.00 v1.25
     [ -n "$MENU_EL" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_EL"      # v2.15
-    [ -n "$MENU_CA" ] && printf "%s\t\t\t%s\n"    "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.12 v1.26
+    [ -n "$MENU_CA" ] && printf "%s\t%s\n"        "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
 
     printf "\n%s\t\t%s\n"           "$MENUW_DIG"     "$MENUW_LOOKUP" # v2.11
     printf "%s\t\t\t\t%s\n"         "$MENUW_DNSINFO" "$MENUW_DNSSEC"                 # v2.12 v1.28
@@ -367,7 +367,7 @@ welcome_message() {
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DIG="$(printf '%bdig%b = {domain} [time] Show dig info e.g. dig asciiart.com\n' "${cBYEL}" "${cRESET}")"    # v2.09
                 MENUW_LOOKUP="$(printf '%blookup%b = {domain} Show the name servers used for domain e.g. lookup asciiart.eu \n' "${cBYEL}" "${cRESET}")"
-                MENUW_DUMPCACHE="$(printf '%bdumpcache%b = Manually use %brestorecache%b after REBOOT\n' "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}" )"  # v2.12
+                MENUW_DUMPCACHE="$(printf '%bdumpcache%b = [bootrest] (or Manually use %brestorecache%b after REBOOT)\n' "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}" )"  # v2.12
                 MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
                 MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
 
@@ -576,6 +576,9 @@ welcome_message() {
                                     MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s%b)\n' "${cBYEL}" "${cRESET}" "$EXTENDEDSTATS" "$GUI_TAB" "$EXTENDEDSTATS_OPTION")"   # v2.16
 
                                     MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blacklist; ec=Config; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"   # v2.15
+                                    if [ -f ${CONFIG_DIR}adblock/gen_adblock.sh ] && [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then   # v2.17
+                                        MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blacklist; eca=Config-AllowSites; ecb=Config-BlockSites; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"    # v2.17
+                                    fi
                                     [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" == "?" ] && MENU_EL=     # v2.15
 
                                fi
@@ -741,8 +744,8 @@ welcome_message() {
                     [ "$menu1" != "vh" ] && nano $ACCESS ${CONFIG_DIR}unbound.conf  # v2.05
                     #break
                 ;;
-                ew|eb|ec|el|el*)
-                    # v2.15 Add ability to modify @juched's Ad Block configuration
+                ew|eb|ec|eca|ecb|el|el*)
+                    # v 2.17 v2.15 Add ability to modify @juched's Ad Block configuration
                     #if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
                         local ACCESS="--unix"                             # Edit in Unix format
 
@@ -751,7 +754,17 @@ welcome_message() {
                             ;;
                             eb) local FN="/opt/share/unbound/configs/blockhost"     # v2.15 Blacklist
                             ;;
-                            ec) local FN="/opt/share/unbound/configs/sites"         # v2.15 Config
+                            ec*) local FN="/opt/share/unbound/configs/sites"        # v2.17 v2.15 Config
+                                if [ -f ${CONFIG_DIR}adblock/gen_adblock.sh ] && [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then
+                                    case $menu1 in
+                                        eca)
+                                            local FN="/opt/share/unbound/configs/allowsites"
+                                        ;;
+                                        ecb)
+                                            local FN="/opt/share/unbound/configs/blocksites"
+                                        ;;
+                                    esac
+                                fi
                             ;;
                             el|el*)
                                 if [ "$(echo "$menu1" | wc -w)" -gt 1 ];then
@@ -916,11 +929,10 @@ EOF
     endscript
 }
 EOF
-                            chmod 600 /opt/etc/logrotate.d/unbound  >/dev/null  # v2.04
-                            /opt/bin/scribe reload 2>/dev/null 1>/dev/null      # v2.04
+                            chmod 600 /opt/etc/logrotate.d/unbound  >/dev/null    # v2.04
+                            /opt/bin/scribe reload 2>/dev/null 1>/dev/null        # v2.04
                             /opt/sbin/logrotate /opt/etc/logrotate.conf 2>/dev/null 1>/dev/null     # v2.04
-                            /opt/etc/init.d/S61unbound restart
-
+                            Restart_unbound                                        # v2.17
                         fi
 
                         # Assume we have the easy option to uncomment....
@@ -931,11 +943,11 @@ EOF
                         #[ "$(Get_unbound_config_option "use-syslog")" == "?" ]        && sed -i '/^log\-time\-ascii:/ause\-syslog: yes' ${CONFIG_DIR}unbound.conf
                         #[ "$(Get_unbound_config_option "log-local-actions")" == "?" ] && sed -i '/^use\-syslog:/alog\-local\-actions: yes' ${CONFIG_DIR}unbound.conf
 
-                        echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe) - Reloading 'unbound.conf' status="$cRESET
+                        #echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe) - Reloading 'unbound.conf' status="$cRESET
+                        echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe)....."$cRESET     # v2.17
                         local TXT=
                         unset $TXT
-                        /opt/etc/init.d/S61unbound restart                              # v2.00
-
+                        Restart_unbound                                            # v2.17
                     fi
                 ;;
                 sd|dnsmasqstats)                                            # v1.18
@@ -1177,12 +1189,28 @@ EOF
                         echo -e $cBRED"\a\n\t***ERROR Please specify valid 'unbound_config' directive"
                     fi
                 ;;
-                dumpcache|restorecache)
+                dumpcache*|restorecache)
                     case $menu1 in
-                        dumpcache)
-                            # Manually save cache ...to be used over say a REBOOT
-                            # NOTE: It will be deleted as soon as it is loaded by this script
+                        dumpcache*)                                                 # v2.17
+                            local ARG=
+                            if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then            # v2.17 dumpcache bootrest
+                               local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                            fi
+                            # Manually save cache ...to be used over say a REBOOT (see Reboot.sh for auto-save)
+                            # NOTE: It will be deleted as soon as it is loaded
                             unbound_Control "save"              # v2.12 force the 'save' message to console
+                            # Should the cache be automatically restored @BOOT
+                            if [ "$ARG" == "bootrest" ];then                        # v2.17
+                                if [ -z "$(grep -o load_cache /jffs/scripts/post-mount)" ];then       # v2.17
+                                    [ -n "$(grep -o unbound_stats /jffs/scripts/post-mount)" ] && POS="$(awk ' /unbound_stats/ {print NR}' "/jffs/scripts/post-mount")";POS=$((POS - 1))
+                                    if [ $POS -gt 0 ];then
+                                        sed -i "${POS}aFN=\"/opt/share/unbound/configs/cache.txt\"; [ -s \$FN ] && { unbound-control load_cache < \$FN; rm \$FN; logger -st \"(\$(basename \$0))\" \"unbound cache RESTORED from '\$FN'\"; } # unbound_manager" /jffs/scripts/post-mount
+                                    else
+                                        echo -e "FN=\"/opt/share/unbound/configs/cache.txt\"; [ -s \$FN ] && { unbound-control load_cache < \$FN; rm \$FN; logger -st \"($(basename $0))\" \"unbound cache RESTORED from '\$FN'\"; } # unbound_manager" >> /jffs/scripts/post-mount
+                                    fi
+                                fi
+                                echo -e $cBCYA"\tNOTE: unbound cache will be ${cRESET}automatically RESTORED on REBOOT$cBCYA (see /jffs/scripts/post-mount)"$cRESET       # v2.17
+                            fi
                         ;;
                         restorecache)
                             # Manually restore cache ... and DELETE file
@@ -1312,7 +1340,7 @@ Check_dnsmasq_postconf() {
     local FN="/jffs/scripts/dnsmasq.postconf"
     local TAB="\t"
 
-    [ ! -f $FN ] && echo -e "#!/bin/sh" > $FN                       # v1.11
+    [ ! -f $FN ] && echo -e "#!/bin/sh" > $FN           # v1.11
 
     if [ "$1" != "del" ];then
         echo -e $cBCYA"Customising 'dnsmasq.postconf' (aka '/jffs/addons/unbound/unbound.postconf')"$cRESET       # v1.08
@@ -1401,13 +1429,15 @@ download_file() {
             ;;
             dev)
                 GITHUB_DIR=$GITHUB_MARTINEAU_DEV                # v2.06
-                printf '\t%bGithub "dev branch"%b\n' "${cRESET}$cWRED" "$cRESET"        # v2.06
+                printf '\t%bGithub "dev branch"%b\n' "${cRESET}$cWRED" "$cRESET"   # v2.06
             ;;
         esac
 
         STATUS="$(curl --retry 3 -L${SILENT} -w '%{http_code}' "$GITHUB_DIR/$FILE" -o "$DIR/$FILE")"    # v1.08
         if [ "$STATUS" -eq "200" ]; then
+            [ -n "$(echo "$@" | grep -F "dos2unix")" ] && dos2unix $DIR/$FILE      # v2.17
             printf '\t%b%s%b downloaded successfully\n' "$cBGRE" "$FILE" "$cRESET"
+
         else
             printf '\n%b%s%b download FAILED with curl error %s\n\n' "\n\t\a$cBMAG" "'$FILE'" "$cBRED" "$STATUS"
             printf '\tRerun %bunbound_manager nochk%b and select the %bRemove unbound/unbound_manager Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
@@ -1802,7 +1832,7 @@ Restart_unbound() {
 
         /opt/etc/init.d/S61unbound restart
 
-        Manage_cache_stats "restore"                        # v2.11
+        #Manage_cache_stats "restore"                        # v2.17 v2.11
 
         if [ -z "$1" ];then                                 # v2.15 If called by 'gen_adblock.sh' then skip the status check
             CHECK_GITHUB=1                                  # v1.27 force a GitHub version check to see if we are OK
@@ -1819,7 +1849,7 @@ Restart_unbound() {
                         SayT "***ERROR unbound went AWOL after $I seconds.... Try debug mode and check for unbound.conf or runtime errors!"
                         break
                     fi
-                    #[ $I -eq 2 ] && Manage_cache_stats "restore"
+                    [ $I -eq 2 ] && Manage_cache_stats "restore"        # v2.17
                 done
             [ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
             [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
@@ -2407,8 +2437,8 @@ install_unbound() {
         else
             echo -en $cBRED"\a"
             unbound-checkconf               # v2.03
-            echo -en $cBCYA"Restarting dnsmasq....."$cGRE           # v1.13
-            service restart_dnsmasq                                 # v1.13
+            echo -en $cBCYA"Restarting dnsmasq....."$cGRE       # v1.13
+            service restart_dnsmasq                             # v1.13
             echo -e $cBRED"\a\n\t***ERROR FATAL...ABORTing!\n"$cRESET
 
             exit_message                    # v2.03
@@ -2427,8 +2457,8 @@ install_unbound() {
         # v2.15 Ad Block MUST be last Option installed because    .....
         Option_Ad_Tracker_Blocker           "$AUTO_REPLY3"      # If installed, invokes 'unbound_manager restart'
         if [ $? -eq 1 ];then                                    # if 'unbound_manager restart' wasn't executed then
-            # Start/restart unbound
-            [ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || /opt/etc/init.d/S61unbound restart # Will also restart dnsmasq
+            # Start/restart unbound (Will also restart dnsmasq)
+            [ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || Restart_unbound # v2.17 Save/Restore cache by default.
         fi
 
         local END_TIME=$(date +%s)
@@ -2524,10 +2554,13 @@ Record_CNT() {
 
     local FN="$1"   # v2.04
 
-    dos2unix $FN
-    sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' $FN
-
-    echo "$(wc -l < $FN)"
+    if [ -f $FN ];then      # v2.17
+        dos2unix $FN
+        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' $FN
+        echo "$(wc -l < $FN)"
+    else
+        echo "n/a"              # v2.17
+    fi
 }
 
 Manage_cache_stats() {
@@ -2678,26 +2711,58 @@ Ad_Tracker_blocking() {
 
     echo -e $cBCYA"Installing Ads and Tracker Blocking....."$cRESET     # v1.06
 
-    download_file ${CONFIG_DIR} adblock/gen_adblock.sh  juched          # v2.14 v2.02 v1.17
-    download_file ${CONFIG_DIR} adblock/permlist        juched          # v2.14 v2.02 v1.17
+    download_file ${CONFIG_DIR} adblock/gen_adblock.sh  juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
+    download_file ${CONFIG_DIR} adblock/permlist        juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
 
     # Ad Block User customisable files...
-    if [ ! -f /opt/share/unbound/configs/sites ];then                   # v2.13 @juched rewrote 'gen_adblock.sh' to reference this file
-        download_file /opt/share/unbound/configs adblock/sites  juched  # v2.14
-        mv /opt/share/unbound/configs/adblock/sites /opt/share/unbound/configs # v2.15 Hack
-    else
-        echo -e $cBCYA"Custom '/opt/share/unbound/configs/sites' already exists - ${cBGRE}'adblock/sites'$cRESET download skipped"$cBGRA
+    #       blocklist='/opt/share/unbound/configs/blockhost'
+    #       allowlist='/opt/share/unbound/configs/allowhost'
+    #   'gen_adblock.sh' v1.0.4 @jusched/@jumpsmm7 split config 'sites' file functionality into two separate files and changed the format
+    #       blocksites='/opt/share/unbound/configs/blocksites'
+    #       allowsites='/opt/share/unbound/configs/allowsites'
+    if [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then  # v2.17 @jusched/@jumpsmm7 renamed 'sites' and only requires URL
+
+        # Save the legacy Ad Block 'sites' config file, then migrate to new layout if possible   # v2.17
+        if [ -f /opt/share/unbound/configs/sites ];then                      # v2.17
+            echo -e $cBCYA"Migrating legacy 'site' config to 'blocksites/allowsites' format....."$cRESET
+            cp /opt/share/unbound/configs/sites /opt/share/unbound/configs/sites.old
+            awk '/whitelist-domains/ {print $2}' /opt/share/unbound/configs/sites > /opt/share/unbound/configs/allowsites
+            sed -i '/whitelist-domains/d' /opt/share/unbound/configs/sites       # Delete the Whitlist entries
+            awk '{$1=""}1' /opt/share/unbound/configs/sites | awk '{$1=$1}1' > /opt/share/unbound/configs/blocksites   # v2.17 migrate legacy 'site' file to new format
+            rm /opt/share/unbound/configs/sites
+        fi
+
+        if [ ! -f /opt/share/unbound/configs/blocksites ];then                              # v2.17 @jusched/@jumpsmm7 renamed 'sites'
+            download_file /opt/share/unbound/configs adblock/blocksites  juched   dos2unix   # v2.17 v2.14
+            mv /opt/share/unbound/configs/adblock/blocksites /opt/share/unbound/configs     # v2.15 Hack
+        else
+            echo -e $cBCYA"Custom '/opt/share/unbound/configs/blocksites' already exists - ${cBGRE}'adblock/blocksites'$cRESET download skipped"$cBGRA
+        fi
+
+        if [ ! -f /opt/share/unbound/configs/allowsites ];then
+            download_file /opt/share/unbound/configs adblock/allowsites  juched   dos2unix
+            mv /opt/share/unbound/configs/adblock/allowsites /opt/share/unbound/configs
+        else
+            echo -e $cBCYA"Custom '/opt/share/unbound/configs/allowsites' already exists - ${cBGRE}'adblock/allowsites'$cRESET download skipped"$cBGRA
+        fi
+    else                                                                          # v2.17
+        if [ ! -f /opt/share/unbound/configs/sites ];then                       # v2.14
+            download_file /opt/share/unbound/configs adblock/sites  juched   dos2unix   # v2.17 v2.14
+            mv /opt/share/unbound/configs/adblock/sites /opt/share/unbound/configs      # v2.15 Hack
+        else
+            echo -e $cBCYA"Custom '/opt/share/unbound/configs/sites' already exists - ${cBGRE}'adblock/sites'$cRESET download skipped"$cBGRA
+        fi
     fi
 
     if [ ! -f /opt/share/unbound/configs/blockhost ];then                          # v2.15
-        download_file /opt/share/unbound/configs  adblock/blockhost juched         # v2.14 v2.02 v1.17
+        download_file /opt/share/unbound/configs  adblock/blockhost juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
         mv /opt/share/unbound/configs/adblock/blockhost /opt/share/unbound/configs # v2.15 Hack
     else
         echo -e $cBCYA"Custom '/opt/share/unbound/configs/blockhost' already exists - ${cBGRE}'adblock/blockhost'$cRESET download skipped"$cBGRA
     fi
 
     if [ ! -f /opt/share/unbound/configs/allowhost ];then                          # v2.15
-        download_file /opt/share/unbound/configs  adblock/allowhost juched         # v2.15
+        download_file /opt/share/unbound/configs  adblock/allowhost juched   dos2unix   # v2.17 v2.15
         mv /opt/share/unbound/configs/adblock/allowhost /opt/share/unbound/configs # v2.15 Hack
     else
         echo -e $cBCYA"Custom '/opt/share/unbound/configs/allowhost' already exists - ${cBGRE}'adblock/allowhost'$cRESET download skipped"$cBGRA
@@ -2705,7 +2770,7 @@ Ad_Tracker_blocking() {
 
     rmdir /opt/share/unbound/configs/adblock                                       # v2.15 Hack
 
-    if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then              # v1.07
+    if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then             # v1.07
         echo -e $cBCYA"Adding Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
         sed -i "/adblock\/adservers/s/^#//" ${CONFIG_DIR}unbound.conf                                       # v1.11
     fi
@@ -2713,8 +2778,8 @@ Ad_Tracker_blocking() {
     # Create cron job to refresh the Ads/Tracker lists  # v1.07
     echo -e $cBCYA"Creating Daily cron job for Ad and Tracker update"$cBGRA
     cru d adblock 2>/dev/null
-    cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh       # EVERY day Deletes '/opt/var/lib/unbound/unbound.log'
-                                                                        #           Restarts S61unbound
+    cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh   # v1.0.3 Restarts unbound using 'unbound_manager restart' to save/restore cache
+
     [ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
     if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
         $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
@@ -2724,7 +2789,7 @@ Ad_Tracker_blocking() {
 
     echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
     chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
-    sh ${CONFIG_DIR}adblock/gen_adblock.sh                  # v2.15 now invokes 'unbound_manager restart' to save/restore cache
+    sh ${CONFIG_DIR}adblock/gen_adblock.sh                  # v1.0.3 now invokes 'unbound_manager restart' to save/restore cache
 
     echo -e $cBCYA
 }
