@@ -2,7 +2,7 @@
 #============================================================================================ © 2019-2020 Martineau v2.17
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
-# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['restart'] ['config='config_file]
+# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['restart'] ['reload config='[config_file]]
 #
 #           unbound_manager    easy
 #                              Menu: Allow quick install options (3. Advanced Tools will be shown a separate page)
@@ -54,7 +54,7 @@
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Cam,juched (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Cam (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://calomel.org/unbound_dns.html
@@ -1196,7 +1196,7 @@ EOF
                             if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then            # v2.17 dumpcache bootrest
                                local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                             fi
-                            # Manually save cache ...to be used over say a REBOOT (see Reboot.sh for auto-save)
+                            # Manually save cache ...to be used over say a REBOOT
                             # NOTE: It will be deleted as soon as it is loaded
                             unbound_Control "save"              # v2.12 force the 'save' message to console
                             # Should the cache be automatically restored @BOOT
@@ -1211,6 +1211,7 @@ EOF
                                 fi
                                 echo -e $cBCYA"\tNOTE: unbound cache will be ${cRESET}automatically RESTORED on REBOOT$cBCYA (see /jffs/scripts/post-mount)"$cRESET       # v2.17
                             fi
+
                         ;;
                         restorecache)
                             # Manually restore cache ... and DELETE file
@@ -1757,7 +1758,6 @@ Customise_config() {
 
     if [ "$KEEPACTIVECONFIG" != "Y" ];then                              # v1.27
          echo -e $cBCYA"Retrieving Custom unbound configuration"$cBGRA
-         #download_file $CONFIG_DIR unbound.conf jackyaz                # v2.02
          if [ "$USE_GITHUB_DEV" != "Y" ];then                           # v2.06
             download_file $CONFIG_DIR unbound.conf martineau            # v2.04
          else
@@ -2687,9 +2687,11 @@ Check_GUI_NVRAM() {
 }
 exit_message() {
 
+        local CODE=0
+        [ -n "$1" ] && local CODE=$1
         rm -rf /tmp/unbound.lock
         echo -e $cRESET
-        exit 0
+        exit $CODE
 }
 Option_Ad_Tracker_Blocker() {
 
@@ -2723,8 +2725,7 @@ Ad_Tracker_blocking() {
     if [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then  # v2.17 @jusched/@jumpsmm7 renamed 'sites' and only requires URL
 
         # Save the legacy Ad Block 'sites' config file, then migrate to new layout if possible   # v2.17
-        if [ -f /opt/share/unbound/configs/sites ];then                      # v2.17
-            echo -e $cBCYA"Migrating legacy 'site' config to 'blocksites/allowsites' format....."$cRESET
+        if [ -f /opt/share/unbound/configs/sites ];then
             cp /opt/share/unbound/configs/sites /opt/share/unbound/configs/sites.old
             awk '/whitelist-domains/ {print $2}' /opt/share/unbound/configs/sites > /opt/share/unbound/configs/allowsites
             sed -i '/whitelist-domains/d' /opt/share/unbound/configs/sites       # Delete the Whitlist entries
@@ -3040,31 +3041,43 @@ case "$CUSTOM_NVRAM" in                                                     # v2
     ;;
 esac
 
-NEW_CONFIG=$(echo "$@" | sed -n "s/^.*config=//p" | awk '{print $1}')                       # v1.22
+if [ -n "$(echo "$@" | grep -F "config=")" ];then                           # v2.17 Hotfix
+    NEW_CONFIG=$(echo "$@" | sed -n "s/^.*config=//p" | awk '{print $1}')                       # v1.22
+    [ -z "$NEW_CONFIG" ] && NEW_CONFIG="${CONFIG_DIR}unbound.conf"          # v2.17 Hotfix
+fi
+
 if [  -n "$NEW_CONFIG" ];then
     [ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"     # v1.22
-    [ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.22
+    [ "${NEW_CONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v2.17 Hotfix v1.22
     if [ -f  $NEW_CONFIG ];then
         if [ -n "$(pidof unbound)" ];then
             TXT=" <<== $NEW_CONFIG"
-            [ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+            if [ -d $CONFIG_DIR ] && [ "$NEW_CONFIG" != "${CONFIG_DIR}unbound.conf" ];then      # v2.17 Hotfix
+                cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
+            fi
             TAG="(Date Loaded by unbound_manager "$(date)")"
             [ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
-            echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-            $UNBOUNCTRLCMD reload
-            TXT=
-            unset $TAG
-            unset $TXT
-            unset $NEW_CONFIG
+            if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.17 Hotfix
+                echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
+                SayT "Reloading 'unbound.conf'$TXT"
+                $UNBOUNCTRLCMD reload
+                TXT=
+                unset $TAG
+                unset $TXT
+                unset $NEW_CONFIG
+            else
+                echo -e $cBRED"\a\n***ERROR Invalid Configuration file '$NEW_CONFIG'\n\n"$cRESET
+                SayT "***ERROR Invalid Configuration file '$NEW_CONFIG'"
+                exit_message 1
+            fi
         else
-            echo -e $cBRED"\a\nunbound not ACTIVE to Load Configuration file '$NEW_CONFIG'\n\n"$cRESET
-            rm -rf /tmp/unbound.lock
-            exit 1
+            echo -e $cBRED"\a\n***ERROR unbound not ACTIVE to Load Configuration file '$NEW_CONFIG'\n\n"$cRESET
+            SayT "***ERROR unbound not ACTIVE to Load Configuration file '$NEW_CONFIG'"          # v2.17 Hotfix
+            exit_message 1
         fi
     else
         echo -e $cBRED"\a\nConfiguration file '$NEW_CONFIG' NOT found?\n\n"$cRESET
-        rm -rf /tmp/unbound.lock
-        exit 1
+        exit_message 1
     fi
 fi
 
@@ -3076,24 +3089,25 @@ case "$1" in
             [ -d $CONFIG_DIR ] && cp $NEW_CONFIG ${CONFIG_DIR}unbound.conf
         else
             echo -e $cBCYA"Recovery: Retrieving Custom unbound configuration"$cBGRA
-            download_file $CONFIG_DIR unbound.conf jackyaz           # v2.02
+            download_file $CONFIG_DIR unbound.conf martineau           # v2.17 HotFix v2.02
         fi
         TAG="(Date Loaded by unbound_manager "$(date)")"
         [ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
         echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
         $UNBOUNCTRLCMD reload
-        unset $TAG
-        TXT=
-        unset $TXT
-        unset $NEW_CONFIG
+        exit_message
         ;;
     restart)                        # v2.14
         # Allow saving of cache - i.e. when called by '/adblock/gen_adblock.sh'
         NOMSG="NOMSG"               # v2.15 if unbound isn't running then suppress errors/messages i.e. 'unbound-control dump_cache'
         Restart_unbound "nochk"     # v2.15 skip the unbound restart status check
-        exit 0
+        exit_message
+        ;;
+    reload)                         # v2.17 Hotfix
+        exit_message
         ;;
 esac
+
 
 clear
 
