@@ -3060,7 +3060,9 @@ if [  -n "$NEW_CONFIG" ];then
             if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.17 Hotfix
                 echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
                 SayT "Reloading 'unbound.conf'$TXT"
+                Manage_cache_stats "save"                               # v2.17 Hotfix
                 $UNBOUNCTRLCMD reload
+                Manage_cache_stats "restore"                            # v2.17 Hotfix
                 TXT=
                 unset $TAG
                 unset $TXT
@@ -3094,7 +3096,9 @@ case "$1" in
         TAG="(Date Loaded by unbound_manager "$(date)")"
         [ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
         echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
+        Manage_cache_stats "save"                               # v2.17 Hotfix
         $UNBOUNCTRLCMD reload
+        Manage_cache_stats "restore"                            # v2.17 HotFix
         exit_message
         ;;
     restart)                        # v2.14
