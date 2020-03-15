@@ -2483,10 +2483,10 @@ install_unbound() {
 
         # v2.15 Ad Block MUST be last Option installed because    .....
         Option_Ad_Tracker_Blocker           "$AUTO_REPLY3"      # If installed, invokes 'unbound_manager restart'
-        if [ $? -eq 1 ];then                                    # if 'unbound_manager restart' wasn't executed then
+        #if [ $? -eq 1 ];then                                    # if 'unbound_manager restart' wasn't executed then
             # Start/restart unbound (Will also restart dnsmasq)
             [ -z "$(pidof unbound)" ] && /opt/etc/init.d/S61unbound start || Restart_unbound # v2.17 Save/Restore cache by default.
-        fi
+        #fi
 
         local END_TIME=$(date +%s)
         local DIFFTIME=$((END_TIME-START_TIME))
