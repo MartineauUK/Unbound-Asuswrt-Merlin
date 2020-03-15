@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v2.17
+#============================================================================================ © 2019-2020 Martineau v2.18
 #  Install the unbound DNS over TLS resolver package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['easy'] ['install'] ['recovery'] ['restart'] ['reload config='[config_file]]
@@ -48,7 +48,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 13-Mar-2020
+# Last Updated Date: 15-Mar-2020
 #
 # Description:
 #
@@ -65,7 +65,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="2.17"
+VERSION="2.18"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -108,7 +108,7 @@ ANSIColours() {
     aBOLD="\e[1m";aDIM="\e[2m";aUNDER="\e[4m";aBLINK="\e[5m";aREVERSE="\e[7m"
     cWRED="\e[41m";cWGRE="\e[42m";cWYEL="\e[43m";cWBLU="\e[44m";cWMAG="\e[45m";cWCYA="\e[46m";cWGRA="\e[47m"
 }
-Get_Router_Model() {                                # v2.10
+Get_Router_Model() {
 
     # Contribution by @thelonelycoder as odmpid is blank for non SKU hardware,
     local HARDWARE_MODEL
@@ -370,8 +370,6 @@ welcome_message() {
                 MENUW_DUMPCACHE="$(printf '%bdumpcache%b = [bootrest] (or Manually use %brestorecache%b after REBOOT)\n' "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}" )"  # v2.12
                 MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
                 MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
-
-
         fi
 
         Show_credits
@@ -379,6 +377,13 @@ welcome_message() {
         if [ "$(Unbound_Installed)" == "Y" ];then   # v2.12
             HDR="N"
             printf '+======================================================================+'   # 2.13
+        fi
+
+        # Identify currently installed eligible AUTO Reply options
+        [ -n "$(pidof unbound)" ] && CURRENT_AUTO_OPTIONS=$(Check_GUI_NVRAM "active")   # v2.18
+        if [ -n "$CURRENT_AUTO_OPTIONS" ];then                                             # v2.18
+            #local TXT=$cRESET"Auto Reply='y' for User Selectable Options ('"$CURRENT_AUTO_OPTIONS"')"   # v2.18
+            USER_OPTION_PROMPTS="N"                   # v2.18
         fi
 
         while true; do
@@ -779,7 +784,7 @@ welcome_message() {
                             local POST_MD5="$(md5sum "$FN" | awk '{print $1}')"
                             if [ "$PRE_MD5" != "$POST_MD5" ];then
                                 echo -e $cCYA"\n\tAd Block file '$FN' changed....updating Ad Block\n"$cRESET
-                                sh ${CONFIG_DIR}adblock/gen_adblock.sh              # Apparently requests '/opt/etc/init.d/S61unbound restart']
+                                sh ${CONFIG_DIR}adblock/gen_adblock.sh
                             else
                                 echo -e $cCYA"\n\tAd Block file '$FN' NOT changed....Ad Block update skipped"$cRESET
                             fi
@@ -899,7 +904,7 @@ welcome_message() {
                     if [ -d /opt/etc/syslog-ng.d ];then
                         if [ ! -f /opt/etc/syslog-ng.d/unbound ];then
                             local TXT="Created scribe 'unbound' file: "
-                            cat > /opt/etc/syslog-ng.d/unbound << EOF       # Generate the missing unbound scribe file
+                            cat > /opt/etc/syslog-ng.d/unbound << EOF       # v2.18 Add 'gen_adblock.sh' Generate the missing unbound scribe file
 # log all unbound logs to /opt/var/log/unbound.log and stop processing unbound logs
 
 destination d_unbound {
@@ -907,7 +912,8 @@ destination d_unbound {
 };
 
 filter f_unbound {
-    program("unbound");
+    program("unbound") or
+    program("gen_adblock.sh");
 };
 
 log {
@@ -1044,6 +1050,27 @@ EOF
 
                     echo -e $cBCYA"\n\tAbout ${cRESET}unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ ${cRESET}"
                     echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
+                ;;
+                adblock*)                                           # v2.18
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                    fi
+
+                    if [ "$(Unbound_Installed)" == "Y" ];then
+                        if [ "$ARG" != "uninstall" ];then
+                            AUTO_REPLY3="y"
+                            echo
+                            Option_Ad_Tracker_Blocker          "$AUTO_REPLY3"
+                            local RC=$?
+                        else
+                            Ad_Tracker_blocking "uninstall"
+                            local RC=0
+                        fi
+                    else
+                        echo -e $cBRED"\a\n\tunbound NOT installed! or Ad Block /adservers NOT defined in 'unbound.conf'?"$cRESET
+                        local RC=1
+                    fi
                 ;;
                 easy|adv|advanced)                                          # v2.07
                     # v2.07 When unbound_manager invoked from amtm, 'easy' mode is the default.
@@ -2577,56 +2604,79 @@ Manage_cache_stats() {
         ;;
     esac
 }
+Options_DESC() {
+    # v2.18 cosmetic display for cryptic numeric options e.g. 3=Ad Block
+
+    local DESC=" "
+
+    for OPT in $1
+        do
+            case $OPT in
+                1) DESC=$DESC"unbound Logging,";;
+                2) DESC=$DESC"Stubby Integration,";;
+                3) DESC=$DESC"Ad Block,";;
+                4) DESC=$DESC"Performance Tweaks,";;
+                5) DESC=$DESC"Firefox DoH,";;
+            esac
+        done
+
+    DESC=$(echo "$DESC" | sed 's/,$//g')
+    echo "$DESC"
+    return 0
+}
 Check_GUI_NVRAM() {
 
         local ERROR_CNT=0                           # v2.16 Hotfix
+        local ENABLED_OPTIONS=" "                    # v2.18
 
-        echo -e $cBCYA"\n\tRouter Configuration recommended pre-reqs status:\n" 2>&1    # v1.04
-        # Check Swap file
-        [ $(Check_SWAP) -eq 0 ] && echo -e $cBRED"\t[✖] Warning SWAP file is not configured $cRESET - use amtm to create one!" 2>&1 || echo -e $cBGRE"\t[✔] Swapfile="$(grep "SwapTotal" /proc/meminfo | awk '{print $2" "$3}')$cRESET  2>&1    # v1.04
-
-        #   DNSFilter: ON - mode Router
-        if [ $(nvram get dnsfilter_enable_x) -eq 0 ];then
-            echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering" 2>&1
-            ERROR_CNT=$((ERROR_CNT + 1))
+        if [ "$1" == "active" ];then                # v2.18
+            STATUSONLY="StatusOnly"                  # v2.18
         else
-            echo -e $cBGRE"\t[✔] DNS Filter=ON" 2>&1
-            #   DNSFilter: ON - Mode Router ?
-            [ $(nvram get dnsfilter_mode) != "11" ] && { echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET \t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp ->LAN->DNSFilter"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] DNS Filter=ROUTER" 2>&1
-        fi
+            echo -e $cBCYA"\n\tRouter Configuration recommended pre-reqs status:\n" 2>&1    # v1.04
+            # Check Swap file
+            [ $(Check_SWAP) -eq 0 ] && echo -e $cBRED"\t[✖] Warning SWAP file is not configured $cRESET - use amtm to create one!" 2>&1 || echo -e $cBGRE"\t[✔] Swapfile="$(grep "SwapTotal" /proc/meminfo | awk '{print $2" "$3}')$cRESET  2>&1    # v1.04
 
-        if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then               # v1.26 HotFix @dave14305
-                [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
-       else
-            if [ $FIRMWARE -ne 38406 ] && [ "$HARDWARE_MODEL" != "RT-AC56U" ] ;then     # v2.10
-                #   Tools/Other WAN DNS local cache: NO # for the FW Merlin development team, it is desirable and safer by this mode.
-                [ $(nvram get dns_local_cache) != "0" ] && { echo -e $cBYEL"\a\t[✖] Warning WAN: Use local caching DNS server as system resolver=YES $cRESET \t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO" 2>&1
+            #   DNSFilter: ON - mode Router
+            if [ $(nvram get dnsfilter_enable_x) -eq 0 ];then
+                echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering" 2>&1
+                ERROR_CNT=$((ERROR_CNT + 1))
+            else
+                echo -e $cBGRE"\t[✔] DNS Filter=ON" 2>&1
+                #   DNSFilter: ON - Mode Router ?
+                [ $(nvram get dnsfilter_mode) != "11" ] && { echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET \t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp ->LAN->DNSFilter"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] DNS Filter=ROUTER" 2>&1
             fi
 
-            # Originally, a check was made to ensure the native RMerlin NTP server is configured.
-            # v2.07, some wish to use ntpd by @JackYaz
-            #if [ "$(/usr/bin/which ntpd)" == "/opt/sbin/ntpd" ];then
-            if [ -f /opt/etc/init.d/S77ntpd ];then
-                [ -n "$(/opt/etc/init.d/S77ntpd check | grep "dead")" ] && { echo -e $cBYEL"\a\t[✖] Warning Entware NTP Server installed but not running? $cRESET \t\t\t\t\t"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Entware NTP server is running" 2>&1
-            else
-                if [ "$HARDWARE_MODEL" != "RT-AC56U" ] && [ $FIRMWARE -ne 38406 ];then  # v2.10
-                    [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+            if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then               # v1.26 HotFix @dave14305
+                    [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+           else
+                if [ $FIRMWARE -ne 38406 ] && [ "$HARDWARE_MODEL" != "RT-AC56U" ] ;then     # v2.10
+                    #   Tools/Other WAN DNS local cache: NO # for the FW Merlin development team, it is desirable and safer by this mode.
+                    [ $(nvram get dns_local_cache) != "0" ] && { echo -e $cBYEL"\a\t[✖] Warning WAN: Use local caching DNS server as system resolver=YES $cRESET \t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO" 2>&1
+                fi
+
+                # Originally, a check was made to ensure the native RMerlin NTP server is configured.
+                # v2.07, some wish to use ntpd by @JackYaz
+                #if [ "$(/usr/bin/which ntpd)" == "/opt/sbin/ntpd" ];then
+                if [ -f /opt/etc/init.d/S77ntpd ];then
+                    [ -n "$(/opt/etc/init.d/S77ntpd check | grep "dead")" ] && { echo -e $cBYEL"\a\t[✖] Warning Entware NTP Server installed but not running? $cRESET \t\t\t\t\t"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Entware NTP server is running" 2>&1
                 else
-                    if [ ! -f /opt/etc/init.d/S77ntpd ];then                                # v2.10
-                        echo -e $cBRED"\a\t[✖] Warning Entware NTP server not installed"$cRESET
+                    if [ "$HARDWARE_MODEL" != "RT-AC56U" ] && [ $FIRMWARE -ne 38406 ];then  # v2.10
+                        [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+                    else
+                        if [ ! -f /opt/etc/init.d/S77ntpd ];then                                # v2.10
+                            echo -e $cBRED"\a\t[✖] Warning Entware NTP server not installed"$cRESET
+                        fi
                     fi
                 fi
             fi
-        fi
 
-        # Check GUI 'Enable DNS Rebind protection'          # v1.18
-        [ "$(nvram get dns_norebind)" == "1" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable DNS Rebind protection=YES $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable DNS Rebind protection=NO" 2>&1
+            # Check GUI 'Enable DNS Rebind protection'          # v1.18
+            [ "$(nvram get dns_norebind)" == "1" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable DNS Rebind protection=YES $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable DNS Rebind protection=NO" 2>&1
 
-        # Check GUI 'Enable DNSSEC support'                 # v1.15
-        [ "$(nvram get dnssec_enable)" == "1" ] && echo -e $cBRED"\a\t[✖] Warning Enable DNSSEC support=YES $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1 || echo -e $cBGRE"\t[✔] Enable DNSSEC support=NO" 2>&1
+            # Check GUI 'Enable DNSSEC support'                 # v1.15
+            [ "$(nvram get dnssec_enable)" == "1" ] && echo -e $cBRED"\a\t[✖] Warning Enable DNSSEC support=YES $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp ->WAN DNS Setting"$cRESET 2>&1 || echo -e $cBGRE"\t[✔] Enable DNSSEC support=NO" 2>&1
 
-        #if [ "$1" != "install" ];then                      # v1.18 Don't bother reporting the options on "install"
-            [ "$USER_OPTION_PROMPTS" != "?" ] && local TXT="$cRESET Auto Reply='y' for User Selectable Options ('$CURRENT_AUTO_OPTIONS')" || local TEXT=        # v1.20
+            [ "$USER_OPTION_PROMPTS" != "?" ] && local TXT="$cRESET Auto Reply='y' for User Selectable Options ('${cBYEL}${CURRENT_AUTO_OPTIONS}$cRESET')" || local TEXT=        # v1.20
 
             if [ "$ACTION" == "INSTALL" ] && [ "$USER_OPTION_PROMPTS" == "N" ];then
                 local TXT="${cRESET}$cBGRE unbound ONLY install$cRESET - No User Selectable options will be configured"
@@ -2634,56 +2684,79 @@ Check_GUI_NVRAM() {
             if [ "$ACTION" == "INSTALL" ] && [ "$USER_OPTION_PROMPTS" == "?" ];then
                 local TXT="${cRESET}$cBGRE unbound Advanced install$cRESET - User will be prompted to install options"
             fi
-
             [ "$(Skynet_BANNED_Countries)" == "Y" ] && echo -e $cBRED"\a\t[✖] Warning Skynet's Country BAN feature is currently ACTIVE and may significantly reduce unbound performance and in some cases block sites" 2>&1         # v2.09
 
-            echo -e $cBCYA"\n\tOptions:$TXT\n" 2>&1
+            local DESC=${cBYEL}$(Options_DESC "$CURRENT_AUTO_OPTIONS")              # v2.18
+            echo -e $cBCYA"\n\tOptions:${TXT}$DESC\n" 2>&1                      # v2.18
 
-            if [ -f ${CONFIG_DIR}unbound.conf ];then
+        fi
 
-                # Logging is deemed dynamic, so need to check both config and unbound-control??? or just unbound-control???
-                if [ "$(Get_unbound_config_option "log-replies:" ${CONFIG_DIR}unbound.conf)" == "yes" ] || [ "$(Get_unbound_config_option "log-queries:" ${CONFIG_DIR}unbound.conf)" == "yes" ] || \
-                   [ "$(unbound_Control "oq" "log-replies" "value")" == "yes" ] || [ "$(unbound_Control "oq" "log-queries" "value")" == "yes" ];then            # v2.04
-                    echo -e $cBGRE"\t[✔] unbound Logging" 2>&1
-                fi
+        if [ -f ${CONFIG_DIR}unbound.conf ];then
 
-                [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" ${CONFIG_DIR}unbound.conf)" != "?" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1
-
-                if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
-                    local TXT="No. of Adblock domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Whitelist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v2.14 v2.04
-                    # Check if Diversion is also running
-                    [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v1.24
-                    echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1
-                fi
-                [ -f /jffs/addons/unbound/stuning ] && echo -e $cBGRE"\t[✔] unbound CPU/Memory Performance tweaks" 2>&1     # v2.00
-                [ "$(Get_unbound_config_option "adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" != "?" ] && echo -e $cBGRE"\t[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker" 2>&1
-
-                if [ "$(Get_unbound_config_option "forward-tls-upstream:" ${CONFIG_DIR}unbound.conf)" == "yes" ];then        # v2.12
-                    echo -e $cBGRE"\t[✔] DoT ENABLED. These third parties are used:" 2>&1
-                    local DOTLIST=$(grep -E "^forward-addr:" /opt/var/lib/unbound/unbound.conf | sed 's/forward-addr://')
-                    for DOT in $DOTLIST
-                        do
-                            echo -e $cBWHT"\t\t"$DOT
-                        done
-                fi
-
-                if [ -f /jffs/addons/unbound/unboundstats_www.asp ];then                                                    # v2.14
-                    echo -e $cBGRE"\t[✔] Router Graphical GUI statistics TAB installed" 2>&1
-                fi
-
-                if [ "$(Get_unbound_config_option "control-use-cert:" ${CONFIG_DIR}unbound.conf)" == "no" ];then            # v2.15
-                    echo -e $cBGRE"\t[✔] unbound-control FAST response ENABLED" 2>&1
-                fi
+            # Logging is deemed dynamic, so need to check both config and unbound-control??? or just unbound-control???
+            # AUTO_REPLY 1
+            if [ "$(Get_unbound_config_option "log-replies:" ${CONFIG_DIR}unbound.conf)" == "yes" ] || [ "$(Get_unbound_config_option "log-queries:" ${CONFIG_DIR}unbound.conf)" == "yes" ] || \
+               [ "$(unbound_Control "oq" "log-replies" "value")" == "yes" ] || [ "$(unbound_Control "oq" "log-queries" "value")" == "yes" ];then            # v2.04
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound Logging" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 1"      #v2.18
             fi
 
-        #fi
+            # AUTO_REPLY 2
+            if [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" ${CONFIG_DIR}unbound.conf)" != "?" ];then      # v2.18
+                echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 2"    #v2.18
+            fi
 
-        [ $ERROR_CNT -ne 0 ] && { return 1; } || return 0   # v2.16 Hotfix
+            # AUTO_REPLY 3
+            if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
+                if [ -z "$STATUSONLY" ];then                        # v2.18
+                    local TXT="No. of Adblock domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Whitelist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v2.14 v2.04
+                    # Check if Diversion is also running
+                    [ -z "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v1.24
+                fi
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 3"     #v2.18
+            fi
+
+            # AUTO_REPLY 4
+            if [ -f /jffs/addons/unbound/stuning ];then             # v2.18
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound CPU/Memory Performance tweaks" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 4"     #v2.18 v2.00
+            fi
+
+            # AUTO_REPLY 5
+            if [ "$(Get_unbound_config_option "adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" != "?" ];then       # v2.18
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 5"      #v2.18
+            fi
+
+            # AUTO_REPLY 6
+            if [ "$(Get_unbound_config_option "forward-tls-upstream:" ${CONFIG_DIR}unbound.conf)" == "yes" ];then        # v2.12
+                [ -n "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] DoT ENABLED. These third parties are used:" 2>&1
+                local DOTLIST=$(grep -E "^forward-addr:" /opt/var/lib/unbound/unbound.conf | sed 's/forward-addr://')
+                for DOT in $DOTLIST
+                    do
+                        echo -e $cBWHT"\t\t"$DOT 2>&1
+                    done
+            fi
+
+            # AUTO_REPLY 7
+            if [ -f /jffs/addons/unbound/unboundstats_www.asp ];then                                                    # v2.14
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Router Graphical GUI statistics TAB installed" 2>&1
+            fi
+
+            # AUTO_REPLY 8
+            if [ "$(Get_unbound_config_option "control-use-cert:" ${CONFIG_DIR}unbound.conf)" == "no" ];then            # v2.15
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound-control FAST response ENABLED" 2>&1
+            fi
+        fi
 
         local TXT=
         unset $TXT
-        echo -e $cRESET 2>&1
+        #echo -e $cRESET 2>&1
 
+        if [ -z "$STATUSONLY" ];then                                     # v2.18
+            [ $ERROR_CNT -ne 0 ] && { return 1; } || return 0          # v2.16 Hotfix
+        else
+            ENABLED_OPTIONS=$(echo "$ENABLED_OPTIONS" | sed 's/  //g')   # v2.18 Strip leading two space chars
+            echo "$ENABLED_OPTIONS"                                       # v2.18
+            return 0
+        fi
 }
 exit_message() {
 
@@ -2711,88 +2784,105 @@ Ad_Tracker_blocking() {
 
     local FN="/jffs/scripts/services-start"
 
-    echo -e $cBCYA"Installing Ads and Tracker Blocking....."$cRESET     # v1.06
+    if [ "$1" != "uninstall" ];then                                                 # v2.18
 
-    download_file ${CONFIG_DIR} adblock/gen_adblock.sh  juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
-    download_file ${CONFIG_DIR} adblock/permlist        juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
+        echo -e $cBCYA"Installing Ads and Tracker Blocking....."$cRESET     # v1.06
 
-    # Ad Block User customisable files...
-    #       blocklist='/opt/share/unbound/configs/blockhost'
-    #       allowlist='/opt/share/unbound/configs/allowhost'
-    #   'gen_adblock.sh' v1.0.4 @jusched/@jumpsmm7 split config 'sites' file functionality into two separate files and changed the format
-    #       blocksites='/opt/share/unbound/configs/blocksites'
-    #       allowsites='/opt/share/unbound/configs/allowsites'
-    if [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then  # v2.17 @jusched/@jumpsmm7 renamed 'sites' and only requires URL
+        download_file ${CONFIG_DIR} adblock/gen_adblock.sh  juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
+        download_file ${CONFIG_DIR} adblock/permlist        juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
 
-        # Save the legacy Ad Block 'sites' config file, then migrate to new layout if possible   # v2.17
-        if [ -f /opt/share/unbound/configs/sites ];then
-            cp /opt/share/unbound/configs/sites /opt/share/unbound/configs/sites.old
-            awk '/whitelist-domains/ {print $2}' /opt/share/unbound/configs/sites > /opt/share/unbound/configs/allowsites
-            sed -i '/whitelist-domains/d' /opt/share/unbound/configs/sites       # Delete the Whitlist entries
-            awk '{$1=""}1' /opt/share/unbound/configs/sites | awk '{$1=$1}1' > /opt/share/unbound/configs/blocksites   # v2.17 migrate legacy 'site' file to new format
-            rm /opt/share/unbound/configs/sites
+        # Ad Block User customisable files...
+        #       blocklist='/opt/share/unbound/configs/blockhost'
+        #       allowlist='/opt/share/unbound/configs/allowhost'
+        #   'gen_adblock.sh' v1.0.4 @jusched/@jumpsmm7 split config 'sites' file functionality into two separate files and changed the format
+        #       blocksites='/opt/share/unbound/configs/blocksites'
+        #       allowsites='/opt/share/unbound/configs/allowsites'
+        if [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then  # v2.17 @jusched/@jumpsmm7 renamed 'sites' and only requires URL
+
+            # Save the legacy Ad Block 'sites' config file, then migrate to new layout if possible   # v2.17
+            if [ -f /opt/share/unbound/configs/sites ];then
+                cp /opt/share/unbound/configs/sites /opt/share/unbound/configs/sites.old
+                awk '/whitelist-domains/ {print $2}' /opt/share/unbound/configs/sites > /opt/share/unbound/configs/allowsites
+                sed -i '/whitelist-domains/d' /opt/share/unbound/configs/sites       # Delete the Whitlist entries
+                awk '{$1=""}1' /opt/share/unbound/configs/sites | awk '{$1=$1}1' > /opt/share/unbound/configs/blocksites   # v2.17 migrate legacy 'site' file to new format
+                rm /opt/share/unbound/configs/sites
+            fi
+
+            if [ ! -f /opt/share/unbound/configs/blocksites ];then                              # v2.17 @jusched/@jumpsmm7 renamed 'sites'
+                download_file /opt/share/unbound/configs adblock/blocksites  juched   dos2unix   # v2.17 v2.14
+                mv /opt/share/unbound/configs/adblock/blocksites /opt/share/unbound/configs     # v2.15 Hack
+            else
+                echo -e $cBCYA"Custom '/opt/share/unbound/configs/blocksites' already exists - ${cBGRE}'adblock/blocksites'$cRESET download skipped"$cBGRA
+            fi
+
+            if [ ! -f /opt/share/unbound/configs/allowsites ];then
+                download_file /opt/share/unbound/configs adblock/allowsites  juched   dos2unix
+                mv /opt/share/unbound/configs/adblock/allowsites /opt/share/unbound/configs
+            else
+                echo -e $cBCYA"Custom '/opt/share/unbound/configs/allowsites' already exists - ${cBGRE}'adblock/allowsites'$cRESET download skipped"$cBGRA
+            fi
+        else                                                                          # v2.17
+            if [ ! -f /opt/share/unbound/configs/sites ];then                       # v2.14
+                download_file /opt/share/unbound/configs adblock/sites  juched   dos2unix   # v2.17 v2.14
+                mv /opt/share/unbound/configs/adblock/sites /opt/share/unbound/configs      # v2.15 Hack
+            else
+                echo -e $cBCYA"Custom '/opt/share/unbound/configs/sites' already exists - ${cBGRE}'adblock/sites'$cRESET download skipped"$cBGRA
+            fi
         fi
 
-        if [ ! -f /opt/share/unbound/configs/blocksites ];then                              # v2.17 @jusched/@jumpsmm7 renamed 'sites'
-            download_file /opt/share/unbound/configs adblock/blocksites  juched   dos2unix   # v2.17 v2.14
-            mv /opt/share/unbound/configs/adblock/blocksites /opt/share/unbound/configs     # v2.15 Hack
+        if [ ! -f /opt/share/unbound/configs/blockhost ];then                          # v2.15
+            download_file /opt/share/unbound/configs  adblock/blockhost juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
+            mv /opt/share/unbound/configs/adblock/blockhost /opt/share/unbound/configs # v2.15 Hack
         else
-            echo -e $cBCYA"Custom '/opt/share/unbound/configs/blocksites' already exists - ${cBGRE}'adblock/blocksites'$cRESET download skipped"$cBGRA
+            echo -e $cBCYA"Custom '/opt/share/unbound/configs/blockhost' already exists - ${cBGRE}'adblock/blockhost'$cRESET download skipped"$cBGRA
         fi
 
-        if [ ! -f /opt/share/unbound/configs/allowsites ];then
-            download_file /opt/share/unbound/configs adblock/allowsites  juched   dos2unix
-            mv /opt/share/unbound/configs/adblock/allowsites /opt/share/unbound/configs
+        if [ ! -f /opt/share/unbound/configs/allowhost ];then                          # v2.15
+            download_file /opt/share/unbound/configs  adblock/allowhost juched   dos2unix   # v2.17 v2.15
+            mv /opt/share/unbound/configs/adblock/allowhost /opt/share/unbound/configs # v2.15 Hack
         else
-            echo -e $cBCYA"Custom '/opt/share/unbound/configs/allowsites' already exists - ${cBGRE}'adblock/allowsites'$cRESET download skipped"$cBGRA
+            echo -e $cBCYA"Custom '/opt/share/unbound/configs/allowhost' already exists - ${cBGRE}'adblock/allowhost'$cRESET download skipped"$cBGRA
         fi
-    else                                                                          # v2.17
-        if [ ! -f /opt/share/unbound/configs/sites ];then                       # v2.14
-            download_file /opt/share/unbound/configs adblock/sites  juched   dos2unix   # v2.17 v2.14
-            mv /opt/share/unbound/configs/adblock/sites /opt/share/unbound/configs      # v2.15 Hack
-        else
-            echo -e $cBCYA"Custom '/opt/share/unbound/configs/sites' already exists - ${cBGRE}'adblock/sites'$cRESET download skipped"$cBGRA
-        fi
-    fi
 
-    if [ ! -f /opt/share/unbound/configs/blockhost ];then                          # v2.15
-        download_file /opt/share/unbound/configs  adblock/blockhost juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
-        mv /opt/share/unbound/configs/adblock/blockhost /opt/share/unbound/configs # v2.15 Hack
+        rmdir /opt/share/unbound/configs/adblock  2>/dev/null                            # v2.18 v2.15 Hack
+
+        if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then             # v1.07
+            echo -e $cBCYA"Adding Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
+            sed -i "/adblock\/adservers/s/^#//" ${CONFIG_DIR}unbound.conf                                       # v1.11
+        fi
+
+        # Create cron job to refresh the Ads/Tracker lists  # v1.07
+        echo -e $cBCYA"Creating Daily cron job for Ad and Tracker update"$cBGRA
+        cru d adblock 2>/dev/null
+        cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh   # v1.0.3 Restarts unbound using 'unbound_manager restart' to save/restore cache
+
+        [ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+        if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
+            $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
+        fi
+
+        chmod +x $FN                                            # v1.11 Hack????
+
+        echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
+        chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
+        [ -n "$(pidof unbound)" ] && sh ${CONFIG_DIR}adblock/gen_adblock.sh || { sh ${CONFIG_DIR}adblock/gen_adblock.sh; Restart_unbound; }   # v2.18 v1.0.3
+        echo -e $cBCYA
     else
-        echo -e $cBCYA"Custom '/opt/share/unbound/configs/blockhost' already exists - ${cBGRE}'adblock/blockhost'$cRESET download skipped"$cBGRA
+        # v2.18 uninstall Ad Block
+        AUTO_REPLY3=
+        if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
+            echo -e $cBCYA"Removing Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
+            sed -i "/adblock\/adservers/s/^i/#i/" ${CONFIG_DIR}unbound.conf
+
+        fi
+        # Remove Ad and Tracker cron job /jffs/scripts/services-start   # v1.07
+        echo -e $cBCYA"Removing Ad and Tracker Update cron job"$cRESET
+        if grep -qF "gen_adblock" $FN; then
+            sed -i '/gen_adblock/d' $FN
+        fi
+        cru d adblock 2>/dev/null
+
     fi
-
-    if [ ! -f /opt/share/unbound/configs/allowhost ];then                          # v2.15
-        download_file /opt/share/unbound/configs  adblock/allowhost juched   dos2unix   # v2.17 v2.15
-        mv /opt/share/unbound/configs/adblock/allowhost /opt/share/unbound/configs # v2.15 Hack
-    else
-        echo -e $cBCYA"Custom '/opt/share/unbound/configs/allowhost' already exists - ${cBGRE}'adblock/allowhost'$cRESET download skipped"$cBGRA
-    fi
-
-    rmdir /opt/share/unbound/configs/adblock                                       # v2.15 Hack
-
-    if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then             # v1.07
-        echo -e $cBCYA"Adding Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
-        sed -i "/adblock\/adservers/s/^#//" ${CONFIG_DIR}unbound.conf                                       # v1.11
-    fi
-
-    # Create cron job to refresh the Ads/Tracker lists  # v1.07
-    echo -e $cBCYA"Creating Daily cron job for Ad and Tracker update"$cBGRA
-    cru d adblock 2>/dev/null
-    cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh   # v1.0.3 Restarts unbound using 'unbound_manager restart' to save/restore cache
-
-    [ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
-    if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
-        $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
-    fi
-
-    chmod +x $FN                                            # v1.11 Hack????
-
-    echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
-    chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
-    sh ${CONFIG_DIR}adblock/gen_adblock.sh                  # v1.0.3 now invokes 'unbound_manager restart' to save/restore cache
-
-    echo -e $cBCYA
 }
 Option_Disable_Firefox_DoH() {
 
