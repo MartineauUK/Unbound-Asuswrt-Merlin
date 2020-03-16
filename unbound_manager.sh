@@ -2870,16 +2870,17 @@ Ad_Tracker_blocking() {
             $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
         fi
 
-        # v2.18 If logging to scribe then Track Ad Block blocked domains to log
-        if [ "$($UNBOUNCTRLCMD get_option use-syslog:)" == "yes" ] && [ "$1" == "track" ];then      # v2.18 Hotfix
-            echo -e $cBCYA"Logging Ad Block BLOCKED domains to scribe"$cRESET
-            Edit_config_options "log-local-actions:"   "uncomment"          # v2.18 Hotfix Track blocked Ad Block domains
-        fi
         chmod +x $FN                                            # v1.11 Hack????
 
         echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
         chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
         [ -n "$(pidof unbound)" ] && sh ${CONFIG_DIR}adblock/gen_adblock.sh || { sh ${CONFIG_DIR}adblock/gen_adblock.sh; Restart_unbound; }   # v2.18 v1.0.3
+
+        # v2.18 If logging to scribe then Track Ad Block blocked domains to log
+        if [ "$($UNBOUNCTRLCMD get_option use-syslog:)" == "yes" ] && [ "$1" == "track" ];then      # v2.18 Hotfix
+            echo -e $cBCYA"Logging Ad Block BLOCKED domains to scribe"$cRESET
+            Edit_config_options "log-local-actions:"   "uncomment"          # v2.18 Hotfix Track blocked Ad Block domains
+        fi
 
         echo -e $cBCYA
     else
