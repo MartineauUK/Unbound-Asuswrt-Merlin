@@ -14,6 +14,7 @@
 #                                    |       o3. Install Ad and Tracker Blocking                     NO     |
 #                                    |       o4. Customise CPU/Memory usage (Advanced Users)        YES     |
 #                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)    NO     |
+#                                    |       o6. Install Graphical Statistics GUI (Addons) TAB       NO     |
 #                                    |                                                                      |
 #                                    |   3 = Advanced Tools  (e.g '? About' and 'z Remove unbound' etc.)    |
 #
@@ -28,6 +29,7 @@
 #                                    |       o3. Install Ad and Tracker Blocking                            |
 #                                    |       o4. Customise CPU/Memory usage (Advanced Users)                |
 #                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
+#                                    |       o6. Install Graphical Statistics GUI (Addons) TAB       NO     |
 #                                    |                                                                      |
 #                                    |   z  = Remove Existing unbound/unbound_manager Installation          |
 #                                    |   ?  = About Configuration                                           |
@@ -48,7 +50,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 15-Mar-2020
+# Last Updated Date: 16-Mar-2020
 #
 # Description:
 #
@@ -351,6 +353,49 @@ Show_credits() {
     printf '|                      Version %b%s%b by Martineau                       |\n' "$cBMAG" "$VERSION" "$cRESET"
     printf '|                                                                      |\n'
 }
+Show_status() {
+    if [ -z "$(which unbound-control)" ] || [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.03
+        # Show unbound uptime
+        UNBOUNDPID=$(pidof unbound)
+        if [ -n "$UNBOUNDPID" ];then
+            # Each call to unbound-control takes upto 2secs!!!
+            I=1
+
+            # error: SSL handshake failed           # v2.02
+            # 548130435088:error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:1915:
+
+            local UNBOUND_STATUS="$($UNBOUNCTRLCMD status)"
+            UNBOUNDUPTIME="$(echo "$UNBOUND_STATUS" | grep -E "uptime:.*seconds"  | awk '{print $2}')"
+            UNBOUNDVERS="$(echo "$UNBOUND_STATUS" | grep -E "version:.*$" | awk '{print $2}')"
+
+            if [ -n "$UNBOUNDUPTIME" ];then         # v2.02
+                UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
+            else
+                echo -e $cBRED"\a\n\t***ERROR unbound-control - failed'?"   # v2.02
+                #/opt/etc/init.d/S61unbound
+                #exit_message
+            fi
+
+            # Display 'unbound.conf' header if present
+            local TAG="Date Loaded by unbound_manager "$(date)")"
+            UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
+            if [ -n "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ];then  # v2.04                                         # v2.05
+                UNBOUND_CONF_VER_TXT=$UNBOUND_CONF_VER
+            else
+                #sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+                :
+            fi
+            echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET      # v1.19
+            [ "$1" == "syslog" ] && SayT "$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"    # v2.18 Hotfix
+        else
+            echo
+        fi
+    else
+            echo -e $cBRED"\a"
+            unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
+            echo -e $cBRED"\n***ERROR INVALID unbound ${cRESET}configuration - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE
+    fi
+}
 welcome_message() {
 
         # No need to recreate the STATIC menu items on each invocation
@@ -412,6 +457,7 @@ welcome_message() {
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA} no";    printf '|       o3. Install Ad and Tracker Blocking                    %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cBGRE}YES";   printf '|       o4. Customise CPU/Memory usage (%bAdvanced Users%b)        %b    %b |\n' "$cBRED" "$cRESET"  "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA} no";    printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)   %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA} no";    printf '|       o6. Install Graphical Statistics GUI (Addons) TAB      %b    %b |\n' "$YES_NO" "$cRESET"
                 printf '|                                                                      |\n'
 
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
@@ -434,46 +480,7 @@ welcome_message() {
                 menu1="z"                                   # v1.21
             else
                 if [ "$1" != "nochk" ];then                 # v2.13
-                    if [ -z "$(which unbound-control)" ] || [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.03
-                        # Show unbound uptime
-                        UNBOUNDPID=$(pidof unbound)
-                        if [ -n "$UNBOUNDPID" ];then
-                            # Each call to unbound-control takes upto 2secs!!!
-                            I=1
-
-                            # error: SSL handshake failed           # v2.02
-                            # 548130435088:error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:1915:
-
-                            local UNBOUND_STATUS="$($UNBOUNCTRLCMD status)"
-                            UNBOUNDUPTIME="$(echo "$UNBOUND_STATUS" | grep -E "uptime:.*seconds"  | awk '{print $2}')"
-                            UNBOUNDVERS="$(echo "$UNBOUND_STATUS" | grep -E "version:.*$" | awk '{print $2}')"
-
-                            if [ -n "$UNBOUNDUPTIME" ];then         # v2.02
-                                UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
-                            else
-                                echo -e $cBRED"\a\n\t***ERROR unbound-control - failed'?"   # v2.02
-                                #/opt/etc/init.d/S61unbound
-                                #exit_message
-                            fi
-
-                            # Display 'unbound.conf' header if present
-                            local TAG="Date Loaded by unbound_manager "$(date)")"
-                            UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
-                            if [ -n "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ];then  # v2.04                                         # v2.05
-                                UNBOUND_CONF_VER_TXT=$UNBOUND_CONF_VER
-                            else
-                                #sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
-                                :
-                            fi
-                            echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET  # v1.19
-                        else
-                            echo
-                        fi
-                    else
-                            echo -e $cBRED"\a"
-                            unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
-                            echo -e $cBRED"\n***ERROR INVALID unbound ${cRESET}configuration - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE
-                    fi
+                    Show_status                             # v2.18
                 fi
 
                 if [ $CHECK_GITHUB -eq 1 ];then             # v1.20
@@ -943,7 +950,6 @@ EOF
 
                         # Assume we have the easy option to uncomment....
                         Edit_config_options "use-syslog:"          "uncomment"     # v1.27
-                        Edit_config_options "log-local-actions:"   "uncomment"     # v1.27
                         Edit_config_options "log-tag-queryreply:"  "uncomment"     # v2.05
 
                         #[ "$(Get_unbound_config_option "use-syslog")" == "?" ]        && sed -i '/^log\-time\-ascii:/ause\-syslog: yes' ${CONFIG_DIR}unbound.conf
@@ -1061,7 +1067,7 @@ EOF
                         if [ "$ARG" != "uninstall" ];then
                             AUTO_REPLY3="y"
                             echo
-                            Option_Ad_Tracker_Blocker          "$AUTO_REPLY3"
+                            Option_Ad_Tracker_Blocker "$AUTO_REPLY3" "$ARG"     # v2.18 Hotfix
                             local RC=$?
                         else
                             Ad_Tracker_blocking "uninstall"
@@ -2481,6 +2487,8 @@ install_unbound() {
 
         Option_Disable_Firefox_DoH          "$AUTO_REPLY5"      # v1.18
 
+        Option_GUI_Stats_TAB                "$AUTO_REPLY7"      # v2.18 Hotfix
+
         # v2.15 Ad Block MUST be last Option installed because    .....
         Option_Ad_Tracker_Blocker           "$AUTO_REPLY3"      # If installed, invokes 'unbound_manager restart'
         #if [ $? -eq 1 ];then                                    # if 'unbound_manager restart' wasn't executed then
@@ -2710,7 +2718,7 @@ Check_GUI_NVRAM() {
                 if [ -z "$STATUSONLY" ];then                        # v2.18
                     local TXT="No. of Adblock domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Whitelist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v2.14 v2.04
                     # Check if Diversion is also running
-                    [ -z "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v1.24
+                    [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v2.18 Hotfix v1.24
                 fi
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 3"     #v2.18
             fi
@@ -2727,7 +2735,7 @@ Check_GUI_NVRAM() {
 
             # AUTO_REPLY 6
             if [ "$(Get_unbound_config_option "forward-tls-upstream:" ${CONFIG_DIR}unbound.conf)" == "yes" ];then        # v2.12
-                [ -n "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] DoT ENABLED. These third parties are used:" 2>&1
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] DoT ENABLED. These third parties are used:" 2>&1          # v2.18 Hotfix
                 local DOTLIST=$(grep -E "^forward-addr:" /opt/var/lib/unbound/unbound.conf | sed 's/forward-addr://')
                 for DOT in $DOTLIST
                     do
@@ -2768,7 +2776,8 @@ exit_message() {
 }
 Option_Ad_Tracker_Blocker() {
 
-        local ANS=$1                                        # v1.20
+        local ANS=$1        # v1.20
+        shift               # v2.18 Hotfix
         if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
             echo -en $cBYEL"Option Auto Reply 'y'\t"
         fi
@@ -2777,7 +2786,7 @@ Option_Ad_Tracker_Blocker() {
             echo -e "\nDo you want to install Ad and Tracker blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
             read -r "ANS"
         fi
-        [ "$ANS" == "y"  ] && { Ad_Tracker_blocking; return 0; } || return 1   # v2.15
+        [ "$ANS" == "y"  ] && { Ad_Tracker_blocking "$@" ; return 0; } || return 1   # v2.18 Hotfix v2.15
 
 }
 Ad_Tracker_blocking() {
@@ -2861,20 +2870,29 @@ Ad_Tracker_blocking() {
             $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
         fi
 
+        # v2.18 If logging to scribe then Track Ad Block blocked domains to log
+        if [ "$($UNBOUNCTRLCMD get_option use-syslog:)" == "yes" ] && [ "$1" == "track" ];then      # v2.18 Hotfix
+            echo -e $cBCYA"Logging Ad Block BLOCKED domains to scribe"$cRESET
+            Edit_config_options "log-local-actions:"   "uncomment"          # v2.18 Hotfix Track blocked Ad Block domains
+        fi
         chmod +x $FN                                            # v1.11 Hack????
 
         echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
         chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
         [ -n "$(pidof unbound)" ] && sh ${CONFIG_DIR}adblock/gen_adblock.sh || { sh ${CONFIG_DIR}adblock/gen_adblock.sh; Restart_unbound; }   # v2.18 v1.0.3
+
         echo -e $cBCYA
     else
         # v2.18 uninstall Ad Block
+        echo -e
         AUTO_REPLY3=
-        if [ -n "$(grep -E "^#[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
+        if [ -n "$(grep -E "^include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then    # v2.18 Hotfix
             echo -e $cBCYA"Removing Ad and Tracker 'include: ${CONFIG_DIR}adblock/adservers'"$cRESET
             sed -i "/adblock\/adservers/s/^i/#i/" ${CONFIG_DIR}unbound.conf
-
         fi
+
+        Edit_config_options "log-local-actions:"   "comment"            # v2.18 Hotfix
+
         # Remove Ad and Tracker cron job /jffs/scripts/services-start   # v1.07
         echo -e $cBCYA"Removing Ad and Tracker Update cron job"$cRESET
         if grep -qF "gen_adblock" $FN; then
@@ -2882,7 +2900,9 @@ Ad_Tracker_blocking() {
         fi
         cru d adblock 2>/dev/null
 
+        CURRENT_AUTO_OPTIONS=$(echo "$CURRENT_AUTO_OPTIONS" | sed 's/3//' | sed 's/^ //')   # v2.18 Hotfix Remove option from AUTO install
     fi
+exit
 }
 Option_Disable_Firefox_DoH() {
 
@@ -2947,13 +2967,13 @@ _quote() {
     local REQUIRE_PIXELSERV=
 
     # Fix init.d/S80pixelserv-tls so it can start if either Unbound or Diversion is UP
-    if [ -f /opt/etc/init.d/S80pixelserv-tls ];then                         # v1.25
-        if [ -z "$(grep "pidof unbound" /opt/etc/init.d/S80pixelserv-tls)" ];then
-            OLD_LINE="if \[ \"\$DIVERSION_STATUS\" = \"enabled\" \] \&\& \[ \"\$psState\" = \"on\" \]; then"
-            NEW_LINE="if [ -n \"\$(pidof unbound)\" ] || { [ \"\$DIVERSION_STATUS\" = \"enabled\" ] \&\& [ \"\$psState\" = \"on\" ]; };then\t# unbound_manager/"
-            sed -i "s/$OLD_LINE/$NEW_LINE" /opt/etc/init.d/S80pixelserv-tls
-        fi
-    fi
+    #if [ -f /opt/etc/init.d/S80pixelserv-tls ];then                         # v1.25
+        #if [ -z "$(grep "pidof unbound" /opt/etc/init.d/S80pixelserv-tls)" ];then
+            #OLD_LINE="if \[ \"\$DIVERSION_STATUS\" = \"enabled\" \] \&\& \[ \"\$psState\" = \"on\" \]; then"
+            #NEW_LINE="if [ -n \"\$(pidof unbound)\" ] || { [ \"\$DIVERSION_STATUS\" = \"enabled\" ] \&\& [ \"\$psState\" = \"on\" ]; };then\t# unbound_manager/"
+            #sed -i "s/$OLD_LINE/$NEW_LINE" /opt/etc/init.d/S80pixelserv-tls
+        #fi
+    #fi
 
     local ACTION="Analyze"
     #local ACTION="Merge"
@@ -3200,6 +3220,9 @@ case "$1" in
     reload)                         # v2.17 Hotfix
         exit_message
         ;;
+    status)                         # v2.18 Hotfix
+        Show_status "syslog"
+        exit_message
 esac
 
 
