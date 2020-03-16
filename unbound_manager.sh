@@ -2902,7 +2902,7 @@ Ad_Tracker_blocking() {
 
         CURRENT_AUTO_OPTIONS=$(echo "$CURRENT_AUTO_OPTIONS" | sed 's/3//' | sed 's/^ //')   # v2.18 Hotfix Remove option from AUTO install
     fi
-exit
+
 }
 Option_Disable_Firefox_DoH() {
 
