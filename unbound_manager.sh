@@ -2284,6 +2284,10 @@ remove_existing_installation() {
         fi
         cru d adblock 2>/dev/null
 
+        # Remove 3rd Party scripts e.g. 'Unbound_Stats.sh' (Graphical Statistics GUI Addon TAB)
+        sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start            # v2.18 HotFix
+        sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event             # v2.18 HotFix
+
         echo -en $cRESET
 
         ln -f /opt/etc/unbound/unbound.conf 2>/dev/null
