@@ -1078,7 +1078,7 @@ EOF
                     unbound_Control "$menu1"                                # v1.16
                     #break
                 ;;
-                u|uf)                                                       # v1.07
+                u|uf*)                                                      # v3.00 v1.07
                     [ "$menu1" == "uf" ] && echo -e ${cRESET}$cWRED"\nForced Update"$cRESET"\n"  # v2.06 v1.07
                     update_installer $menu1
                     [ $? -eq 0 ] && exec "$0"                               # v1.18 Only exit if new script downloaded
@@ -2357,7 +2357,11 @@ update_installer() {
     if [ "$1" == "uf" ] || [ "$localmd5" != "$remotemd5" ]; then
         if [ "$1" == "uf" ] || [ "$( awk '{print $1}' /jffs/addons/unbound/unbound_manager.md5)" != "$remotemd5" ]; then # v2.00 v1.18
             echo 2>&1
-            download_file /jffs/addons/unbound unbound_manager.sh martineau             # v2.00
+
+            [ "$2" != "dev" ] && local DEV= || local DEV="dev"          # v3.00
+
+            download_file /jffs/addons/unbound unbound_manager.sh martineau "$DEV"            # v3.00 v2.00
+
             printf '\n%bunbound Manager UPDATE Complete! %s\n' "$cBGRE" "$remotemd5" 2>&1
             localmd5="$(md5sum "$0" | awk '{print $1}')"
             echo $localmd5 > /jffs/addons/unbound/unbound_manager.md5        # v2.00 v1.18
