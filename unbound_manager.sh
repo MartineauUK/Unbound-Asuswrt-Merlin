@@ -71,6 +71,7 @@ VERSION="2.18"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
+GITHUB_JUCHED_DEV="https://raw.githubusercontent.com/juched78/$GIT_REPO/develop"    # v3.00
 GITHUB_MARTINEAU="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/master"
 GITHUB_MARTINEAU_DEV="https://raw.githubusercontent.com/MartineauUK/$GIT_REPO/dev"
 GITHUB_DIR=$GITHUB_MARTINEAU                       # v1.08 default for script
@@ -296,7 +297,7 @@ _quote() {
 
     # When using v1.01+ of unbound.conf, need to exclude the header comments from the search
     # i.e. 'server:' should be the first non-comment line in 'unbound.conf'
-    local POS="$(grep -Enw "[[:space:]]*server:" ${CONFIG_DIR}unbound.conf | cut -d':' -f1)"    # v2.05                                         # v2.05
+        local POS="$(grep -Enw "[[:space:]]*server:" ${CONFIG_DIR}unbound.conf | head -n 1 | cut -d':' -f1)"   # v3.00 v2.05                                        # v2.05
 
     case $ACTION in
         comment)
@@ -984,7 +985,7 @@ EOF
                     unbound_Control "$menu1"                                # v1.16
                     #break
                 ;;
-                u|uf)                                                       # v1.07
+                u|uf*)                                                      # v3.00 v1.07
                     [ "$menu1" == "uf" ] && echo -e ${cRESET}$cWRED"\nForced Update"$cRESET"\n"  # v2.06 v1.07
                     update_installer $menu1
                     [ $? -eq 0 ] && exec "$0"                               # v1.18 Only exit if new script downloaded
@@ -1449,32 +1450,28 @@ download_file() {
         local GITHUB="$3"                                       # v2.06
         local GITHUB_BRANCH="$4"                                # v2.06
 
-        [ "$GITHUB_BRANCH" == "dev" ] && GITHUB="dev"           # v2.06
-
-        case $GITHUB in                                         # v1.08
+        case $GITHUB in                                        # v1.08
             martineau)
-                GITHUB_DIR=$GITHUB_MARTINEAU
+                [ "$GITHUB_BRANCH" != "dev" ] && GITHUB_DIR=$GITHUB_MARTINEAU || GITHUB_DIR=$GITHUB_MARTINEAU_DEV               # v3.00
             ;;
             jackyaz)
-                GITHUB_DIR=$GITHUB_JACKYAZ                      # v2.02
+                GITHUB_DIR=$GITHUB_JACKYAZ                    # v2.02
             ;;
             juched)
-                GITHUB_DIR=$GITHUB_JUCHED                       # v2.14
-            ;;
-            dev)
-                GITHUB_DIR=$GITHUB_MARTINEAU_DEV                # v2.06
-                printf '\t%bGithub "dev branch"%b\n' "${cRESET}$cWRED" "$cRESET"   # v2.06
+                [ "$GITHUB_BRANCH" != "dev" ] && GITHUB_DIR=$GITHUB_JUCHED || GITHUB_DIR=$GITHUB_JUCHED_DEV                      # v3.00 v2.14
             ;;
         esac
+
+        [ "$GITHUB_BRANCH" == "dev" ] && local DEVTXT=${cRESET}$cWRED"Github 'dev/development' branch"$cRESET || local DEVTXT=    # v3.00
 
         STATUS="$(curl --retry 3 -L${SILENT} -w '%{http_code}' "$GITHUB_DIR/$FILE" -o "$DIR/$FILE")"    # v1.08
         if [ "$STATUS" -eq "200" ]; then
             [ -n "$(echo "$@" | grep -F "dos2unix")" ] && dos2unix $DIR/$FILE      # v2.17
-            printf '\t%b%s%b downloaded successfully\n' "$cBGRE" "$FILE" "$cRESET"
+            printf '\t%b%s%b downloaded successfully %b\n' "$cBGRE" "$FILE" "$cRESET" "$DEVTXT"
 
         else
             printf '\n%b%s%b download FAILED with curl error %s\n\n' "\n\t\a$cBMAG" "'$FILE'" "$cBRED" "$STATUS"
-            printf '\tRerun %bunbound_manager nochk%b and select the %bRemove unbound/unbound_manager Installation%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
+            printf '\tRerun %bunbound_manager nochk%b and select the %bRemove unbound/unbound_manager%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
 
             Check_GUI_NVRAM                                     # v1.17
 
@@ -1674,7 +1671,7 @@ Option_GUI_Stats_TAB() {
         echo -e "\nDo you want to add router GUI TAB to Graphically display stats?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
         read -r "ANS"
      fi
-     [ "$ANS" == "y"  ] && { GUI_Stats_TAB; return $?; } || return 1                     # v2.14
+     [ "$ANS" == "y"  ] && { GUI_Stats_TAB "$@"; return $?; } || return 1                # v3.00 v2.14
 }
 GUI_Stats_TAB(){
 
@@ -1684,9 +1681,15 @@ GUI_Stats_TAB(){
 
         # Allow for any latest @juched tweaks.....
         echo -e $cBCYA"\n\tInstalling @juched's GUI TAB to Graphically display unbound stats....."$cRESET     # v2.14
-        download_file /jffs/addons/unbound/ unbound_stats.sh        juched
-        download_file /jffs/addons/unbound/ unboundstats_www.asp    juched
-        chmod +x /jffs/addons/unbound/unbound_stats.sh
+
+        [ "$2" != "dev" ] && local DEV= || local DEV="dev"      # v3.00 juched now also hosts a "dev" branch
+
+        download_file /jffs/addons/unbound/ unbound_stats.sh        juched   "$DEV"         # v3.00
+        download_file /jffs/addons/unbound/ unboundstats_www.asp    juched   "$DEV"         # v3.00
+        if [ -n "$(grep "unbound_log.sh" /jffs/addons/unbound/unbound_stats.sh)" ];then    # v3.00
+            download_file /jffs/addons/unbound/ unbound_log.sh      juched   "$DEV"         # v3.00
+            chmod +x /jffs/addons/unbound/unbound_log.sh                                   # v3.00
+        fi
 
         # Don't run install script if TAB already exists; Search '/tmp/menuTree.js' ('/tmp/var/wwwext/userX.asp') for 'unbound' entry
             #   {
@@ -2115,7 +2118,7 @@ unbound_Control() {
                         echo -en $cRESET                                # v2.15
 
                         AUTO_REPLY7="y"
-                        Option_GUI_Stats_TAB          "$AUTO_REPLY7"
+                        Option_GUI_Stats_TAB          "$AUTO_REPLY7"    "$ARG"      # v3.00 Allow use of juched's 'dev' Github
                         local RC=$?
 
                         [ $RC -eq 0 ] && Check_GUI_NVRAM
@@ -2244,7 +2247,10 @@ update_installer() {
     if [ "$1" == "uf" ] || [ "$localmd5" != "$remotemd5" ]; then
         if [ "$1" == "uf" ] || [ "$( awk '{print $1}' /jffs/addons/unbound/unbound_manager.md5)" != "$remotemd5" ]; then # v2.00 v1.18
             echo 2>&1
-            download_file /jffs/addons/unbound unbound_manager.sh martineau             # v2.00
+
+            [ "$2" != "dev" ] && local DEV= || local DEV="dev"          # v3.00
+
+            download_file /jffs/addons/unbound unbound_manager.sh martineau "$DEV"            # v3.00 v2.00
             printf '\n%bunbound Manager UPDATE Complete! %s\n' "$cBGRE" "$remotemd5" 2>&1
             localmd5="$(md5sum "$0" | awk '{print $1}')"
             echo $localmd5 > /jffs/addons/unbound/unbound_manager.md5        # v2.00 v1.18
@@ -2284,7 +2290,14 @@ remove_existing_installation() {
         fi
         cru d adblock 2>/dev/null
 
-        # Remove 3rd Party scripts e.g. 'Unbound_Stats.sh' (Graphical Statistics GUI Addon TAB)
+        # Graphicat Statistics GUI TAB
+        if [ -f /tmp/menuTree.js ] && [ -z "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
+            echo -en $cBCYA"\n\tunbound GUI graphical stats TAB uninstalled - "$cRESET  # v2.18 HotFix
+            sh /jffs/addons/unbound/unbound_stats.sh "uninstall" 2>/dev/null
+            rm /jffs/addons/unbound/unbound_stats.sh
+        fi
+
+        # Remove 3rd Party scripts - just in case
         sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start            # v2.18 HotFix
         sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event             # v2.18 HotFix
 
@@ -2559,7 +2572,7 @@ _quote() {
         local KEYWORD="$(_quote "$1")"  # v2.00
 
         # Ignore the comment/header entries                         # v2.14
-        local POS="$(grep -Enw "[[:space:]]*server:" ${CONFIG_DIR}unbound.conf | cut -d':' -f1)"        # v2.14
+        local POS="$(grep -Enw "[[:space:]]*server:" ${CONFIG_DIR}unbound.conf | head -n 1 | cut -d':' -f1)"        # v3.00 v2.05
         local LINE="$(tail -n +$POS ${CONFIG_DIR}unbound.conf | grep -E "^[[:blank:]]*[^#]" | grep -E "$KEYWORD")"  # v2.14
 
         [ "$(echo "$LINE" | grep -E "^#" )" ] && local LINE=
