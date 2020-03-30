@@ -1690,6 +1690,7 @@ GUI_Stats_TAB(){
             download_file /jffs/addons/unbound/ unbound_log.sh      juched   "$DEV"         # v3.00
             chmod +x /jffs/addons/unbound/unbound_log.sh                                   # v3.00
         fi
+        chmod +x /jffs/addons/unbound/unbound_stats.sh                                     # v2.18 Hotfix
 
         # Don't run install script if TAB already exists; Search '/tmp/menuTree.js' ('/tmp/var/wwwext/userX.asp') for 'unbound' entry
             #   {
