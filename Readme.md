@@ -57,9 +57,9 @@ e  = Exit Script
 A:Option ==> ?
 
 	Version=2.18
-	Local						md5=67a7bfd3f0426c50b3ad17764d8d8491
-	Github						md5=67a7bfd3f0426c50b3ad17764d8d8491
-	/jffs/addons/unbound/unbound_manager.md5	md5=67a7bfd3f0426c50b3ad17764d8d8491
+	Local						md5=4f491af39cc07c139e10220980cb9514
+	Github						md5=4f491af39cc07c139e10220980cb9514
+	/jffs/addons/unbound/unbound_manager.md5	md5=4f491af39cc07c139e10220980cb9514
 
 
 ```
