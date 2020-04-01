@@ -2717,7 +2717,7 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: yes
     #
     local DUPLICATES="$(sed '/^#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
-                        grep -vE "server:|access-control:|private-address:|domain-insecure:|forward-addr:")"
+                        grep -vE "server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:")"
 
     if [ -z "$DUPLICATES"  ];then   # v3.00
        local CHK_Config_Syntax="$(unbound-checkconf $CHECKTHIS 2>/dev/null)"           # v2.03
