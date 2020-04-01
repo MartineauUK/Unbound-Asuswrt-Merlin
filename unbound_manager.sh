@@ -638,8 +638,12 @@ welcome_message() {
                         fi
                     else
                         # Generate v3.00 Easy (dynamically context aware) menu
-                        if [ -n "$(pidof unbound)" ];then
+                        if [ -f /opt/etc/init.d/S61unbound ] || [ -f ${CONFIG_DIR}unbound.conf ];then       # v3.00
                             MENU_I="$(printf '%b1 %b = Update unbound files and configuration' "${cBYEL}" "${cRESET}")"
+                        else
+                            MENU_I="$(printf '%b1 %b = Begin unbound Installation Process %b' "${cBYEL}" "${cRESET}")"
+                        fi
+                        if [ -n "$(pidof unbound)" ];then
                             MENU_S="$(printf '%b3 %b = %bStop%b unbound' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}" )"
                             MENU_ST="$(printf '%b4 %b = Show unbound statistics' "${cBYEL}" "${cRESET}")"
 
@@ -649,7 +653,7 @@ welcome_message() {
                                 MENU_T="$(printf '%b6 %b = Uninstall Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}")"
                             fi
                         else
-                            MENU_I="$(printf '%b1 %b = Begin unbound Installation Process %b' "${cBYEL}" "${cRESET}")"
+
                             if [ -f /opt/etc/init.d/S61unbound ];then
                                 MENU_S="$(printf '%b3 %b = %bStart%b unbound' "${cBYEL}" "${cRESET}" "${cBGRE}" "${cRESET}")"
                             else
