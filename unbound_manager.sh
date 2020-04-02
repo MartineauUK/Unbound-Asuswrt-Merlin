@@ -2,7 +2,7 @@
 #============================================================================================ © 2019-2020 Martineau v3.00
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
-# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
+# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id | 'disable'}]
 #
 #           unbound_manager
 #                              Context Menu: Install with 'user option prompts (see advanced section below)
@@ -39,9 +39,13 @@
 #                              The script on start-up attempts to check GitHub for any version update/md5 mismatch, but a
 #                              failed install will look as if the script has stalled until cURL time-out expires (3 mins).
 #                              Use of nochk disables the 'stall' to quickly allow access to the 'z  = Remove unbound Installation' option
-#
 #           unbound_manager    restart
 #                              Allows saving of the cache (unlike sh /opt/etc/init.d/S61unbound restart)
+#           unbound_manager    vpn=1
+#                              unbound will send its Root Server DNS requests via the VPN Client 1 tunnel (see vpnclient1-route-up)
+#           unbound_manager    vpn=disable
+#                              unbound will send its Root Server DNS requests via the WAN (see post-mount)
+#
 #
 #  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for additional help/documentation with this script.
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
@@ -1223,6 +1227,29 @@ EOF
                         Diversion_to_unbound_list "all"                     # v1.25
                     fi
                 ;;
+                vpn*)                                                       # v3.00  [ vpn_id | disable]
+                    # Allow using a nominated VPN tunnel to send DNS Root Server requests
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                    fi
+
+                    if [ "$(Unbound_Installed)" == "Y" ];then
+                        if [ "$ARG" != "disable" ];then
+                            AUTO_REPLY9="y"
+                            echo
+                            Option_Use_VPN_Tunnel "$AUTO_REPLY9" "$ARG"
+                            local RC=$?
+                        else
+                            Use_VPN_Tunnel "disable"
+                            local RC=0
+                        fi
+                        [ $RC -eq 0 ] && Restart_unbound
+                    else
+                        echo -e $cBRED"\a\n\tunbound NOT installed! or 'outgoing-interface:' NOT defined in 'unbound.conf'?"$cRESET
+                        local RC=1
+                    fi
+                ;;
                 getrootdns)                                                 # v1.24
                     echo
                     Get_RootDNS
@@ -1852,6 +1879,46 @@ FastMenu() {
         Edit_config_options "control-use-cert:"  "comment"
         echo -e $cBCYA"\n\tunbound-control FAST response ${cRESET}DISABLED (LAN SSL validation reinstated)"$cBGRA
     fi
+}
+Option_Use_VPN_Tunnel() {
+
+    # Use VPN Client tunnel for unbound requests to Root Servers        # v3.00
+     local ANS=$1
+     if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+        echo -en $cBYEL"Option Auto Reply 'y'\t"
+     fi
+
+     if [ "$USER_OPTION_PROMPTS" == "?" ];then
+        echo -e "\nDo you want to route unbound requests through the VPN Client tunnel?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+        read -r "ANS"
+     fi
+     [ "$ANS" == "y"  ] && { Use_VPN_Tunnel "$@"; return $?; } || return 1                # v3.00
+}
+Use_VPN_Tunnel() {
+
+    local STATUS=0
+
+    if [ -n "$(grep -E "^[#|o].*utgoing-interface:" /opt/var/lib/unbound/unbound.conf)" ];then
+        if [ "$1" != "disable" ];then                                # v2.15
+            local VPN_ID= $1
+            Edit_config_options "outgoing-interface:"  "uncomment"
+            local VPN_CLIENT_GW=$(ip route | grep "dev tun1"${VPN_ID} | awk '{print $NF}')
+            if [ -n "$VPN_CLIENT_GW" ];then
+                sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$VPN_CLIENT_GW/2" ${CONFIG_DIR}unbound.conf
+                echo -e $cBCYA"\n\tunbound requests via VPN Client $VPN_ID tunnel ${cRESET}ENABLED"$cBGRA
+                SayT "unbound requests via VPN Client $VPN_ID ($VPN_CLIENT_GW) tunnel ENABLED"
+            else
+                STATUS=1
+            fi
+        else
+            Edit_config_options "outgoing-interface:"  "comment"
+            echo -e $cBCYA"\n\tunbound requests via VPN Client tunnel ${cRESET}DISABLED"$cBGRA
+            SayT "unbound requests via VPN Client $VPN_ID tunnel DISABLED"
+        fi
+    else
+        STATUS=1
+    fi
+exit
 }
 Get_RootDNS() {
      # https://www.iana.org/domains/root/servers
@@ -2720,8 +2787,9 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: no
     #            ip-v6: yes
     #
+    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|interfaces:outgoing-interface"   # v3.00
     local DUPLICATES="$(sed '/^#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
-                        grep -vE "server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:")"
+                        grep -vE "$STATEMENTS")"
 
     if [ -z "$DUPLICATES"  ];then   # v3.00
        local CHK_Config_Syntax="$(unbound-checkconf $CHECKTHIS 2>/dev/null)"           # v2.03
@@ -2915,6 +2983,15 @@ Check_GUI_NVRAM() {
             # AUTO_REPLY 8
             if [ "$(Get_unbound_config_option "control-use-cert:" ${CONFIG_DIR}unbound.conf)" == "no" ];then            # v2.15
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound-control FAST response ENABLED" 2>&1
+            fi
+
+            # AUTO_REPLY 9
+            if [ "$(Get_unbound_config_option "outgoing-interface:" ${CONFIG_DIR}unbound.conf)" != "?" ];then            # v3.00
+                if [ -z "$STATUSONLY" ];then
+                    local VPN_IP=$(awk '/^outgoing-interface:/ {print $2}' ${CONFIG_DIR}unbound.conf)
+                    local VPN_ID=$(ip route | grep "$VPN_IP" | awk '{print substr($3,4,1)}')
+                    echo -e $cBGRE"\t[✔] unbound requests via VPN Client ${cBMAG}$VPN_ID ($VPN_IP)$cBGRE tunnel ENABLED" 2>&1
+                fi
             fi
         fi
 
@@ -3399,6 +3476,32 @@ case "$1" in
         ;;
     status)                         # v2.18 Hotfix
         Show_status "syslog"
+        exit_message
+        ;;
+    vpn*)                           # v3.00
+        VPN_ID=$(echo "$@" | sed -n "s/^.*vpn=//p" | awk '{print $1}')
+        case $VPN_ID in
+        1|2|3|4|5)
+                if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
+                    Use_VPN_Tunnel "$VPN_ID"
+                    [ $? -eq 0 ] && Restart_unbound
+                else
+                    echo -e $cBRED"\n\a"
+                    Say "***ERROR VPN Client '$VPN_ID' is NOT Connected?"
+                fi
+        ;;
+        disable)
+                # Remember, 'post-mount' initialises Entware then you must include the following:
+                #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh vpn=disable
+                #
+                Use_VPN_Tunnel "disable"
+                [ $? -eq 0 ] && Restart_unbound
+        ;;
+        *)
+            echo -e $cBRED"\n\a"
+            Say "***ERROR Invalid argument '$VPN_ID' must be numeric '1-5' or 'disable'"
+        esac
+        echo -e $cRESET
         exit_message
 esac
 
