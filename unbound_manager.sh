@@ -51,7 +51,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 16-Mar-2020
+# Last Updated Date: 03-Apr-2020
 #
 # Description:
 #
@@ -2787,7 +2787,7 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: no
     #            ip-v6: yes
     #
-    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|interfaces:outgoing-interface"   # v3.00
+    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|interfaces:|outgoing-interface"   # v3.00
     local DUPLICATES="$(sed '/^#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
                         grep -vE "$STATEMENTS")"
 
