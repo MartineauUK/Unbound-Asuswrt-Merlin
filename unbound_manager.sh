@@ -1765,11 +1765,11 @@ Backup_unbound_config() {
 }
 Check_config_add_and_postconf() {
 
-    # If the 'server:' directives are to be included add the 'include $FN' directive
+    # If 'server:' directives are to be included, append the 'include: $FN' directive so values will override any previous ones # v2.18 Hotfix
     local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"              # v2.10
     if [ -f $CONFIG_ADD ];then
         echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA
-        [ -z "$(grep "^include \"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && sed -i "/^server:/ainclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n\n" ${CONFIG_DIR}unbound.conf    # v2.10
+        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
     local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
     if [ -f $POSTCONF_SCRIPT ];then
