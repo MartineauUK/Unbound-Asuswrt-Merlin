@@ -554,7 +554,7 @@ welcome_message() {
                     # Always rebuild the dynamic menu items if unbound INSTALLED & UP
                     if [ "$1" != "nochk" ];then                                                         # v2.13
                         if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.03
-                            if [ Unbound_Installed ];then           # Installed?
+                            if [ "$(Unbound_Installed)" == "Y" ];then           # Installed?
                                 if [ -n "$(pidof unbound)" ];then   # UP ?
 
                                     MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
