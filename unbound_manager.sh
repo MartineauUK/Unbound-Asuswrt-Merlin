@@ -50,13 +50,13 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 16-Mar-2020
+# Last Updated Date: 06-Apr-2020
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Cam (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Cam,toazd (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://calomel.org/unbound_dns.html
