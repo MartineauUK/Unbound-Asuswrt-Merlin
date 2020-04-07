@@ -341,6 +341,7 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t\t%s\n"     "$MENU__"  "$MENU_OQ"
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
     [ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v2.15
+    printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
     [ -n "$MENU_AD" ] && printf "%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v2.00 v1.25
     [ -n "$MENU_EL" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_EL"      # v2.15
     [ -n "$MENU_CA" ] && printf "%s\t%s\n"        "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
@@ -434,6 +435,8 @@ welcome_message() {
                 MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENU_FM="$(printf '%bfastmenu%b = Disable SLOW unbound-control LAN SSL cert validation\n' "${cBYEL}" "${cRESET}")"
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
+                MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -1108,9 +1111,8 @@ EOF
                         echo -en $cBCYA"Restarting dnsmasq....."$cBGRE        # v1.13
                         service restart_dnsmasq                                # v1.13
                         echo -en $cRESET
+                        Check_GUI_NVRAM
                     fi
-
-                    Check_GUI_NVRAM
                 ;;
                 s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                      # v2.07 v1.08
 
@@ -1440,9 +1442,7 @@ EOF
                         local RC=1
                     fi
 
-                    [ $RC -eq 0 ] && Restart_unbound
-
-                    Check_GUI_NVRAM
+                    [ $RC -eq 0 ] && { Restart_unbound;Check_GUI_NVRAM; }           # v3.00
                 ;;
                 fastmenu*)
                     # unbound-control uses SSL certs for security but this impacts responses see [URL="https://www.snbforums.com/threads/release-unbound_manager-manager-installer-utility-for-unbound-recursive-dns-server.61669/page-33#post-554237"]post #657[/URL]
