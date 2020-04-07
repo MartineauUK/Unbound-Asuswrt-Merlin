@@ -50,7 +50,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 06-Apr-2020
+# Last Updated Date: 07-Apr-2020
 #
 # Description:
 #
@@ -554,7 +554,7 @@ welcome_message() {
                     # Always rebuild the dynamic menu items if unbound INSTALLED & UP
                     if [ "$1" != "nochk" ];then                                                         # v2.13
                         if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.03
-                            if [ "$(Unbound_Installed)" == "Y" ];then           # Installed?
+                            if [ "$(Unbound_Installed)" == "Y" ];then           # Installed? v2.18 Hotfix @toazd
                                 if [ -n "$(pidof unbound)" ];then   # UP ?
 
                                     MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
@@ -1537,11 +1537,14 @@ Stubby_Integration() {
         if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ $FIRMWARE -ge 38406 ];then        # v2.10
             # Merlin firmware
             if [ "$(nvram get dnspriv_enable)" -eq "1" ]; then
-                # set Unbound forward address to 127.0.1.1:53
+                # set Unbound forward address to 127.0.0.1:53
                 echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-                if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
-                    sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf
-                    sed -i 's/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.1\.1\@53/' ${CONFIG_DIR}unbound.conf
+                if [ -n "$(grep -E "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
+                    #sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Bug prompted to review by @toazd
+                    local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
+                    [ -n "$POS" ] && sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@5453/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
+                    sed -i 's/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.0\.1\@53/' ${CONFIG_DIR}unbound.conf
+                    [ "$(nvram get ipv6_service)" != "disabled" ] && sed -i '/forward\-addr: 0::1@5453/ s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
                 fi
             else
                 echo -e $cBRED"\a\n\tERROR: DNS Privacy (DoT) not enabled in GUI. see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp WAN->DNS Privacy Protocol\n"$cRESET 2>&1       # v 2.13 v2.08 Martineau add message attributes
@@ -1550,8 +1553,10 @@ Stubby_Integration() {
             # John's fork
             # set Unbound forward address to 127.0.0.1 and port determined in nvram stubby_port
             echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-            if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
-                sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf
+            if [ -n "$(grep -E "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
+                #sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.[01]\.1\@53/s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
+                local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
+                [ -n "$POS" ] && sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@5453/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
                 sed -i "s/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.0\.1\@$(nvram get stubby_port)/" ${CONFIG_DIR}unbound.conf
             fi
         else
@@ -1641,7 +1646,7 @@ DoT_Forwarder() {
     if [ "$1" != "off" ];then
         echo -e $cBCYA"\n\tEnabling DoT with unbound now as a ${cBWHT}Forwarder....."$cBGRA     # v2.12
         #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        #forward-zone:      # DNS-Over-TLS support
+        #forward-zone:                                         # DNS-Over-TLS support
         #name: "."
         #forward-tls-upstream: yes
         #forward-addr: 1.1.1.1@853#cloudflare-dns.com
