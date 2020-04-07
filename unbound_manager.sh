@@ -51,13 +51,13 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 03-Apr-2020
+# Last Updated Date: 07-Apr-2020
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Cam.Max33Verstappen, (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -369,53 +369,57 @@ Show_credits() {
 }
 Show_status() {
 
-    local CONFIG_STATUS="$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")"   # V3.00
+    if [ "$(Unbound_Installed)" == "Y" ];then
 
-    if [ -z "$(which unbound-control)" ] || [ "$CONFIG_STATUS" == "Y" ];then # V3.00 v2.03
-        # Show unbound uptime
-        local UNBOUNDPID=$(pidof unbound)
-        if [ -n "$UNBOUNDPID" ];then
-            # Each call to unbound-control takes upto 2secs!!!
-            I=1
+        local CONFIG_STATUS="$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")"   # V3.00
 
-            # error: SSL handshake failed           # v2.02
-            # 548130435088:error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:1915:
+        if [ -z "$(which unbound-control)" ] || [ "$CONFIG_STATUS" == "Y" ];then # V3.00 v2.03
 
-            local UNBOUND_STATUS="$($UNBOUNCTRLCMD status)"
-            local UNBOUNDUPTIME="$(echo "$UNBOUND_STATUS" | grep -E "uptime:.*seconds"  | awk '{print $2}')"
-            local UNBOUNDVERS="$(echo "$UNBOUND_STATUS" | grep -E "version:.*$" | awk '{print $2}')"
+            # Show unbound uptime
+            local UNBOUNDPID=$(pidof unbound)
+            if [ -n "$UNBOUNDPID" ];then
+                # Each call to unbound-control takes upto 2secs!!!
+                I=1
 
-            if [ -n "$UNBOUNDUPTIME" ];then         # v2.02
-                local UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
+                # error: SSL handshake failed           # v2.02
+                # 548130435088:error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:ssl/statem/statem_clnt.c:1915:
+
+                local UNBOUND_STATUS="$($UNBOUNCTRLCMD status)"
+                local UNBOUNDUPTIME="$(echo "$UNBOUND_STATUS" | grep -E "uptime:.*seconds"  | awk '{print $2}')"
+                local UNBOUNDVERS="$(echo "$UNBOUND_STATUS" | grep -E "version:.*$" | awk '{print $2}')"
+
+                if [ -n "$UNBOUNDUPTIME" ];then         # v2.02
+                    local UNBOUND_STATUS="unbound (pid $UNBOUNDPID) is running...  uptime: "$(Convert_SECS_to_HHMMSS "$UNBOUNDUPTIME" "days")" version: "$UNBOUNDVERS
+                else
+                    echo -e $cBRED"\a\n\t***ERROR unbound-control - failed'?"   # v2.02
+                    #/opt/etc/init.d/S61unbound
+                    #exit_message
+                fi
+
+                # Display 'unbound.conf' header if present
+                local TAG="Date Loaded by unbound_manager "$(date)")"
+                local UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
+                if [ -n "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ];then  # v2.04                                         # v2.05
+                    local UNBOUND_CONF_VER_TXT=$UNBOUND_CONF_VER
+                else
+                    #sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+                    :
+                fi
+                echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET      # v1.19
+                [ "$1" == "syslog" ] && SayT "$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"    # v2.18 Hotfix
             else
-                echo -e $cBRED"\a\n\t***ERROR unbound-control - failed'?"   # v2.02
-                #/opt/etc/init.d/S61unbound
-                #exit_message
+                echo
             fi
-
-            # Display 'unbound.conf' header if present
-            local TAG="Date Loaded by unbound_manager "$(date)")"
-            local UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
-            if [ -n "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ];then  # v2.04                                         # v2.05
-                local UNBOUND_CONF_VER_TXT=$UNBOUND_CONF_VER
-            else
-                #sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
-                :
-            fi
-            echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET      # v1.19
-            [ "$1" == "syslog" ] && SayT "$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"    # v2.18 Hotfix
         else
-            echo
+           echo -e $cBRED"\a"
+           if [ "$CONFIG_STATUS" == "N" ];then                     # V3.00
+                unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
+                echo -e $cBRED"\n***ERROR INVALID unbound ${cRESET}configuration - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE
+           else
+                echo -e $cBRED"\n***ERROR unbound ${cRESET}configuration contains ${cBYEL}DUPLICATES$cRESET - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE   # v3.00
+                echo -e $cBYEL"\t$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf" "returndup")\n"   # v3.00
+           fi
         fi
-    else
-       echo -e $cBRED"\a"
-       if [ "$CONFIG_STATUS" == "N" ];then                     # V3.00
-            unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
-            echo -e $cBRED"\n***ERROR INVALID unbound ${cRESET}configuration - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE
-       else
-            echo -e $cBRED"\n***ERROR unbound ${cRESET}configuration contains ${cBYEL}DUPLICATES$cRESET - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE   # v3.00
-            echo -e $cBYEL"\t$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf" "returndup")\n"   # v3.00
-       fi
     fi
 }
 welcome_message() {
@@ -478,17 +482,18 @@ welcome_message() {
                 fi
                 local YES_NO="   "                              # v2.07
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cBGRE}   ";   printf '|       o1. Enable unbound Logging                             %b    %b |\n' "$YES_NO" "$cRESET"
-                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o2. Integrate with Stubby                              %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o2. Integrate with Stubby (%bAdvanced Users%b)             %b    %b |\n' "$cBRED" "$cRESET" "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o3. Install Ad and Tracker Blocking                    %b    %b |\n' "$YES_NO" "$cRESET"
-                [ "$EASYMENU" == "Y" ] && local YES_NO="${cBGRE}   ";   printf '|       o4. Customise CPU/Memory usage (%bAdvanced Users%b)        %b    %b |\n' "$cBRED" "$cRESET"  "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cBGRE}   ";   printf '|       o4. Customise CPU/Memory usage                         %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)   %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o6. Install Graphical Statistics GUI (Add-ons) TAB     %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o7. Integrate with DoT (%bAdvanced Users%b)                %b    %b |\n' "$cBRED" "$cRESET" "$YES_NO" "$cRESET"
                 printf '|                                                                      |\n'
 
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
                     printf '|   z  = Remove unbound/unbound_manager                                |\n'
                     printf '|   ?  = About Configuration                                           |\n'
-                    printf '|   3 = Advanced Tools                                                 |\n'
+                    printf '|   3  = Advanced Tools                                                |\n'
                 fi
                 printf '|                                                                      |\n'
                 printf '|     See SNBForums thread %b%s%b for helpful     |\n' "$cBGRE" "https://tinyurl.com/s89z3mm" "$cRESET"
@@ -575,7 +580,7 @@ welcome_message() {
                     # Always rebuild the dynamic menu items if unbound INSTALLED & UP
                     if [ "$1" != "nochk" ];then                                                         # v2.13
                         if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.03
-                            if [ Unbound_Installed ];then           # Installed?
+                            if [ "$(Unbound_Installed)" == "Y" ];then           # Installed?  v2.18 Hotfix @toazd
                                 if [ -n "$(pidof unbound)" ];then   # UP ?
                                     if [ "$EASYMENU" == "N" ];then
                                         MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
@@ -666,7 +671,7 @@ welcome_message() {
                             MENU_ST="$(printf '%b4 %b = n/a Show unbound statistics' "${cBYEL}" "${cRESET}$cGRA")"
                             MENU_T="$(printf '%b6 %b = n/a Install Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}$cGRA")"
                         fi
-                        if [ -n "$(grep -E "^[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
+                        if [ -f ${CONFIG_DIR}unbound.conf ] && [ -n "$(grep -E "^[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
                             MENU_AD="$(printf '%b5 %b = Uninstall Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}")"
                         else
                             if [ -d /opt/var/lib/unbound/adblock ];then
@@ -1080,6 +1085,33 @@ EOF
                     # Host                                     Address                        Flags      Expires
                     kill -SIGUSR1 $(pidof dnsmasq) | sed -n '/cache entries\.$/,/Host/p' $SYSLOG | tail -n 6 | grep -F dnsmasq
                 ;;
+                Stubby*)                                           # v3.00
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                    fi
+                    if [ "$(Unbound_Installed)" == "Y" ];then
+                        if [ "$ARG" != "disable" ];then
+                            AUTO_REPLY2="?"
+                            Option_Stubby_Integration           "$AUTO_REPLY2"
+                            local RC=$?
+                        else
+                            Stubby_Integration "disable"        # TBA
+                            local RC=1                          # TEMPORARARY TO IGNORE UNNECESSARY dnsamsq restart.
+                        fi
+                    else
+                        echo -e $cBRED"\a\n\tunbound NOT installed!?"$cRESET
+                        local RC=1
+                    fi
+
+                    if [ $RC -eq 0 ];then
+                        echo -en $cBCYA"Restarting dnsmasq....."$cBGRE        # v1.13
+                        service restart_dnsmasq                                # v1.13
+                        echo -en $cRESET
+                    fi
+
+                    Check_GUI_NVRAM
+                ;;
                 s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                      # v2.07 v1.08
 
                     echo
@@ -1396,7 +1428,7 @@ EOF
                     # https://www.dnsknowledge.com/unbound/configure-unbound-dns-over-tls-on-linux/
                     if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "DNS-Over-TLS support" ${CONFIG_DIR}unbound.conf)" ];then
                         if [ "$ARG" != "disable" ];then
-                            AUTO_REPLY6="y"
+                            AUTO_REPLY6="?"
                             Option_DoT_Forwarder          "$AUTO_REPLY6"
                             local RC=$?
                         else
@@ -1651,7 +1683,7 @@ Option_Stubby_Integration() {
         echo -en $cBYEL"Option Auto Reply 'y'\t"
      fi
 
-     if [ "$USER_OPTION_PROMPTS" == "?" ];then
+     if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
         # v2.07 Stubby-Integration defeats main selling point of unbound i.e. being your own (secure) Recursive DNS Resolver
         echo -e "\nDo you want to integrate Stubby with unbound?"
         echo -e $cBRED"\n\tWarning: This will DISABLE being able to be your ${aUNDER}own trusted Recursive DNS Resolver\n"$cRESET
@@ -1674,9 +1706,12 @@ Stubby_Integration() {
             if [ "$(nvram get dnspriv_enable)" -eq "1" ]; then
                 # set Unbound forward address to 127.0.1.1:53
                 echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-                if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
-                    sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf
+                if [ -n "$(grep -E "#forward-zone:.*Stubby" ${CONFIG_DIR}unbound.conf)" ];then
+                    #sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Bug prompted to review by @toazd
+                    local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
+                    [ -n "$POS" ] && sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@5453/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
                     sed -i 's/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.1\.1\@53/' ${CONFIG_DIR}unbound.conf
+                    [ "$(nvram get ipv6_service)" != "disabled" ] && sed -i '/forward\-addr: 0::1@5453/ s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
                 fi
             else
                 echo -e $cBRED"\a\n\tERROR: DNS Privacy (DoT) not enabled in GUI. see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp WAN->DNS Privacy Protocol\n"$cRESET 2>&1       # v 2.13 v2.08 Martineau add message attributes
@@ -1685,8 +1720,9 @@ Stubby_Integration() {
             # John's fork
             # set Unbound forward address to 127.0.0.1 and port determined in nvram stubby_port
             echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-            if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
-                sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf
+            if [ -n "$(grep -F "#forward-zone:.*Stubby" ${CONFIG_DIR}unbound.conf)" ];then
+                local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
+                sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@53/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
                 sed -i "s/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.0\.1\@$(nvram get stubby_port)/" ${CONFIG_DIR}unbound.conf
             fi
         else
@@ -1757,7 +1793,7 @@ Option_DoT_Forwarder() {
         echo -en $cBYEL"Option Auto Reply 'y'\t"
      fi
 
-     if [ "$USER_OPTION_PROMPTS" == "?" ];then
+     if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
         # v2.12 DoT defeats main selling point of unbound i.e. being your own (secure) Recursive DNS Resolver
         echo -e "\nDo you want to ENABLE DoT with unbound?"
         echo -e $cBRED"\n\tWarning: This will DISABLE being able to be your ${aUNDER}own trusted Recursive DNS Resolver\n"$cRESET
@@ -1941,11 +1977,11 @@ Backup_unbound_config() {
 }
 Check_config_add_and_postconf() {
 
-    # If the 'server:' directives are to be included add the 'include $FN' directive
+    # If 'server:' directives are to be included, append the 'include: $FN' directive so values will override any previous ones # v2.18 Hotfix
     local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"              # v2.10
     if [ -f $CONFIG_ADD ];then
         echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA
-        [ -z "$(grep "^include \"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && sed -i "/^server:/ainclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n\n" ${CONFIG_DIR}unbound.conf    # v2.10
+        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
     local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
     if [ -f $POSTCONF_SCRIPT ];then
@@ -2671,7 +2707,7 @@ install_unbound() {
 
         Option_Optimise_Performance         "$AUTO_REPLY4"
 
-        Option_Stubby_Integration           "$AUTO_REPLY2"
+        #Option_Stubby_Integration           "$AUTO_REPLY2"     # v3.00 Advanced users will use the Stubby menu command
 
         echo -en $cBCYA"Restarting dnsmasq....."$cBGRE        # v1.13
         service restart_dnsmasq                                # v1.13
@@ -2779,6 +2815,9 @@ Valid_unbound_config_Syntax() {
     local CHECKTHIS="$1"    # v2.03
     [ -z "$1" ] && CHECKTHIS="${CONFIG_DIR}unbound.conf"
 
+    # If file doesn't exist then spoof 'Y' reply
+    [ ! -f "$CHEKTHIS" ] && { echo "Y"; return 0; }
+
     #echo -e $cBCYA"\nChecking $cBMAG'$CHECKTHIS'$cBCYA for valid syntax....."$cBGRE 2>&1
 
     # v3.00 Certain directives can explicitly be specified more than once e.g. 'server:', 'access-control:' etc.
@@ -2787,7 +2826,7 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: no
     #            ip-v6: yes
     #
-    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|interfaces:|outgoing-interface"   # v3.00
+    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|interfaces:outgoing-interface"   # v3.00
     local DUPLICATES="$(sed '/^#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
                         grep -vE "$STATEMENTS")"
 
