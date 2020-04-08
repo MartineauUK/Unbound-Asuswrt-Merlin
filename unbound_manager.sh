@@ -1537,13 +1537,13 @@ Stubby_Integration() {
         if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ $FIRMWARE -ge 38406 ];then        # v2.10
             # Merlin firmware
             if [ "$(nvram get dnspriv_enable)" -eq "1" ]; then
-                # set Unbound forward address to 127.0.0.1:53
+                # set Unbound forward address to 127.0.1.1:53
                 echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
                 if [ -n "$(grep -E "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
                     #sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Bug prompted to review by @toazd
                     local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
                     [ -n "$POS" ] && sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@5453/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
-                    sed -i 's/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.0\.1\@53/' ${CONFIG_DIR}unbound.conf
+                    sed -i 's/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.1\.1\@53/' ${CONFIG_DIR}unbound.conf
                     [ "$(nvram get ipv6_service)" != "disabled" ] && sed -i '/forward\-addr: 0::1@5453/ s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
                 fi
             else
