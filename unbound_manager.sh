@@ -2118,7 +2118,7 @@ unbound_Control() {
             # @juched's GUI stats Graphical TAB requires 'extended-statistics: yes' and firmware must support 'addons'
             if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "extended-statistics" ${CONFIG_DIR}unbound.conf)" ];then
                 if [ "$ARG" != "uninstall" ];then
-                    if [ -n $(nvram get rc_support | grep -o am_addons) ];then  # v2.15
+                    if [ -n "$(nvram get rc_support | grep -o am_addons)" ];then  # v2.15
 
                         Manage_Extended_stats "s+"                      # v2.15 Ensure ENABLED
                         echo -en $cRESET                                # v2.15
@@ -3162,7 +3162,7 @@ fi
 [ -n "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU="Y" || EASYMENU="N"                    # v2.07
 
 # Does the firmware support addons?                                         # v2.10
-if [ -n $(nvram get rc_support | grep -o am_addons) ];then
+if [ -n "$(nvram get rc_support | grep -o am_addons)" ];then
     CUSTOM_NVRAM="$(am_settings_get unbound_mode)"                          # v2.07 Retrieve value saved across amtm sessions
 fi
 
