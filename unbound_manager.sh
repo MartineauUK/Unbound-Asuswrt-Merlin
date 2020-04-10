@@ -568,10 +568,13 @@ welcome_message() {
 
                         if [ "$EASYMENU" == "N" ];then
                             MENU_I="$(printf '%bi %b = Update unbound and configuration %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
+                            MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
+                        else
+                            MENU_VX="$(printf '%bv %b = View %b%s\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR'unbound.conf)")"    # v3.00
                         fi
 
                         MENU_RS="$(printf '%brs%b = %bRestart%b (or %bStart%b) unbound (%b)\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "$cBGRE" "${cRESET}" "use $cBGRE'rs nocache'$cRESET to flush cache" )"
-                        MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit) \n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")"
+
                     else
                         if [ "$EASYMENU" == "N" ] ;then
                             MENU_I="$(printf '%bi %b = Begin unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
@@ -693,7 +696,8 @@ welcome_message() {
                         printf "%s\t\t%s\n"            "$MENU_ST"
                         printf "%s\t\t%s\n"            "$MENU_AD"
                         printf "%s\t\t%s\n"            "$MENU_T"
-                        printf "\n%s\t\t%s\n"           "$MENU__"
+                        printf "\n%s\t\t%s\n"          "$MENU__"
+                        printf "%s\t\t%s\n"            "$MENU_VX"
                     fi
                     printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
                 fi
@@ -736,6 +740,7 @@ _GetKEY() {
                     e) ;;
                     u|uf) ;;
                     "?") ;;
+                    "v") ;;
                     "") ;;
                     adv*) ;;
                     *) printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
@@ -810,7 +815,7 @@ _GetKEY() {
                                 # If either of the two customising files exist then no point in prompting the restore
                                 if [ ! -f /opt/share/unbound/configs/unbound.conf.add ] && [ ! -f /opt/share/unbound/configs/unbound.postconf ];then      # V2.12 Hotfix v2.10
                                         if [ "$EASYMENU" != "Y" ];then
-                                            echo -e "\a\nDo you want to KEEP your current unbound configuration? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}KEEP ${cRESET}or press $cBGRE[Enter] to use new downloaded 'unbound.conf'$cRESET"
+                                            echo -e "\a\nDo you want to KEEP your current unbound configuration? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}KEEP ${cRESET}or press ${cBGRE}[Enter] to use new downloaded 'unbound.conf'$cRESET"
                                             read -r "ANS"
                                             if [ "$ANS" == "y"  ];then                      # v1.27
                                                 cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf # Restore previous config
@@ -2343,7 +2348,7 @@ unbound_Control() {
             # @juched's GUI stats Graphical TAB requires 'extended-statistics: yes' and firmware must support 'addons'
             if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "extended-statistics" ${CONFIG_DIR}unbound.conf)" ];then
                 if [ "$ARG" != "uninstall" ];then
-                    if [ -n $(nvram get rc_support | grep -o am_addons) ];then  # v2.15
+                    if [ -n "$(nvram get rc_support | grep -o "am_addons")" ];then  # v2.18 Hotfix v2.15
 
                         if [ "$ARG" == "extended" ];then                # v3.00
                             echo -e $cBCYA"\nConfiguring unbound to be the DNS for the LAN directly.....\n"$cRESET
@@ -2850,7 +2855,7 @@ Valid_unbound_config_Syntax() {
     [ -z "$1" ] && CHECKTHIS="${CONFIG_DIR}unbound.conf"
 
     # If file doesn't exist then spoof 'Y' reply
-    [ ! -f "$CHEKTHIS" ] && { echo "Y"; return 0; }
+    [ ! -f "$CHECKTHIS" ] && { echo "Y"; return 0; }
 
     #echo -e $cBCYA"\nChecking $cBMAG'$CHECKTHIS'$cBCYA for valid syntax....."$cBGRE 2>&1
 
@@ -3464,7 +3469,7 @@ fi
 
 if [ -f ${CONFIG_DIR}unbound.conf/Read.me ];then
     # Does the firmware support addons?                                         # v2.10
-    if [ -n $(nvram get rc_support | grep -o am_addons) ];then
+    if [ -n "$(nvram get rc_support | grep -o "am_addons")" ];then  # v2.18 Hotfix v2.15
         CUSTOM_NVRAM="$(am_settings_get unbound_mode)"                          # v2.07 Retrieve value saved across amtm sessions
     fi
 
