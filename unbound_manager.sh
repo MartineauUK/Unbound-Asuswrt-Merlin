@@ -51,7 +51,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 07-Apr-2020
+# Last Updated Date: 10-Apr-2020
 #
 # Description:
 #
@@ -952,10 +952,19 @@ _GetKEY() {
                     if [ "$PERFORMRELOAD" == "Y" ];then                         # v1.19
                         local TAG="Date Loaded by unbound_manager "$(date)")"
                         sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
-                        echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-                        Manage_cache_stats "save"                               # v2.12
-                        $UNBOUNCTRLCMD reload                                   # v1.08
-                        Manage_cache_stats "restore"                            # v2.12
+                        if [ -n "$(pidof unbound)" ];then                      # v3.00
+                            echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
+                            Manage_cache_stats "save"                           # v2.12
+                            $UNBOUNCTRLCMD reload                              # v1.08
+                            Manage_cache_stats "restore"                        # v2.12
+                        else
+                            local FN="/opt/share/unbound/configs/unbound.conf.add"  # v3.00
+                            if [ -n "$(echo "$NEW_CONFIG" | grep "reset")" ] && [ -f $FN ];then
+                                echo -en $cRESET"\nReset requested..disabling $cBGRE'unbound.conf.add'$cRESET - renamed $cBGRE'$FN"RESET"'"$cRESET
+                                mv $FN $FN"RESET"                               # v3.00 Always disable 'unbound.conf.add'
+                            fi
+                            Restart_unbound                                     # v3.00
+                        fi
                         CHECK_GITHUB=1                                          # v1.27 force a GitHub version check to see if we are OK
                     fi
                     local TXT=
@@ -1470,6 +1479,11 @@ EOF
                     Check_GUI_NVRAM
 
                 ;;
+                tcpdump)
+                    echo -e $cBMAG"\a\n${LOGFILE}$TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
+                    trap 'welcome_message' INT
+                    [ -n "$(which tcpdump)" ] && tcpdump -i any port '(53 or 853)' -nn -tttt || echo -e $cBRED"\a\n\ttcpdump not installed!\n"  # v3.00
+                ;;
                 *)
                     printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
                 ;;
@@ -1706,7 +1720,7 @@ Stubby_Integration() {
             if [ "$(nvram get dnspriv_enable)" -eq "1" ]; then
                 # set Unbound forward address to 127.0.1.1:53
                 echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-                if [ -n "$(grep -E "#forward-zone:.*Stubby" ${CONFIG_DIR}unbound.conf)" ];then
+                if [ -n "$(grep -E "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
                     #sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Bug prompted to review by @toazd
                     local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
                     [ -n "$POS" ] && sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@5453/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
@@ -1720,7 +1734,7 @@ Stubby_Integration() {
             # John's fork
             # set Unbound forward address to 127.0.0.1 and port determined in nvram stubby_port
             echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-            if [ -n "$(grep -F "#forward-zone:.*Stubby" ${CONFIG_DIR}unbound.conf)" ];then
+            if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
                 local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
                 sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@53/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
                 sed -i "s/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.0\.1\@$(nvram get stubby_port)/" ${CONFIG_DIR}unbound.conf
@@ -2314,7 +2328,7 @@ unbound_Control() {
         "s+"|"s-")                                                      # v1.18
             Manage_Extended_stats "$menu1"                              # v2.15
         ;;
-        sgui*)                                                          # v2.14 [ dev | uninstall ] [stats]]
+        sgui*)                                                          # v2.14 [ dev | uninstall [stats] ]
 
             local ARG2=                                                 # v2.16
             if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then                # v2.16
@@ -2330,6 +2344,27 @@ unbound_Control() {
             if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "extended-statistics" ${CONFIG_DIR}unbound.conf)" ];then
                 if [ "$ARG" != "uninstall" ];then
                     if [ -n $(nvram get rc_support | grep -o am_addons) ];then  # v2.15
+
+                        if [ "$ARG" == "extended" ];then                # v3.00
+                            echo -e $cBCYA"\nConfiguring unbound to be the DNS for the LAN directly.....\n"$cRESET
+                            ARG="dev"                                     # Ensure the dev version is retrieved from Github
+                            FN="/jffs/addons/unbound/unbound.postconf"
+                            [ -z "$(grep "dhcp-option=lan,6" $FN)" ] && sed -i '11a\\tpc_append \"dhcp-option=lan,6,0\.0\.0\.0\" \$CONFIG'  $FN
+                            # Update dnsmasq 'port=0' to disable DNS
+                            [ -z "$(grep "port=0" $FN)" ] && sed -i '11a\\tpc_append \"port=0\" \$CONFIG' $FN
+
+                            [ -z "$(grep -E "#pc_append \"server=.*UNBOUNDLISTENADDR" $FN)" ] && sed -i 's/\(pc_append \"server=\$UNBOUNDLISTENADDR\)/#\1/' $FN
+
+                            echo -en $cBCYA"Restarting dnsmasq....."$cBGRE
+                            service restart_dnsmasq
+                            echo -en $cRESET
+
+                            # Modify /opt/share/unbound/configs/unbound.conf.add
+                            local FN="/opt/share/unbound/configs/unbound.conf.add"
+                            [ -f $FN ] && sed -i '/port: 53/,/extended-statistics: yes/ s/^#//' $FN
+
+                            Restart_unbound
+                        fi
 
                         Manage_Extended_stats "s+"                      # v2.15 Ensure ENABLED
                         echo -en $cRESET                                # v2.15
@@ -2708,10 +2743,9 @@ install_unbound() {
         Option_Optimise_Performance         "$AUTO_REPLY4"
 
         #Option_Stubby_Integration           "$AUTO_REPLY2"     # v3.00 Advanced users will use the Stubby menu command
-
-        echo -en $cBCYA"Restarting dnsmasq....."$cBGRE        # v1.13
-        service restart_dnsmasq                                # v1.13
-        echo -en $cRESET
+        #echo -en $cBCYA"Restarting dnsmasq....."$cBGRE        # v1.13
+        #service restart_dnsmasq                                # v1.13
+        #echo -en $cRESET
 
         Option_Disable_Firefox_DoH          "$AUTO_REPLY5"      # v1.18
 
