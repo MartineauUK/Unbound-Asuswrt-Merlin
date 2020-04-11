@@ -2940,7 +2940,7 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: yes
     #
     local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|\
-interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:|tags:"   # v3.00 Hotfix
+interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:|tags:|access-control-tag:"   # v3.00 Hotfix
     local DUPLICATES="$(sed '/^[[:space:]]*#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
                        grep -vE "$STATEMENTS")"
 
