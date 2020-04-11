@@ -342,6 +342,7 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
     [ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v2.15
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
+    printf "%s\t\t\t\t\t\t\t\t\t%s\n"                ""                 "$MENUW_RPZ"    # v3.00
     [ -n "$MENU_AD" ] && printf "%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v2.00 v1.25
     [ -n "$MENU_EL" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_EL"      # v2.15
     [ -n "$MENU_CA" ] && printf "%s\t%s\n"        "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
@@ -438,6 +439,7 @@ welcome_message() {
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
+                MENUW_RPZ="$(printf '%brpz%b = Enable RPZ Firewall [disable]\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
