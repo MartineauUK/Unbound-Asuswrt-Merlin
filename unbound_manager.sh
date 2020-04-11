@@ -50,7 +50,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 07-Apr-2020
+# Last Updated Date: 11-Apr-2020
 #
 # Description:
 #
@@ -701,7 +701,7 @@ welcome_message() {
                                 # If either of the two customising files exist then no point in prompting the restore
                                 if [ ! -f /opt/share/unbound/configs/unbound.conf.add ] && [ ! -f /opt/share/unbound/configs/unbound.postconf ];then      # V2.12 Hotfix v2.10
 
-                                        echo -e "\a\nDo you want to KEEP your current unbound configuration? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}KEEP ${cRESET}or press $cBGRE[Enter] to use new downloaded 'unbound.conf'$cRESET"
+                                        echo -e "\a\nDo you want to KEEP your current unbound configuration? ${cRESET}('${cBMAG}${PREINSTALLCONFIG}${cRESET}')\n\n\tReply$cBRED 'y'$cRESET to ${cBRED}KEEP ${cRESET}or press ${cBGRE}[Enter] to use new downloaded 'unbound.conf'$cRESET"   # v2.18 Hotfix @toazd
                                         read -r "ANS"
                                         if [ "$ANS" == "y"  ];then                      # v1.27
                                             cp "/opt/share/unbound/configs/$PREINSTALLCONFIG" ${CONFIG_DIR}unbound.conf # Restore previous config
@@ -2118,7 +2118,7 @@ unbound_Control() {
             # @juched's GUI stats Graphical TAB requires 'extended-statistics: yes' and firmware must support 'addons'
             if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "extended-statistics" ${CONFIG_DIR}unbound.conf)" ];then
                 if [ "$ARG" != "uninstall" ];then
-                    if [ -n $(nvram get rc_support | grep -o am_addons) ];then  # v2.15
+                    if [ -n "$(nvram get rc_support | grep -o "am_addons")" ];then  # v2.18 Hotfix @toazdv2.15
 
                         Manage_Extended_stats "s+"                      # v2.15 Ensure ENABLED
                         echo -en $cRESET                                # v2.15
@@ -3162,7 +3162,7 @@ fi
 [ -n "$(echo "$@" | grep -oiw "easy")" ] && EASYMENU="Y" || EASYMENU="N"                    # v2.07
 
 # Does the firmware support addons?                                         # v2.10
-if [ -n $(nvram get rc_support | grep -o am_addons) ];then
+if [ -n "$(nvram get rc_support | grep -o "am_addons")" ];then  # v2.18 Hotfix @toazd v2.15
     CUSTOM_NVRAM="$(am_settings_get unbound_mode)"                          # v2.07 Retrieve value saved across amtm sessions
 fi
 
