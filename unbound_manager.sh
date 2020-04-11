@@ -51,7 +51,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 10-Apr-2020
+# Last Updated Date: 11-Apr-2020
 #
 # Description:
 #
@@ -419,6 +419,7 @@ Show_status() {
            else
                 echo -e $cBRED"\n***ERROR unbound ${cRESET}configuration contains ${cBYEL}DUPLICATES$cRESET - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE   # v3.00
                 echo -e $cBYEL"\t$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf" "returndup")\n"   # v3.00
+exit
            fi
         fi
     fi
@@ -1484,6 +1485,28 @@ EOF
                     Check_GUI_NVRAM
 
                 ;;
+                rpz*)
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                    fi
+
+                    if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "RPZ" ${CONFIG_DIR}unbound.conf)" ];then
+                        if [ "$ARG" != "disable" ];then
+                            AUTO_REPLY10="?"
+                            Option_RPZ_Firewall          "$AUTO_REPLY10"
+                            local RC=$?
+                        else
+                            RPZ_Firewall "disable"
+                            local RC=0
+                        fi
+                    else
+                        echo -e $cBRED"\a\n\tunbound NOT installed! or RPZ template NOT defined in 'unbound.conf'?"$cRESET
+                        local RC=1
+                    fi
+
+                    [ $RC -eq 0 ] && { Restart_unbound;Check_GUI_NVRAM; }           # v3.00
+                ;;
                 tcpdump)
                     echo -e $cBMAG"\a\n${LOGFILE}$TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
                     trap 'welcome_message' INT
@@ -1973,7 +1996,47 @@ Use_VPN_Tunnel() {
     else
         STATUS=1
     fi
-exit
+}
+Option_RPZ_Firewall() {
+
+    # Enable RPZ Firewall# v3.00
+     local ANS=$1
+     if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+        echo -en $cBYEL"Option Auto Reply 'y'\t"
+     fi
+
+     if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
+        echo -e "\nDo you want to enable RPZ Firewall?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+        read -r "ANS"
+     fi
+     [ "$ANS" == "y"  ] && { RPZ_Firewall "$@"; return $?; } || return 1                # v3.00
+}
+RPZ_Firewall() {
+
+    local STATUS=0
+
+    if [ "$1" != "disable" ];then
+        echo -e $cBCYA"Retrieving URLHaus Firewall URLs....."$cBGRA
+        wget --show-progress -qO ${CONFIG_DIR}urlhaus.rpz http://urlhaus.abuse.ch/downloads/rpz/
+        Edit_config_options "rpz:#RPZ" "rpz-action-override:" "uncomment"
+        if [ -z "$(grep "unbound_RPZ" /jffs/scripts/services-start)" ];then
+           echo -e $cBCYA"Creating Daily (04:16) RPZ URLhaus update cron job "$cRESET
+           [ ! -f /jffs/scripts/services-start ] && { echo -e "#!/bin/sh\n" > /jffs/scripts/services-start; }
+           $(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a unbound_RPZ  \"16 4 * * * wget -O \/opt\/var\/lib\/unbound\/urlhaus\.rpz http://urlhaus.abuse.ch/downloads/rpz/\"\t# unbound_manager")" )  # v1.24
+           cru a unbound_RPZ "16 4 * * *  wget -O ${CONFIG_DIR}urlhaus.rpz http://urlhaus.abuse.ch/downloads/rpz/"
+           chmod +x /jffs/scripts/services-start
+        fi
+        echo -e $cBCYA"\n\tunbound RPZ Firewall ${cRESET}ENABLED"$cBGRA
+    else
+        Edit_config_options "rpz:#RPZ" "rpz-action-override:" "comment"
+        rm ${CONFIG_DIR}urlhaus.rpz 2>/dev/null
+        [ -n "$(grep "unbound_RPZ" /jffs/scripts/services-start)" ] && sed -i '/unbound_RPZ/d' /jffs/scripts/services-start
+        cru d unbound_RPZ 2>/dev/null
+        echo -e $cBCYA"\n\tunbound RPZ Firewall ${cRESET}DISABLED"$cBGRA
+        SayT "unbound RPZ Firewall DISABLED"
+    fi
+
+    return $STATUS
 }
 Get_RootDNS() {
      # https://www.iana.org/domains/root/servers
@@ -2104,8 +2167,10 @@ Restart_unbound() {
 
         if [ -z "$1" ];then                                 # v2.15 If called by 'gen_adblock.sh' then skip the status check
             CHECK_GITHUB=1                                  # v1.27 force a GitHub version check to see if we are OK
-            echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
-            WAIT=11     # 11 i.e. 10 secs should be adequate?
+            #echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
+            echo -en $cRESET"\nPlease wait....."$cRESET
+            #WAIT=11     # 11 i.e. 10 secs should be adequate?
+            WAIT=3                          # v3.00 Hopefully unbound initialization should be valid
             INTERVAL=1
             I=0
              while [ $I -lt $((WAIT-1)) ]
@@ -2535,18 +2600,25 @@ remove_existing_installation() {
         done
 
         # InterNIC Root DNS Servers cron job                            # v1.18
-        echo -e $cBCYA"Removing InterNIC Root DNS Servers cron job"$cRESET
         if grep -qF "root_servers" /jffs/scripts/services-start; then
+            echo -e $cBCYA"Removing InterNIC Root DNS Servers cron job"$cRESET
             sed -i '/root_servers/d' /jffs/scripts/services-start
         fi
         cru d root_servers 2>/dev/null
 
         # Remove Ad and Tracker cron job /jffs/scripts/services-start   # v1.07
-        echo -e $cBCYA"Removing Ad and Tracker Update cron job"$cRESET
         if grep -qF "gen_adblock" /jffs/scripts/services-start; then
+            echo -e $cBCYA"Removing Ad and Tracker Update cron job"$cRESET
             sed -i '/gen_adblock/d' /jffs/scripts/services-start
         fi
         cru d adblock 2>/dev/null
+
+        # Remove RPZ Firewall cron job /jffs/scripts/services-start   # v1.07
+        if grep -qF "RPZ_unbound" /jffs/scripts/services-start; then
+            echo -e $cBCYA"Removing RPZ Firewall Update cron job"$cRESET
+            sed -i '/RPZ_unbound/d' /jffs/scripts/services-start
+        fi
+        cru d RPZ_unbound 2>/dev/null
 
         # Remove 3rd Party scripts e.g. 'Unbound_Stats.sh' (Graphical Statistics GUI Addon TAB)
         sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start            # v2.18 HotFix
@@ -2865,9 +2937,10 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: no
     #            ip-v6: yes
     #
-    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|interfaces:|outgoing-interface"   # v3.00
-    local DUPLICATES="$(sed '/^#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
-                        grep -vE "$STATEMENTS")"
+    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:| \
+interfaces:|outgoing-interface|name:|zonefile:|rpz.*:|url:"   # v3.00
+    local DUPLICATES="$(sed '/^[[:space:]]*#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
+                       grep -vE "$STATEMENTS")"
 
     if [ -z "$DUPLICATES"  ];then   # v3.00
        local CHK_Config_Syntax="$(unbound-checkconf $CHECKTHIS 2>/dev/null)"           # v2.03
@@ -3070,6 +3143,11 @@ Check_GUI_NVRAM() {
                     local VPN_ID=$(ip route | grep "$VPN_IP" | awk '{print substr($3,4,1)}')
                     echo -e $cBGRE"\t[✔] unbound requests via VPN Client ${cBMAG}$VPN_ID ($VPN_IP)$cBGRE tunnel ENABLED" 2>&1
                 fi
+            fi
+
+            # AUTO_REPLY 10
+            if [ "$(Get_unbound_config_option "rpz:" ${CONFIG_DIR}unbound.conf)" != "?" ];then            # v3.00
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] RPZ Firewall ENABLED" 2>&1
             fi
         fi
 
