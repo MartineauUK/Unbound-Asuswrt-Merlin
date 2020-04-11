@@ -1252,7 +1252,7 @@ EOF
                                     [ $FIRMWARE  -ge 38415 ] && am_settings_set unbound_mode "Advanced"  # v2.07 Save mode across amtm sessions
                                     echo -en $cRESET"\nAdvanced Menu mode ${cBGRE}ENABLED"$cRESET
                                     MENU_Z=
-                                    touch ${CONFIG_DIR}unbound.conf/Read.me
+                                    touch ${CONFIG_DIR}Read.me
                                 fi
                             else
                                 printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
@@ -2939,8 +2939,8 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: no
     #            ip-v6: yes
     #
-    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:| \
-interfaces:|outgoing-interface|name:|zonefile:|rpz.*:|url:"   # v3.00
+    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|\
+interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:"   # v3.00 Hotfix
     local DUPLICATES="$(sed '/^[[:space:]]*#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
                        grep -vE "$STATEMENTS")"
 
@@ -3547,7 +3547,7 @@ fi
 
 [ -n "$(echo "$@" | grep -oiw "advanced")" ] && EASYMENU="N" || EASYMENU="Y"                    # v2.07
 
-if [ -f ${CONFIG_DIR}unbound.conf/Read.me ];then
+if [ -f ${CONFIG_DIR}Read.me ];then
     # Does the firmware support addons?                                         # v2.10
     if [ -n "$(nvram get rc_support | grep -o "am_addons")" ];then  # v2.18 Hotfix v2.15
         CUSTOM_NVRAM="$(am_settings_get unbound_mode)"                          # v2.07 Retrieve value saved across amtm sessions
