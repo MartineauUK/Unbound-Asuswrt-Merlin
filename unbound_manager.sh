@@ -2019,13 +2019,13 @@ RPZ_Firewall() {
 
     if [ "$1" != "disable" ];then
         echo -e $cBCYA"Retrieving URLHaus Firewall URLs....."$cBGRA
-        wget --show-progress -qO ${CONFIG_DIR}urlhaus.rpz http://urlhaus.abuse.ch/downloads/rpz/
+        curl --progress-bar -L -o ${CONFIG_DIR}urlhaus.rpz http://urlhaus.abuse.ch/downloads/rpz/
         Edit_config_options "rpz:#RPZ" "rpz-action-override:" "uncomment"
         if [ -z "$(grep "unbound_RPZ" /jffs/scripts/services-start)" ];then
            echo -e $cBCYA"Creating Daily (04:16) RPZ URLhaus update cron job "$cRESET
            [ ! -f /jffs/scripts/services-start ] && { echo -e "#!/bin/sh\n" > /jffs/scripts/services-start; }
-           $(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a unbound_RPZ  \"16 4 * * * wget -O \/opt\/var\/lib\/unbound\/urlhaus\.rpz http://urlhaus.abuse.ch/downloads/rpz/\"\t# unbound_manager")" )  # v1.24
-           cru a unbound_RPZ "16 4 * * *  wget -O ${CONFIG_DIR}urlhaus.rpz http://urlhaus.abuse.ch/downloads/rpz/"
+           $(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a unbound_RPZ  \"16 4 * * * curl -L -o \/opt\/var\/lib\/unbound\/urlhaus\.rpz http://urlhaus.abuse.ch/downloads/rpz/\"\t# unbound_manager")" )  # v1.24
+           cru a unbound_RPZ "16 4 * * *  curl -L -o ${CONFIG_DIR}urlhaus.rpz http://urlhaus.abuse.ch/downloads/rpz/"
            chmod +x /jffs/scripts/services-start
         fi
         echo -e $cBCYA"\n\tunbound RPZ Firewall ${cRESET}ENABLED"$cBGRA
@@ -2170,7 +2170,7 @@ Restart_unbound() {
         if [ -z "$1" ];then                                 # v2.15 If called by 'gen_adblock.sh' then skip the status check
             CHECK_GITHUB=1                                  # v1.27 force a GitHub version check to see if we are OK
             #echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
-            echo -en $cRESET"\nPlease wait....."$cRESET
+            echo -en ${cRESET}$cBCYA"\nChecking status, please wait..... "$cRESET
             #WAIT=11     # 11 i.e. 10 secs should be adequate?
             WAIT=3                          # v3.00 Hopefully unbound initialization should be valid
             INTERVAL=1
@@ -2180,13 +2180,13 @@ Restart_unbound() {
                     sleep 1
                     I=$((I + 1))
                     if [ -z "$(pidof unbound)" ];then
-                        echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET
+                        echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after ${aREVERSE}$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET
                         SayT "***ERROR unbound went AWOL after $I seconds.... Try debug mode and check for unbound.conf or runtime errors!"
                         break
                     fi
                     [ $I -eq 2 ] && Manage_cache_stats "restore"        # v2.17
                 done
-            [ -n "$(pidof unbound)" ] && echo -e $cBGRE"unbound OK"
+            [ -n "$(pidof unbound)" ] && echo -e ${cRESET}$cBGRE"unbound OK"
             [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
         else
             echo -en $cBCYA
