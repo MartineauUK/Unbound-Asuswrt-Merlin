@@ -744,6 +744,7 @@ _GetKEY() {
                     u|uf) ;;
                     "?") ;;
                     "v") ;;
+                    "l") ;;
                     "") ;;
                     adv*) ;;
                     *) printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
@@ -1907,28 +1908,23 @@ GUI_Stats_TAB(){
         fi
         chmod +x /jffs/addons/unbound/unbound_stats.sh
 
-        # Don't run install script if TAB already exists; Search '/tmp/menuTree.js' ('/tmp/var/wwwext/userX.asp') for 'unbound' entry
-            #   {
-            #   menuName: "Addons",
-            #   index: "menu_Addons",
-            #   tab: [
-            # <snip>
-            #{url: "userX.asp", tabName: "Unbound"},
-        #if [ ! -f /tmp/menuTree.js ] || [ -z "$(grep -i "Unbound" /tmp/menuTree.js)" ];then      # v2.15
-            echo -en $cBGRA
-            sh /jffs/addons/unbound/unbound_stats.sh "install"
-            echo -en $cRESET
-        #else
-            #echo -en $cBRED"\a\n\tunbound GUI graphical stats TAB already installed!\n"$cRESET
-            #STATUS=1                                                # v2.15
-        #fi
+        echo -en $cBGRA
+        sh /jffs/addons/unbound/unbound_stats.sh "install"
+        echo -en $cRESET
+
     else
         if [ -f /tmp/menuTree.js ] && [ -n "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
-            echo -en $cBCYA"\n\tunbound GUI graphical stats TAB uninstalled - "$cRESET
+            if [ ! -f /jffs/addons/unbound/unbound_stats.sh ];then              # v3.00 Hotfix
+                echo -e $cBRED"\a\n\t***ERROR Orphaned TAB; missing 'unbound_stats.sh' script??? - retrieving....."$cRESET # v3.00 Hotfix
+                download_file /jffs/addons/unbound/ unbound_stats.sh juched     # v3.00 Hotfix
+                download_file /jffs/addons/unbound/ unboundstats_www.asp    juched
+                chmod +x /jffs/addons/unbound/unbound_stats.sh                  # v3.00 Hotfix
+            fi
             sh /jffs/addons/unbound/unbound_stats.sh "uninstall"
             rm /jffs/addons/unbound/unboundstats_www.asp 2>/dev/null
             rm /jffs/addons/unbound/unbound_stats.sh     2>/dev/null
             rm /jffs/addons/unbound/unbound_log.sh       2>/dev/null     # v3.00
+            echo -en $cBCYA"\n\tunbound GUI graphical stats TAB uninstalled."$cRESET
         else
             echo -e $cBRED"\a\n\t***ERROR unbound GUI graphical stats TAB NOT installed"$cRESET
         fi
@@ -2622,7 +2618,12 @@ remove_existing_installation() {
         fi
         cru d RPZ_unbound 2>/dev/null
 
-        # Remove 3rd Party scripts e.g. 'Unbound_Stats.sh' (Graphical Statistics GUI Addon TAB)
+        # Remove @juched's Graphical Statistics GUI TAB                 # v3.00 HotFix
+        if [ -f /tmp/menuTree.js ] && [ -n "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
+            echo -e $cBCYA"@juched's"$cRESET $(GUI_Stats_TAB "uninstall") # v3.00 HotFix
+        fi
+
+        # Remove 3rd Party scripts
         sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start            # v2.18 HotFix
         sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event             # v2.18 HotFix
 
@@ -2856,7 +2857,7 @@ install_unbound() {
         # e.g. fatal error: could not open autotrust file for writing, /root.key.22350-0-2a0796d0: Permission denied
         [ "$USER_OPTION_PROMPTS" == "?" ] && local INSTALLMETHOD="Manual install" || local INSTALLMETHOD="Auto install"
         echo -e $cRESET"\n$INSTALLMETHOD unbound Customisation complete $cBGRE$(($DIFFTIME / 60)) minutes and $(($DIFFTIME % 60)) seconds elapsed - ${cRESET}Please wait for up to ${cBCYA}10$cRESET seconds for ${cBCYA}status.....\n"$cRESET
-        WAIT=11     # 16 i.e. 15 secs should be adequate?
+        WAIT=3     # 16 i.e. 15 secs should be adequate?        # v3.00
         INTERVAL=1
         I=0
          while [ $I -lt $((WAIT-1)) ]
