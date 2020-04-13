@@ -439,7 +439,7 @@ welcome_message() {
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
-                MENUW_RPZ="$(printf '%brpz%b = Enable DNS Firewall [disable]\n' "${cBYEL}" "${cRESET}")"  # v3.02
+                MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -1488,7 +1488,7 @@ EOF
                     Check_GUI_NVRAM
 
                 ;;
-                rpz*)                                                       # v3.00 [ dev | disable ]
+                firewall*)                                                       # v3.00 [ dev | disable ]
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
@@ -1496,14 +1496,14 @@ EOF
 
                     if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "RPZ" ${CONFIG_DIR}unbound.conf)" ];then
                         if [ "$ARG" != "disable" ];then
-							if [ "$ARG" != "?" ];then							# v3.02
-								AUTO_REPLY10="?"
-								Option_DNS_Firewall          "$AUTO_REPLY10"   "$ARG"
-								local RC=$?
-							else
-								sh /jffs/addons/unbound/unbound_rpz.sh		# v3.02
-								local RC=1
-							fi
+                            if [ "$ARG" != "?" ];then                           # v3.02
+                                AUTO_REPLY10="?"
+                                Option_DNS_Firewall          "$AUTO_REPLY10"   "$ARG"
+                                local RC=$?
+                            else
+                                sh /jffs/addons/unbound/unbound_rpz.sh      # v3.02
+                                local RC=1
+                            fi
                         else
                             DNS_Firewall "disable"
                             local RC=0
