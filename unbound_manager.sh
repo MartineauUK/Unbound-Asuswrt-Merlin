@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v3.01
+#============================================================================================ © 2019-2020 Martineau v3.02
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id | 'disable'}]
@@ -51,7 +51,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 12-Apr-2020
+# Last Updated Date: 13-Apr-2020
 #
 # Description:
 #
@@ -70,7 +70,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.01"
+VERSION="3.02"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -439,7 +439,7 @@ welcome_message() {
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
-                MENUW_RPZ="$(printf '%brpz%b = Enable RPZ Firewall [disable]\n' "${cBYEL}" "${cRESET}")"  # v3.00
+                MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -1488,7 +1488,7 @@ EOF
                     Check_GUI_NVRAM
 
                 ;;
-                rpz*)
+                firewall*)                                                       # v3.00 [ dev | disable ]
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
@@ -1496,11 +1496,16 @@ EOF
 
                     if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "RPZ" ${CONFIG_DIR}unbound.conf)" ];then
                         if [ "$ARG" != "disable" ];then
-                            AUTO_REPLY10="?"
-                            Option_RPZ_Firewall          "$AUTO_REPLY10"
-                            local RC=$?
+                            if [ "$ARG" != "?" ];then                           # v3.02
+                                AUTO_REPLY10="?"
+                                Option_DNS_Firewall          "$AUTO_REPLY10"   "$ARG"
+                                local RC=$?
+                            else
+                                sh /jffs/addons/unbound/unbound_rpz.sh      # v3.02
+                                local RC=1
+                            fi
                         else
-                            RPZ_Firewall "disable"
+                            DNS_Firewall "disable"
                             local RC=0
                         fi
                     else
@@ -1508,7 +1513,7 @@ EOF
                         local RC=1
                     fi
 
-                    [ $RC -eq 0 ] && { Restart_unbound;Check_GUI_NVRAM; }           # v3.00
+                    [ $RC -eq 0 ] && { Restart_unbound;Check_GUI_NVRAM; }
                 ;;
                 tcpdump)
                     echo -e $cBMAG"\a\n${LOGFILE}$TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
@@ -1924,7 +1929,7 @@ GUI_Stats_TAB(){
             rm /jffs/addons/unbound/unboundstats_www.asp 2>/dev/null
             rm /jffs/addons/unbound/unbound_stats.sh     2>/dev/null
             rm /jffs/addons/unbound/unbound_log.sh       2>/dev/null     # v3.00
-            echo -en $cBCYA"\n\tunbound GUI graphical stats TAB uninstalled."$cRESET
+            echo -e $cBCYA"\n\tunbound GUI graphical stats TAB uninstalled."$cRESET
         else
             echo -e $cBRED"\a\n\t***ERROR unbound GUI graphical stats TAB NOT installed"$cRESET
         fi
@@ -1995,43 +2000,41 @@ Use_VPN_Tunnel() {
         STATUS=1
     fi
 }
-Option_RPZ_Firewall() {
+Option_DNS_Firewall() {
 
-    # Enable RPZ Firewall# v3.00
+    # Enable DNS Firewall# v3.00
      local ANS=$1
      if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
         echo -en $cBYEL"Option Auto Reply 'y'\t"
      fi
 
      if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
-        echo -e "\nDo you want to enable RPZ Firewall?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+        echo -e "\nDo you want to enable DNS Firewall?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
         read -r "ANS"
      fi
-     [ "$ANS" == "y"  ] && { RPZ_Firewall "$@"; return $?; } || return 1                # v3.00
+     [ "$ANS" == "y"  ] && { DNS_Firewall "$@"; return 0; } || return 1                # v3.02 v3.00
 }
-RPZ_Firewall() {
+DNS_Firewall() {
 
     local STATUS=0
 
     if [ "$1" != "disable" ];then
-        echo -e $cBCYA"Retrieving URLHaus Firewall URLs....."$cBGRA
-        curl --progress-bar -L -o ${CONFIG_DIR}urlhaus.rpz http://urlhaus.abuse.ch/downloads/rpz/
-        Edit_config_options "rpz:#RPZ" "rpz-action-override:" "uncomment"
-        if [ -z "$(grep "unbound_RPZ" /jffs/scripts/services-start)" ];then
-           echo -e $cBCYA"Creating Daily (04:16) RPZ URLhaus update cron job "$cRESET
-           [ ! -f /jffs/scripts/services-start ] && { echo -e "#!/bin/sh\n" > /jffs/scripts/services-start; }
-           $(Smart_LineInsert "/jffs/scripts/services-start" "$(echo -e "cru a unbound_RPZ  \"16 4 * * * curl -L -o \/opt\/var\/lib\/unbound\/urlhaus\.rpz http://urlhaus.abuse.ch/downloads/rpz/\"\t# unbound_manager")" )  # v1.24
-           cru a unbound_RPZ "16 4 * * *  curl -L -o ${CONFIG_DIR}urlhaus.rpz http://urlhaus.abuse.ch/downloads/rpz/"
-           chmod +x /jffs/scripts/services-start
-        fi
-        echo -e $cBCYA"\n\tunbound RPZ Firewall ${cRESET}ENABLED"$cBGRA
+
+        [ "$2" != "dev" ] && local DEV= || local DEV="dev"      # v3.00 juched now also hosts a "dev" branch
+
+        download_file /jffs/addons/unbound/ unbound_rpz.sh  juched "$DEV" dos2unix      # v3.02
+        chmod +x /jffs/addons/unbound/unbound_rpz.sh
+        echo -e $cGRA
+        sh /jffs/addons/unbound/unbound_rpz.sh "install"                                # v3.02
+        Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "uncomment"
+        echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}ENABLED"$cBGRA
+        SayT "unbound DNS Firewall ENABLED"
     else
-        Edit_config_options "rpz:#RPZ" "rpz-action-override:" "comment"
-        rm ${CONFIG_DIR}urlhaus.rpz 2>/dev/null
-        [ -n "$(grep "unbound_RPZ" /jffs/scripts/services-start)" ] && sed -i '/unbound_RPZ/d' /jffs/scripts/services-start
-        cru d unbound_RPZ 2>/dev/null
-        echo -e $cBCYA"\n\tunbound RPZ Firewall ${cRESET}DISABLED"$cBGRA
-        SayT "unbound RPZ Firewall DISABLED"
+        echo -e $cGRA
+        sh /jffs/addons/unbound/unbound_rpz.sh "uninstall"                              # v3.02
+        Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "comment"
+        echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}DISABLED"$cBGRA
+        SayT "unbound DNS Firewall DISABLED"
     fi
 
     return $STATUS
@@ -2611,12 +2614,10 @@ remove_existing_installation() {
         fi
         cru d adblock 2>/dev/null
 
-        # Remove RPZ Firewall cron job /jffs/scripts/services-start   # v1.07
-        if grep -qF "RPZ_unbound" /jffs/scripts/services-start; then
-            echo -e $cBCYA"Removing RPZ Firewall Update cron job"$cRESET
-            sed -i '/RPZ_unbound/d' /jffs/scripts/services-start
+        # Remove @juched's DNS Firewall
+        if grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then
+            echo -e $cBCYA"@juched's"$cRESET  $(DNS_Firewall "disable") # v3.02
         fi
-        cru d RPZ_unbound 2>/dev/null
 
         # Remove @juched's Graphical Statistics GUI TAB                 # v3.00 HotFix
         if [ -f /tmp/menuTree.js ] && [ -n "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
@@ -3150,7 +3151,7 @@ Check_GUI_NVRAM() {
 
             # AUTO_REPLY 10
             if [ "$(Get_unbound_config_option "rpz:" ${CONFIG_DIR}unbound.conf)" != "?" ];then            # v3.00
-                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] RPZ Firewall ENABLED" 2>&1
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] DNS Firewall ENABLED" 2>&1
             fi
         fi
 
