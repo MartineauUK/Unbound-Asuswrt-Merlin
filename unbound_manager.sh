@@ -13,6 +13,7 @@
 #                                    |   4  = n/a Show unbound statistics*                                  |
 #                                    |   5  = Install Ad and Tracker blocker (Ad Block)*                    |
 #                                    |   6  = Install Graphical Statistics GUI Add-on TAB*                  |
+#                                    |   7  = Enable DNS Firewall*                                          |
 #
 #                              '*' - toggle' options; e.g. unbound already started, option '3' shows 'Stop' |
 #
@@ -26,6 +27,7 @@
 #                                    |       o4. Customise CPU/Memory usage                                 |
 #                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
 #                                    |       o6. Install Graphical Statistics GUI (Add-ons) TAB             |
+#                                    |       o7. Enable DNS Firewall                                        |
 #                                    |                                                                      |
 #                                    |   z  = Remove Existing unbound/unbound_manager Installation          |
 #                                    |   ?  = About Configuration                                           |
@@ -51,7 +53,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 12-Apr-2020
+# Last Updated Date: 13-Apr-2020
 #
 # Description:
 #
@@ -420,7 +422,6 @@ Show_status() {
            else
                 echo -e $cBRED"\n***ERROR unbound ${cRESET}configuration contains ${cBYEL}DUPLICATES$cRESET - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE   # v3.00
                 echo -e $cBYEL"\t$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf" "returndup")\n"   # v3.00
-exit
            fi
         fi
     fi
@@ -494,6 +495,7 @@ welcome_message() {
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)   %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o6. Install Graphical Statistics GUI (Add-ons) TAB     %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o7. Integrate with DoT (%bAdvanced Users%b)                %b    %b |\n' "$cBRED" "$cRESET" "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o8. Enable DNS Firewall                                %b    %b |\n' "$YES_NO" "$cRESET"
                 printf '|                                                                      |\n'
 
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
@@ -670,6 +672,12 @@ welcome_message() {
                             else
                                 MENU_T="$(printf '%b6 %b = Uninstall Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}")"
                             fi
+
+                            if ! grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then                  # v3.02 Hotfix
+                                MENUW_RPZ="$(printf '%b7 %b = Enable DNS Firewall' "${cBYEL}" "${cRESET}")"   # v3.02 Hotfix
+                            else
+                                MENUW_RPZ="$(printf '%b7 %b = Disable DNS Firewall' "${cBYEL}" "${cRESET}")"  # v3.02 Hotfix
+                            fi
                         else
 
                             if [ -f /opt/etc/init.d/S61unbound ];then
@@ -679,6 +687,8 @@ welcome_message() {
                             fi
                             MENU_ST="$(printf '%b4 %b = n/a Show unbound statistics' "${cBYEL}" "${cRESET}$cGRA")"
                             MENU_T="$(printf '%b6 %b = n/a Install Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}$cGRA")"
+                            MENUW_RPZ="$(printf '%b7 %b = n/a Enable DNS Firewall' "${cBYEL}" "${cRESET}$cGRA")"   # v3.02 Hotfix
+
                         fi
                         if [ -f ${CONFIG_DIR}unbound.conf ] && [ -n "$(grep -E "^[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
                             MENU_AD="$(printf '%b5 %b = Uninstall Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}")"
@@ -699,6 +709,7 @@ welcome_message() {
                         printf "%s\t\t%s\n"            "$MENU_ST"
                         printf "%s\t\t%s\n"            "$MENU_AD"
                         printf "%s\t\t%s\n"            "$MENU_T"
+                        printf "%s\t\t%s\n"            "$MENUW_RPZ"         # v3.02 Hotfix
                         printf "\n%s\t\t%s\n"          "$MENU__"
                         printf "%s\t\t%s\n"            "$MENU_VX"
                     fi
@@ -740,6 +751,7 @@ _GetKEY() {
                     4|s) menu1="s";;
                     5|adblock) [ -n "$(echo "$MENU_AD" | grep "Uninstall" )" ] && menu1="adblock uninstall" || menu1="adblock";;
                     6|sgui) [ -n "$(echo "$MENU_T"  | grep "Uninstall" )" ] && { GUI_Stats_TAB "uninstall"; menu1=; } || menu1="sgui";;
+                    7|firewall) [ -n "$(echo "$MENUW_RPZ"  | grep "Disable" )" ] && { DNS_Firewall "disable"; menu1=; } || menu1="firewall";;   # v3.02 Hotfix
                     e) ;;
                     u|uf) ;;
                     "?") ;;
