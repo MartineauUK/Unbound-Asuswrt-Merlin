@@ -1496,9 +1496,14 @@ EOF
 
                     if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "RPZ" ${CONFIG_DIR}unbound.conf)" ];then
                         if [ "$ARG" != "disable" ];then
-                            AUTO_REPLY10="?"
-                            Option_DNS_Firewall          "$AUTO_REPLY10"   "$ARG"
-                            local RC=$?
+							if [ "$ARG" != "?" ];then							# v3.02
+								AUTO_REPLY10="?"
+								Option_DNS_Firewall          "$AUTO_REPLY10"   "$ARG"
+								local RC=$?
+							else
+								sh /jffs/addons/unbound/unbound_rpz.sh		# v3.02
+								local RC=1
+							fi
                         else
                             DNS_Firewall "disable"
                             local RC=0
