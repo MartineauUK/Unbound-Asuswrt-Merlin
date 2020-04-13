@@ -1924,7 +1924,7 @@ GUI_Stats_TAB(){
             rm /jffs/addons/unbound/unboundstats_www.asp 2>/dev/null
             rm /jffs/addons/unbound/unbound_stats.sh     2>/dev/null
             rm /jffs/addons/unbound/unbound_log.sh       2>/dev/null     # v3.00
-            echo -en $cBCYA"\n\tunbound GUI graphical stats TAB uninstalled."$cRESET
+            echo -e $cBCYA"\n\tunbound GUI graphical stats TAB uninstalled."$cRESET
         else
             echo -e $cBRED"\a\n\t***ERROR unbound GUI graphical stats TAB NOT installed"$cRESET
         fi
@@ -2007,7 +2007,7 @@ Option_DNS_Firewall() {
         echo -e "\nDo you want to enable DNS Firewall?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
         read -r "ANS"
      fi
-     [ "$ANS" == "y"  ] && { DNS_Firewall "$@"; return $?; } || return 1                # v3.00
+     [ "$ANS" == "y"  ] && { DNS_Firewall "$@"; return 0; } || return 1                # v3.02 v3.00
 }
 DNS_Firewall() {
 
@@ -2017,17 +2017,17 @@ DNS_Firewall() {
 
         [ "$2" != "dev" ] && local DEV= || local DEV="dev"      # v3.00 juched now also hosts a "dev" branch
 
-        download_file /jffs/addons/unbound/ unbound_rpz.sh  juched "$DEV" dos2unix         # v3.02
+        download_file /jffs/addons/unbound/ unbound_rpz.sh  juched "$DEV" dos2unix      # v3.02
         chmod +x /jffs/addons/unbound/unbound_rpz.sh
-        download_file /opt/share/unbound/configs rpzsites   juched "$DEV" dos2unix         # v3.02
         echo -e $cGRA
-        sh /jffs/addons/unbound/unbound_rpz.sh
+        sh /jffs/addons/unbound/unbound_rpz.sh "install"                                # v3.02
         Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "uncomment"
         echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}ENABLED"$cBGRA
+        SayT "unbound DNS Firewall ENABLED"
     else
-        [ -n "$(grep "Unbound_RPZ" /jffs/scripts/services-start)" ] && sed -i '/Unbound_RPZ/d' /jffs/scripts/services-start
+        echo -e $cGRA
+        sh /jffs/addons/unbound/unbound_rpz.sh "uninstall"                              # v3.02
         Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "comment"
-        cru d Unbound_RPZ 2>/dev/null
         echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}DISABLED"$cBGRA
         SayT "unbound DNS Firewall DISABLED"
     fi
@@ -2609,12 +2609,10 @@ remove_existing_installation() {
         fi
         cru d adblock 2>/dev/null
 
-        # Remove @juched's DNS Firewall cron job /jffs/scripts/services-start
+        # Remove @juched's DNS Firewall
         if grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then
-            echo -e $cBCYA"Removing DNS Firewall Update cron job"$cRESET
-            sed -i '/Unbound_RPZ/d' /jffs/scripts/services-start
+            echo -e $cBCYA"@juched's"$cRESET  $(DNS_Firewall "disable") # v3.02
         fi
-        cru d Unbound_RPZ 2>/dev/null2>/dev/null
 
         # Remove @juched's Graphical Statistics GUI TAB                 # v3.00 HotFix
         if [ -f /tmp/menuTree.js ] && [ -n "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
