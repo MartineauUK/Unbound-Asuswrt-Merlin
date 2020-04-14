@@ -342,9 +342,10 @@ Show_Advanced_Menu() {
     printf "\t\t\t\t\t\t\t\t\t%s\n" "$MENU_RL"
     printf "%s\t\t\t\t\t\t%s\n"     "$MENU__"  "$MENU_OQ"
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
-    [ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v2.15
+    #[ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v3.00 its the default v2.15
+    [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"        "$MENUW_ADBLOCK"      # v3.03
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
-    printf "%s\t\t\t\t\t\t\t\t\t%s\n"                ""                 "$MENUW_RPZ"    # v3.00
+    printf "%s\t\t\t\t\t\t\t\t\t%s\n"                ""               "$MENUW_RPZ"    # v3.00
     [ -n "$MENU_AD" ] && printf "%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v2.00 v1.25
     [ -n "$MENU_EL" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_EL"      # v2.15
     [ -n "$MENU_CA" ] && printf "%s\t%s\n"        "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
@@ -420,7 +421,7 @@ Show_status() {
                     #sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
                     :
                 fi
-                echo -e ${aBLINK}$cWRED"\a\nWarning unbound not running!!"${cRESET}${cBMAG}$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET
+                echo -e "\a\n\e[44m${cBYEL}Warning unbound not running!!${cRESET} - Config last loaded info:"${cBMAG}$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET
                 SayT "Warning unbound not running!! $UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"  # v3.03
             fi
         else
@@ -450,6 +451,7 @@ welcome_message() {
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
+                MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block\n' "${cBYEL}" "${cRESET}")"  # v3.03
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
