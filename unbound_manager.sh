@@ -2072,7 +2072,7 @@ DNS_Firewall() {
             Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "uncomment"
             sed -i '/\(^url:.*urlhaus\.abuse\)/ s/^url:/#url:/' ${CONFIG_DIR}unbound.conf   # v3.03 TEMPORARY HACK saves forcing 'unbound.conf' download
         else
-            echo -e $cBCYA"Adding $cBGRE'include: \"$FIREWALL_DEF\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA # v3.03
+            echo -e $cBCYA"Adding $cBGRE'include: \"$FIREWALL_CONFIG\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA # v3.03 Hotfix
             [ -z "$(grep "^include.*$FIREWALL_CONFIG" ${CONFIG_DIR}unbound.conf)" ] && echo -e "include: \"$FIREWALL_CONFIG\"\t\t# Custom DNS Firewall\n" >>  ${CONFIG_DIR}unbound.conf # v3.03
         fi
         echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}ENABLED"$cBGRA
