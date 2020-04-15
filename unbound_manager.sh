@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v3.02
+#============================================================================================ © 2019-2020 Martineau v3.03
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id | 'disable'}]
@@ -13,6 +13,7 @@
 #                                    |   4  = n/a Show unbound statistics*                                  |
 #                                    |   5  = Install Ad and Tracker blocker (Ad Block)*                    |
 #                                    |   6  = Install Graphical Statistics GUI Add-on TAB*                  |
+#                                    |   7  = Enable DNS Firewall*                                          |
 #
 #                              '*' - toggle' options; e.g. unbound already started, option '3' shows 'Stop' |
 #
@@ -26,6 +27,7 @@
 #                                    |       o4. Customise CPU/Memory usage                                 |
 #                                    |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
 #                                    |       o6. Install Graphical Statistics GUI (Add-ons) TAB             |
+#                                    |       o7. Enable DNS Firewall                                        |
 #                                    |                                                                      |
 #                                    |   z  = Remove Existing unbound/unbound_manager Installation          |
 #                                    |   ?  = About Configuration                                           |
@@ -51,7 +53,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 13-Apr-2020
+# Last Updated Date: 15-Apr-2020
 #
 # Description:
 #
@@ -70,7 +72,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.02"
+VERSION="3.03"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -340,9 +342,10 @@ Show_Advanced_Menu() {
     printf "\t\t\t\t\t\t\t\t\t%s\n" "$MENU_RL"
     printf "%s\t\t\t\t\t\t%s\n"     "$MENU__"  "$MENU_OQ"
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
-    [ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v2.15
+    #[ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v3.00 its the default v2.15
+    [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"        "$MENUW_ADBLOCK"      # v3.03
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
-    printf "%s\t\t\t\t\t\t\t\t\t%s\n"                ""                 "$MENUW_RPZ"    # v3.00
+    printf "%s\t\t\t\t\t\t\t\t\t%s\n"                ""               "$MENUW_RPZ"    # v3.00
     [ -n "$MENU_AD" ] && printf "%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v2.00 v1.25
     [ -n "$MENU_EL" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_EL"      # v2.15
     [ -n "$MENU_CA" ] && printf "%s\t%s\n"        "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
@@ -350,7 +353,7 @@ Show_Advanced_Menu() {
     printf "\n%s\t\t%s\n"           "$MENUW_DIG"     "$MENUW_LOOKUP" # v2.11
     printf "%s\t\t\t\t%s\n"         "$MENUW_DNSINFO" "$MENUW_DNSSEC"                 # v2.12 v1.28
     printf "%s\\n\n"                "$MENUW_LINKS"              # v1.28
-    printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
+    printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
     printf '\n%b[Enter] %bLeave %bAdvanced Tools Menu\n' "${cBGRE}" "$cBCYA" "${cRESET}" # v1.21
 }
 Unbound_Installed() {
@@ -410,17 +413,25 @@ Show_status() {
                 echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET      # v1.19
                 [ "$1" == "syslog" ] && SayT "$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"    # v2.18 Hotfix
             else
-                echo
+                local TAG="Date Loaded by unbound_manager "$(date)")"
+                local UNBOUND_CONF_VER=$(head -n 1 ${CONFIG_DIR}unbound.conf) # v1.19
+                if [ -n "$(echo "$UNBOUND_CONF_VER" | grep -iE "^#.*Version" )" ];then  # v2.04                                         # v2.05
+                    local UNBOUND_CONF_VER_TXT=$UNBOUND_CONF_VER
+                else
+                    #sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
+                    :
+                fi
+                echo -e "\a\n\e[44m${cBYEL}Warning unbound not running!!${cRESET} - Config last loaded info:"${cBMAG}$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET
+                SayT "Warning unbound not running!! $UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"  # v3.03
             fi
         else
            echo -e $cBRED"\a"
            if [ "$CONFIG_STATUS" == "N" ];then                     # V3.00
                 unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
-                echo -e $cBRED"\n***ERROR INVALID unbound ${cRESET}configuration - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE
+                echo -e $cBRED"\n***ERROR INVALID unbound ${cRESET}configuration - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n\n\t\t\t\t\t or ${cBMAG}'e'${cRESET} exit; then issue debug command\n\n\t\t\t\t\t\t${cBMAG}unbound -dv${cRESET}\n\n"$cBGRE
            else
                 echo -e $cBRED"\n***ERROR unbound ${cRESET}configuration contains ${cBYEL}DUPLICATES$cRESET - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE   # v3.00
                 echo -e $cBYEL"\t$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf" "returndup")\n"   # v3.00
-exit
            fi
         fi
     fi
@@ -439,7 +450,8 @@ welcome_message() {
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
-                MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
+                MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable] ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
+                MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block [uninstall]\n' "${cBYEL}" "${cRESET}")"  # v3.03
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -494,6 +506,7 @@ welcome_message() {
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)   %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o6. Install Graphical Statistics GUI (Add-ons) TAB     %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o7. Integrate with DoT (%bAdvanced Users%b)                %b    %b |\n' "$cBRED" "$cRESET" "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o8. Enable DNS Firewall                                %b    %b |\n' "$YES_NO" "$cRESET"
                 printf '|                                                                      |\n'
 
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
@@ -670,6 +683,12 @@ welcome_message() {
                             else
                                 MENU_T="$(printf '%b6 %b = Uninstall Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}")"
                             fi
+
+                            if ! grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then                  # v3.02 Hotfix
+                                MENUW_RPZ="$(printf '%b7 %b = Enable DNS Firewall' "${cBYEL}" "${cRESET}")"   # v3.02 Hotfix
+                            else
+                                MENUW_RPZ="$(printf '%b7 %b = Disable DNS Firewall [?]' "${cBYEL}" "${cRESET}")"  # v3.02 Hotfix
+                            fi
                         else
 
                             if [ -f /opt/etc/init.d/S61unbound ];then
@@ -679,6 +698,8 @@ welcome_message() {
                             fi
                             MENU_ST="$(printf '%b4 %b = n/a Show unbound statistics' "${cBYEL}" "${cRESET}$cGRA")"
                             MENU_T="$(printf '%b6 %b = n/a Install Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}$cGRA")"
+                            MENUW_RPZ="$(printf '%b7 %b = n/a Enable DNS Firewall' "${cBYEL}" "${cRESET}$cGRA")"   # v3.02 Hotfix
+
                         fi
                         if [ -f ${CONFIG_DIR}unbound.conf ] && [ -n "$(grep -E "^[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
                             MENU_AD="$(printf '%b5 %b = Uninstall Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}")"
@@ -699,31 +720,33 @@ welcome_message() {
                         printf "%s\t\t%s\n"            "$MENU_ST"
                         printf "%s\t\t%s\n"            "$MENU_AD"
                         printf "%s\t\t%s\n"            "$MENU_T"
+                        printf "%s\t\t%s\n"            "$MENUW_RPZ"         # v3.02 Hotfix
                         printf "\n%s\t\t%s\n"          "$MENU__"
                         printf "%s\t\t%s\n"            "$MENU_VX"
                     fi
-                    printf '\n%be %b = Exit Script\n' "${cBYEL}" "${cRESET}"
+                    printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
                 fi
 
-                # Show 'E[asy]'/'A[dvanced]' mode, and does the selection require ENTER?
+                # Show 'E[asy]'/'A[dvanced]' mode, and does the selection require ENTER?    # v3.03 revert to 'normal' behaviour
                 if [ "$EASYMENU" == "N" ];then
                    TXT="A:"
-                   printf '\n%b%s%bOption ==>%b ' "$cBCYA" "$TXT" "${cBYEL}" "${cRESET}"
+                   #printf '\n%b%s%bOption ==>%b ' "$cBCYA" "$TXT" "${cBYEL}" "${cRESET}"
                 else
                    TXT="E:"
-                   printf '\n%b%s%bPress desired Option key (no ENTER key reqd.) %bOption ==>%b ' "$cBCYA" "$TXT" "${cBYEL}" "${cRESET}" "${cBYEL}"
+                   #printf '\n%b%s%bPress desired Option key (no ENTER key reqd.) %bOption ==>%b ' "$cBCYA" "$TXT" "${cBYEL}" "${cRESET}" "${cBYEL}"
                 fi
+                printf '\n%b%s%bOption ==>%b ' "$cBCYA" "$TXT" "${cBYEL}" "${cRESET}"
 
 _GetKEY() {
         # Doesn't require user also hitting ENTER
         IFS= read -r -s -n1  "${@:-menu1}"               # v3.00
 }
-                if [ "$EASYMENU" == "Y" ];then          # v3.00 Easy menu ONLY contains single character options (err... uf - eek!!)
-                    _GetKEY
-                    echo "$menu1"                        # v3.00 let the user see the keypress assuming its visible i.e. not ESC or cursor key
-                else
+                #if [ "$EASYMENU" == "Y" ];then          # v3.00 Easy menu ONLY contains single character options (err... uf - eek!!)
+                    #_GetKEY
+                    #echo "$menu1"                        # v3.00 let the user see the keypress assuming its visible i.e. not ESC or cursor key
+                #else
                     read -r "menu1"
-                fi
+                #fi
 
             fi
             local TXT=
@@ -740,13 +763,19 @@ _GetKEY() {
                     4|s) menu1="s";;
                     5|adblock) [ -n "$(echo "$MENU_AD" | grep "Uninstall" )" ] && menu1="adblock uninstall" || menu1="adblock";;
                     6|sgui) [ -n "$(echo "$MENU_T"  | grep "Uninstall" )" ] && { GUI_Stats_TAB "uninstall"; menu1=; } || menu1="sgui";;
-                    e) ;;
+                    7*|firewall*) if [ "$menu1" == "7" ];then                                                    # v 3.03
+                                     [ -n "$(echo "$MENUW_RPZ"  | grep "Disable" )" ] && { DNS_Firewall "disable"; menu1=; } || menu1="firewall"   # v3.02 Hotfix
+                                  else
+                                     [ -n "$(echo "$menu1" | grep -E "7.*\?")" ] && menu1="firewall ?"                  # v3.03
+                                  fi
+                    ;;
+                    e*) ;;
                     u|uf) ;;
                     "?") ;;
                     "v") ;;
                     "l") ;;
                     "") ;;
-                    adv*) ;;
+                    easy|adv*) ;;
                     *) printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
                        continue
                        ;;
@@ -1171,14 +1200,14 @@ EOF
                     echo -en $cBCYA"\nunbound STOPPED."$cBGRE
                     break
                 ;;
-                dd|ddnouser)                # v1.07
+                debug|dd|ddnouser)                # v1.07
 
                     [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
                     echo
                     [ "$menu1" == "ddnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
                     echo -e $cBYEL
-                    unbound -vvvd
+                    unbound -dv
                     echo -e $cRESET
                     [ "$menu1" == "ddnouser" ] &&  sed -i 's/username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
                     break
@@ -1263,8 +1292,8 @@ EOF
 
                     echo -e $cBGRA
                     ;;
-                e)
-                    exit_message
+                e*)
+                    [ -n "$(echo "$menu1" | grep -E "e.*\?")" ] && exit_message "0" || exit_message
                     break
 
                 ;;
@@ -1501,7 +1530,9 @@ EOF
                                 Option_DNS_Firewall          "$AUTO_REPLY10"   "$ARG"
                                 local RC=$?
                             else
+                                echo -en ${aBOLD}$cBRED
                                 sh /jffs/addons/unbound/unbound_rpz.sh      # v3.02
+                                echo -en $cRESET
                                 local RC=1
                             fi
                         else
@@ -2018,6 +2049,8 @@ DNS_Firewall() {
 
     local STATUS=0
 
+    local FIREWALL_CONFIG="/opt/share/unbound/configs/unbound.conf.firewall"           # v3.03
+
     if [ "$1" != "disable" ];then
 
         [ "$2" != "dev" ] && local DEV= || local DEV="dev"      # v3.00 juched now also hosts a "dev" branch
@@ -2026,13 +2059,26 @@ DNS_Firewall() {
         chmod +x /jffs/addons/unbound/unbound_rpz.sh
         echo -e $cGRA
         sh /jffs/addons/unbound/unbound_rpz.sh "install"                                # v3.02
-        Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "uncomment"
+
+        # Allow external definitions...created by @juched's 'unbound_rpz.sh'            # v3.03
+        if [ ! -f $FIREWALL_CONFIG ];then
+            Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "uncomment"
+            sed -i '/\(^url:.*urlhaus\.abuse\)/ s/^url:/#url:/' ${CONFIG_DIR}unbound.conf   # v3.03 TEMPORARY HACK saves forcing 'unbound.conf' download
+        else
+            echo -e $cBCYA"Adding $cBGRE'include: \"$FIREWALL_DEF\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA # v3.03
+            [ -z "$(grep "^include.*$FIREWALL_CONFIG" ${CONFIG_DIR}unbound.conf)" ] && echo -e "include: \"$FIREWALL_CONFIG\"\t\t# Custom DNS Firewall\n" >>  ${CONFIG_DIR}unbound.conf # v3.03
+        fi
         echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}ENABLED"$cBGRA
         SayT "unbound DNS Firewall ENABLED"
     else
         echo -e $cGRA
         sh /jffs/addons/unbound/unbound_rpz.sh "uninstall"                              # v3.02
-        Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "comment"
+        if [ ! -f $FIREWALL_CONFIG ];then                                               # v3.03
+            sed -i '/^#url:.*urlhaus\.abuse/ s/^#//' ${CONFIG_DIR}unbound.conf          # v3.03 TEMPORARY HACK prevent multiple '^#'
+            Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "comment"
+        else
+            [ -n "$(grep "^include.*$FIREWALL_CONFIG" ${CONFIG_DIR}unbound.conf)" ] && sed -i "\\~$FIREWALL_CONFIG~d" ${CONFIG_DIR}unbound.conf # v3.03
+        fi
         echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}DISABLED"$cBGRA
         SayT "unbound DNS Firewall DISABLED"
     fi
@@ -2179,8 +2225,8 @@ Restart_unbound() {
                     sleep 1
                     I=$((I + 1))
                     if [ -z "$(pidof unbound)" ];then
-                        echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after ${aREVERSE}$I seconds${cRESET}$cBRED.....\n\tTry debug mode and check for unbound.conf or runtime errors!"$cRESET
-                        SayT "***ERROR unbound went AWOL after $I seconds.... Try debug mode and check for unbound.conf or runtime errors!"
+                        echo -e $cBRED"\a\n\n\t${aREVERSE}***ERROR unbound went AWOL after $I seconds${cRESET}.....\n\n\t${cBRED}Try option ${cBMAG}'debug'$cRESET and check for unbound.conf or runtime errors!"$cRESET
+                        SayT "***ERROR unbound went AWOL after $I seconds.... Try 'unbound -dv' and check for unbound.conf or runtime errors!"
                         break
                     fi
                     [ $I -eq 2 ] && Manage_cache_stats "restore"        # v2.17
@@ -2430,9 +2476,12 @@ unbound_Control() {
                             service restart_dnsmasq
                             echo -en $cRESET
 
+                            Edit_config_options "#NOdnsmasq" "access-control: 0.0.0.0/0 allow" uncomment
+                            sed 's/port: 53535/port: 53' ${CONFIG_DIR}unbound.conf
+
                             # Modify /opt/share/unbound/configs/unbound.conf.add
                             local FN="/opt/share/unbound/configs/unbound.conf.add"
-                            [ -f $FN ] && sed -i '/port: 53/,/extended-statistics: yes/ s/^#//' $FN
+                            [ -f $FN ] && sed -i '/#NOdnsmasq/,/#NOdnsmasqEND/ s/^#//' $FN
 
                             Restart_unbound
                         fi
@@ -2865,7 +2914,7 @@ install_unbound() {
             do
                 sleep 1
                 I=$((I + 1))
-                [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\n\t***ERROR unbound went AWOL after $aREVERSE$I seconds${cRESET}$cBRED.....\n"$cRESET ; break; }
+                [ -z "$(pidof unbound)" ] && { echo -e $cBRED"\a\n\n\t${aREVERSE}***ERROR unbound went AWOL after $I seconds${cRESET}.....\n$cBRED"$cRESET ; break; }
             done                                                         # v1.06
 
         if pidof unbound >/dev/null 2>&1; then
@@ -3150,7 +3199,7 @@ Check_GUI_NVRAM() {
             fi
 
             # AUTO_REPLY 10
-            if [ "$(Get_unbound_config_option "rpz:" ${CONFIG_DIR}unbound.conf)" != "?" ];then            # v3.00
+            if [ -n "$(grep -F "unbound.conf.firewall" ${CONFIG_DIR}unbound.conf)" ] || [ "$(Get_unbound_config_option "rpz:" ${CONFIG_DIR}unbound.conf)" != "?" ];then            # v3.03 v3.00
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] DNS Firewall ENABLED" 2>&1
             fi
         fi
@@ -3171,7 +3220,18 @@ exit_message() {
 
         local CODE=0
         [ -n "$1" ] && local CODE=$1
+
         rm -rf /tmp/unbound.lock
+
+        if [ -n "$1" ] && [ $CODE -eq 0 ];then
+            echo -e $cBWHT
+            echo "_____  __      ______                     _________   ______  ___                                         ";
+            echo "__  / / /_________  /___________  ______________  /   ___   |/  /_____ _____________ _______ _____________";
+            echo "_  / / /__  __ \_  __ \  __ \  / / /_  __ \  __  /    __  /|_/ /_  __ \`/_  __ \  __ \`/_  __ \`/  _ \_  ___/";
+            echo "/ /_/ / _  / / /  /_/ / /_/ / /_/ /_  / / / /_/ /     _  /  / / / /_/ /_  / / / /_/ /_  /_/ //  __/  /    ";
+            echo "\____/  /_/ /_//_.___/\____/\__,_/ /_/ /_/\__,_/______/_/  /_/  \__,_/ /_/ /_/\__,_/ _\__, / \___//_/     ";
+            echo "                                               _/_____/                              /____/               ";
+        fi
         echo -e $cRESET
         exit $CODE
 }
