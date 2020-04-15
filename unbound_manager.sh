@@ -53,7 +53,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 15-Apr-2020
+# Last Updated Date: 14-Apr-2020
 #
 # Description:
 #
@@ -759,7 +759,7 @@ _GetKEY() {
                     0) ;;
                     1|i) menu1="i?";;
                     2|z) menu1="z";;
-                    3|x|rs) [ -n "$(pidof unbound)" ] && menu1="x" || menu1="rs";;
+                    3|x) [ -n "$(pidof unbound)" ] && menu1="x" || menu1="rs";;
                     4|s) menu1="s";;
                     5|adblock) [ -n "$(echo "$MENU_AD" | grep "Uninstall" )" ] && menu1="adblock uninstall" || menu1="adblock";;
                     6|sgui) [ -n "$(echo "$MENU_T"  | grep "Uninstall" )" ] && { GUI_Stats_TAB "uninstall"; menu1=; } || menu1="sgui";;
