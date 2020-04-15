@@ -2057,6 +2057,13 @@ DNS_Firewall() {
 
         download_file /jffs/addons/unbound/ unbound_rpz.sh  juched "$DEV" dos2unix      # v3.02
         chmod +x /jffs/addons/unbound/unbound_rpz.sh
+
+        if [ ! -f /opt/share/unbound/configs/rpzsites ];then                           # v3.03 Hotfix
+            download_file /opt/share/unbound/configs/ rpzsites  juched "$DEV" dos2unix   # v3.03 Hotfix
+        else
+            echo -e $cBCYA"Custom '/opt/share/unbound/configs/rpzsites' already exists - ${cBGRE}'rpzsites'$cRESET download skipped"$cBGRA
+        fi
+
         echo -e $cGRA
         sh /jffs/addons/unbound/unbound_rpz.sh "install"                                # v3.02
 
