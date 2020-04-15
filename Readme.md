@@ -22,11 +22,11 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 +======================================================================+
 |  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
 |                                                                      |
-|                      Version 3.00 by Martineau                       |
+|                      Version 3.03 by Martineau                       |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
-|   1 = Install unbound DNS Server                                     |
+|   i = Install unbound DNS Server - Advanced Mode                     |
 |       o1. Enable unbound Logging                                     |
 |       o2. Integrate with Stubby (Advanced Users)                     |
 |       o3. Install Ad and Tracker Blocking                            |
@@ -34,7 +34,11 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 |       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
 |       o6. Install Graphical Statistics GUI (Add-ons) TAB             |
 |       o7. Integrate with DoT (Advanced Users)                        |
+|       o8. Enable DNS Firewall                                        |
 |                                                                      |
+|   z  = Remove unbound/unbound_manager                                |
+|   ?  = About Configuration                                           |
+|   3  = Advanced Tools                                                |
 |                                                                      |
 |     See SNBForums thread https://tinyurl.com/s89z3mm for helpful     |
 |         user tips on unbound usage/configuration.                    |
@@ -44,10 +48,11 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 3  = n/a Start unbound		
 4  = n/a Show unbound statistics		
 5  = n/a Install Ad and Tracker blocker (Ad Block)		
-6  = n/a Install Graphical Statistics GUI Add-on TAB	
+6  = n/a Install Graphical Statistics GUI Add-on TAB
+7  = n/a Enable DNS Firewall [?]
 
 
-unbound (pid 3113) is running... uptime: 0 Days, 01:14:24 version: 1.9.3 (# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer Fri Jan 10 11:43:15 GMT 2020))
+unbound (pid 3113) is running... uptime: 0 Days, 01:14:24 version: 1.10.0 (# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer Tue Apr 14 17:26:55 DST 2020))
 
 
 i  = Update unbound Installation ('/opt/var/lib/unbound/')      l  = Show unbound LIVE log entries (lx=Disable Logging)
@@ -156,57 +161,9 @@ e  = Exit Script
 Option ==> i?
 ```
 
-### **v1.21** now allows dumbing down of the menus (**'Easy Mode'**) and will be the default when invoked from **amtm** ###
-
-### (When invoked direct from the commandline the default is **'Advanced Mode'**) ###
-
+You can override the default **'Easy mode'** startup i.e switch to **'Advanced mode'** from the command line by using
 ```
-+======================================================================+
-|  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
-|                                                                      |
-|                      Version 3.00 by Martineau                       |
-|                                                                      |
-| Requirements: USB drive with Entware installed                       |
-|                                                                      |
-|   1 = Install unbound DNS Server                                     |
-|       o1. Enable unbound Logging                                     |
-|       o2. Integrate with Stubby (Advanced Users)                     |
-|       o3. Install Ad and Tracker Blocking                            |
-|       o4. Customise CPU/Memory usage                                 |
-|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)           |
-|       o6. Install Graphical Statistics GUI (Add-ons) TAB             |
-|       o7. Integrate with DoT (Advanced Users)                        |
-|                                                                      |
-|                                                                      |
-|     See SNBForums thread https://tinyurl.com/s89z3mm for helpful     |
-|         user tips on unbound usage/configuration.                    |
-+======================================================================+
-1  = Begin unbound Installation Process 		
-2  = Remove unbound/unbound_manager		
-3  = n/a Start unbound		
-4  = n/a Show unbound statistics		
-5  = n/a Install Ad and Tracker blocker (Ad Block)		
-6  = n/a Install Graphical Statistics GUI Add-on TAB	
-
-unbound (pid 19214) is running... uptime: 0 Days, 00:00:15 version: 1.10.0 # rgnldo Github Version=v1.08 Martineau update (Date Loaded by unbound_manager Sat Apr 11 20:44:51 DST 2020)
-
-1  = Update unbound files and configuration		
-2  = Remove unbound/unbound_manager		
-3  = Stop unbound		
-4  = Show unbound statistics		
-5  = Install Ad and Tracker blocker (Ad Block)		
-6  = Uninstall Graphical Statistics GUI Add-on TAB		
-
-?  = About Configuration		
-v  = View ('/opt/var/lib/unbound/'unbound.conf)		
-
-e  = Exit Script
-
-```
-
-You can override the default **'Advanced mode'** startup i.e switch to **'Easy mode'** from the command line by using
-```
-unbound_manager easy
+unbound_manager advanced
 ```
 or you can quickly change modes at the option prompt
 
