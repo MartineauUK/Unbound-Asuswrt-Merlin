@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v3.03
+#============================================================================================ © 2019-2020 Martineau v3.04
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id | 'disable'}]
@@ -53,7 +53,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 14-Apr-2020
+# Last Updated Date: 17-Apr-2020
 #
 # Description:
 #
@@ -72,7 +72,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.03"
+VERSION="3.04"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -450,7 +450,7 @@ welcome_message() {
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
-                MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable] ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
+                MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
                 MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block [uninstall]\n' "${cBYEL}" "${cRESET}")"  # v3.03
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -772,8 +772,10 @@ _GetKEY() {
                     e*) ;;
                     u|uf) ;;
                     "?") ;;
-                    "v") ;;
-                    "l") ;;
+                    v|vx) ;;                            # v3.04
+                    l) ;;
+                    debug) ;;                           # v3.04
+                    rl) ;;                              # v3.04
                     "") ;;
                     easy|adv*) ;;
                     *) printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
@@ -2066,26 +2068,15 @@ DNS_Firewall() {
 
         echo -e $cGRA
         sh /jffs/addons/unbound/unbound_rpz.sh "install"                                # v3.02
-
         # Allow external definitions...created by @juched's 'unbound_rpz.sh'            # v3.03
-        if [ ! -f $FIREWALL_CONFIG ];then
-            Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "uncomment"
-            sed -i '/\(^url:.*urlhaus\.abuse\)/ s/^url:/#url:/' ${CONFIG_DIR}unbound.conf   # v3.03 TEMPORARY HACK saves forcing 'unbound.conf' download
-        else
-            echo -e $cBCYA"Adding $cBGRE'include: \"$FIREWALL_CONFIG\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA # v3.03 Hotfix
-            [ -z "$(grep "^include.*$FIREWALL_CONFIG" ${CONFIG_DIR}unbound.conf)" ] && echo -e "include: \"$FIREWALL_CONFIG\"\t\t# Custom DNS Firewall\n" >>  ${CONFIG_DIR}unbound.conf # v3.03
-        fi
+        echo -e $cBCYA"Adding $cBGRE'include: \"$FIREWALL_CONFIG\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA # v3.03 Hotfix
+        [ -z "$(grep "^include.*$FIREWALL_CONFIG" ${CONFIG_DIR}unbound.conf)" ] && echo -e "include: \"$FIREWALL_CONFIG\"\t\t# Custom DNS Firewall\n" >>  ${CONFIG_DIR}unbound.conf # v3.04 v3.03
         echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}ENABLED"$cBGRA
         SayT "unbound DNS Firewall ENABLED"
     else
         echo -e $cGRA
         sh /jffs/addons/unbound/unbound_rpz.sh "uninstall"                              # v3.02
-        if [ ! -f $FIREWALL_CONFIG ];then                                               # v3.03
-            sed -i '/^#url:.*urlhaus\.abuse/ s/^#//' ${CONFIG_DIR}unbound.conf          # v3.03 TEMPORARY HACK prevent multiple '^#'
-            Edit_config_options "rpz:#RPZ" "rpz-action-override: nxdomain" "comment"
-        else
-            [ -n "$(grep "^include.*$FIREWALL_CONFIG" ${CONFIG_DIR}unbound.conf)" ] && sed -i "\\~$FIREWALL_CONFIG~d" ${CONFIG_DIR}unbound.conf # v3.03
-        fi
+        [ -n "$(grep "^include.*$FIREWALL_CONFIG" ${CONFIG_DIR}unbound.conf)" ] && sed -i "\\~$FIREWALL_CONFIG~d" ${CONFIG_DIR}unbound.conf # v3.04 v3.03
         echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}DISABLED"$cBGRA
         SayT "unbound DNS Firewall DISABLED"
     fi
@@ -3231,6 +3222,7 @@ exit_message() {
         rm -rf /tmp/unbound.lock
 
         if [ -n "$1" ] && [ $CODE -eq 0 ];then
+            clear
             echo -e $cBWHT
             echo "_____  __      ______                     _________   ______  ___                                         ";
             echo "__  / / /_________  /___________  ______________  /   ___   |/  /_____ _____________ _______ _____________";
