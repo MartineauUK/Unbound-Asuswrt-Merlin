@@ -1242,7 +1242,7 @@ EOF
                     echo -e $cBCYA"\n\tAbout ${cRESET}unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ ${cRESET}"
                     echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
                 ;;
-                adblock*)                                           # v2.18
+                adblock*)                                           # v2.18   [ track | uninstall ]
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
@@ -1934,7 +1934,7 @@ GUI_Stats_TAB(){
     if [ "$1" != "uninstall" ];then
 
         # Allow for any latest @juched tweaks.....
-        echo -e $cBCYA"\n\tInstalling @juched's GUI TAB to Graphically display unbound stats....."$cRESET     # v2.14
+        echo -e $cBCYA"\n\tInstalling GUI TAB to Graphically display unbound stats....."$cRESET     # v2.14
 
         [ "$2" != "dev" ] && local DEV= || local DEV="dev"      # v3.00 juched now also hosts a "dev" branch
 
@@ -2014,7 +2014,7 @@ Use_VPN_Tunnel() {
 
     if [ -n "$(grep -E "^[#|o].*utgoing-interface:" /opt/var/lib/unbound/unbound.conf)" ];then
         if [ "$1" != "disable" ];then                                # v2.15
-            local VPN_ID= $1
+            local VPN_ID=$1                                           # v3.04 HotFix
             Edit_config_options "outgoing-interface:"  "uncomment"
             local VPN_CLIENT_GW=$(ip route | grep "dev tun1"${VPN_ID} | awk '{print $NF}')
             if [ -n "$VPN_CLIENT_GW" ];then
