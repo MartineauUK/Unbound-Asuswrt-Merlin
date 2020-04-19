@@ -3191,7 +3191,7 @@ Check_GUI_NVRAM() {
             if [ "$(Get_unbound_config_option "outgoing-interface:" ${CONFIG_DIR}unbound.conf)" != "?" ];then            # v3.00
                 if [ -z "$STATUSONLY" ];then
                     local VPN_IP=$(awk '/^outgoing-interface:/ {print $2}' ${CONFIG_DIR}unbound.conf)
-                    local VPN_ID=$(ip route | grep "$VPN_IP" | awk '{print substr($3,4,1)}')
+                    local VPN_ID=$(ip route | grep "$VPN_IP" | awk '{print substr($3,5,1)}')    # v3.04 Hotfix
                     echo -e $cBGRE"\t[✔] unbound requests via VPN Client ${cBMAG}$VPN_ID ($VPN_IP)$cBGRE tunnel ENABLED" 2>&1
                 fi
             fi
