@@ -1,5 +1,5 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v3.04
+#============================================================================================ © 2019-2020 Martineau v3.05
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id | 'disable'}]
@@ -53,7 +53,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 17-Apr-2020
+# Last Updated Date: 20-Apr-2020
 #
 # Description:
 #
@@ -72,7 +72,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.04"
+VERSION="3.05"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -897,13 +897,24 @@ _GetKEY() {
                         v|vh) ACCESS="--view"                           # v1.11 View/Readonly
                         ;;
                         vx) ACCESS="--unix"                             # Edit in Unix format
+                            local PRE_MD5="$(md5sum ${CONFIG_DIR}unbound.conf | awk '{print $1}')"              # v3.05
                         ;;
                         vb) echo -e "\n"$(Backup_unbound_config "msg")  # v1.27
                             continue
                         ;;
                     esac
-                    #[ "$menu1" != "vh" ] && nano $ACCESS ${CONFIG_DIR}unbound.conf || nano $ACCESS /opt/etc/unbound/unbound.conf.Example    # v1.17
+
                     [ "$menu1" != "vh" ] && nano $ACCESS ${CONFIG_DIR}unbound.conf  # v2.05
+                    
+                    # Has the user edited 'unbound.conf'.....
+                    if [ "$ACCESS" == "--unix" ];then                                             # v3.05
+                       local POST_MD5="$(md5sum ${CONFIG_DIR}unbound.conf | awk '{print $1}')"    # v3.05
+                       if [ "$PRE_MD5" != "$POST_MD5" ];then
+                          echo -e "\nDo you want to restart unbound to apply your config changes?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+                          read -r "ANS"   
+                          [ "$ANS" == "y" ] && Restart_unbound                                     # v3.05
+                       fi
+                    fi
                     #break
                 ;;
                 ew|eb|ec|eca|ecb|el|el*)
@@ -1319,7 +1330,7 @@ EOF
 
                     if [ "$(Unbound_Installed)" == "Y" ];then
                         if [ "$ARG" != "disable" ];then
-                            AUTO_REPLY9="y"
+                            AUTO_REPLY9="?"                                # v3.05
                             echo
                             Option_Use_VPN_Tunnel "$AUTO_REPLY9" "$ARG"
                             local RC=$?
@@ -1548,10 +1559,35 @@ EOF
 
                     [ $RC -eq 0 ] && { Restart_unbound;Check_GUI_NVRAM; }
                 ;;
-                tcpdump)
-                    echo -e $cBMAG"\a\n${LOGFILE}$TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
-                    trap 'welcome_message' INT
-                    [ -n "$(which tcpdump)" ] && tcpdump -i any port '(53 or 853)' -nn -tttt || echo -e $cBRED"\a\n\ttcpdump not installed!\n"  # v3.00
+                tcpdump*)                                               # [ interface_name [ port_expr ] ]
+                    if [ -n "$(which tcpdump)" ];then                   # v3.05
+                        local ARG=
+                        if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                            local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"         # v3.05
+                        fi
+
+                        local DNS_INTERFACE="any"                                           # v3.05
+                        local TCPDUMP_PORTS="53 or 853"                                 # v3.05
+
+                        if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then                        # v3.05
+                           local TCPDUMP_PORTS="$(printf "%s" "$menu1" | cut -d' ' -f3-)"
+                        fi
+                        if [ -z "$ARG" ];then                                               # # v3.05
+                            if [ -n "$(grep -E "^outgoing-interface:" ${CONFIG_DIR}unbound.conf)"  ];then   # v3.05
+                               local VPN_CLIENT_GW="$(awk '/^outgoing-interface:/ {print $2}' ${CONFIG_DIR}unbound.conf)"
+                               local VPN_IF=$(ip route | grep "${VPN_CLIENT_GW}" | awk '{print $3}')
+                               local DNS_INTERFACE=$VPN_IF
+                            fi
+                        else
+                            DNS_INTERFACE=$ARG                                              # v3.05
+                        fi
+
+                        echo -e $cBMAG"\a\n${LOGFILE}$TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
+                        trap 'welcome_message' INT
+                        [ -n "$(which tcpdump)" ] && tcpdump -i $DNS_INTERFACE 'port ('$TCPDUMP_PORTS')' -nn -tttt || echo -e $cBRED"\a\n\ttcpdump not installed!\n"  # v3.00
+                    else
+                        echo -e $cBRED"\a\n\tEntware's tcpdump NOT installed!"$cRESET       # v3.05
+                    fi
                 ;;
                 *)
                     printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
@@ -1998,39 +2034,62 @@ Option_Use_VPN_Tunnel() {
 
     # Use VPN Client tunnel for unbound requests to Root Servers        # v3.00
      local ANS=$1
+     local ARG=$2
      if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
         echo -en $cBYEL"Option Auto Reply 'y'\t"
      fi
 
-     if [ "$USER_OPTION_PROMPTS" == "?" ];then
-        echo -e "\nDo you want to route unbound requests through the VPN Client tunnel?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+     if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then         # v3.05
+        echo -e "\nDo you want to route unbound requests through VPN Client ${cBMAG}'$ARG'$cRESET tunnel?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
         read -r "ANS"
      fi
-     [ "$ANS" == "y"  ] && { Use_VPN_Tunnel "$@"; return $?; } || return 1                # v3.00
+     [ "$ANS" == "y"  ] && { Use_VPN_Tunnel "$ARG"; return $?; } || return 1                # v3.00
 }
 Use_VPN_Tunnel() {
 
     local STATUS=0
 
     if [ -n "$(grep -E "^[#|o].*utgoing-interface:" /opt/var/lib/unbound/unbound.conf)" ];then
-        if [ "$1" != "disable" ];then                                # v2.15
-            local VPN_ID=$1                                           # v3.04 HotFix
-            Edit_config_options "outgoing-interface:"  "uncomment"
-            local VPN_CLIENT_GW=$(ip route | grep "dev tun1"${VPN_ID} | awk '{print $NF}')
-            if [ -n "$VPN_CLIENT_GW" ];then
-                sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$VPN_CLIENT_GW/2" ${CONFIG_DIR}unbound.conf
-                echo -e $cBCYA"\n\tunbound requests via VPN Client $VPN_ID tunnel ${cRESET}ENABLED"$cBGRA
-                SayT "unbound requests via VPN Client $VPN_ID ($VPN_CLIENT_GW) tunnel ENABLED"
-            else
-                STATUS=1
-            fi
-        else
-            Edit_config_options "outgoing-interface:"  "comment"
-            echo -e $cBCYA"\n\tunbound requests via VPN Client tunnel ${cRESET}DISABLED"$cBGRA
-            SayT "unbound requests via VPN Client $VPN_ID tunnel DISABLED"
-        fi
+        [ "$1" = "y" ] && shift                                   # v3.05
+        local VPN_ID=$1                                           # v3.04 HotFix
+
+        case $VPN_ID in                                         # v3.05
+        1|2|3|4|5)
+                if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
+                    Edit_config_options "outgoing-interface:"  "uncomment"
+                    local VPN_CLIENT_GW=$(ip route | grep "dev tun1"${VPN_ID} | awk '{print $NF}')
+                    if [ -n "$VPN_CLIENT_GW" ];then         # v3.05
+                        sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$VPN_CLIENT_GW/2" ${CONFIG_DIR}unbound.conf
+                        echo -e $cBCYA"\n\tunbound requests via VPN Client ${cBMAG}$VPN_ID ($VPN_CLIENT_GW)$cBCYA tunnel ${cRESET}ENABLED"$cBGRA   # v3.04
+                        SayT "unbound requests via VPN Client $VPN_ID ($VPN_CLIENT_GW) tunnel ENABLED"
+                    else
+                        Edit_config_options "outgoing-interface:"  "comment"   # v3.05
+                        echo -e $cBRED"\a\n\n\t***ERROR unbound request via VPN Client ${cBMAG}$VPN_ID ($VPN_CLIENT_GW)$cBCYA tunnel ABORTED!\n"$cRESET   # v3.04 Hotfix
+                        SayT "unbound requests via VPN Client $VPN_ID ($VPN_CLIENT_GW) tunnel ABORTED!"       # v3.04 Hotfix
+                        STATUS=1                    # v3.05
+                    fi
+                else
+                    echo -e $cBRED"\n\a"
+                    Say "***ERROR VPN Client '$VPN_ID' is NOT Connected?"
+                    STATUS=1
+                fi
+        ;;
+        disable)
+                # Remember, 'post-mount' initialises Entware then you must include the following:
+                #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh vpn=disable
+                #
+                Edit_config_options "outgoing-interface:"  "comment"
+                echo -e $cBCYA"\n\tunbound requests via VPN Client tunnel ${cRESET}DISABLED"$cBGRA
+                SayT "unbound requests via VPN Client $VPN_ID tunnel DISABLED"
+        ;;
+        *)
+            echo -e $cBRED"\a\n\t***ERROR Invalid argument '$VPN_ID' VPN must be numeric '1-5' or 'disable'"
+            SayT "***ERROR Invalid argument '$VPN_ID' must be numeric '1-5' or 'disable'"
+            local STATUS=1
+        esac
     else
-        STATUS=1
+        local STATUS=1
+        return $STATUS                                          # v3.05
     fi
 }
 Option_DNS_Firewall() {
