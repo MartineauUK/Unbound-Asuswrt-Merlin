@@ -2,7 +2,7 @@
 #============================================================================================ © 2019-2020 Martineau v3.05
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
-# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id | 'disable'}]
+# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id [ delay=nnn ] | 'disable' }
 #
 #           unbound_manager
 #                              Context Menu: Install with 'user option prompts (see advanced section below)
@@ -44,10 +44,12 @@
 #           unbound_manager    restart
 #                              Allows saving of the cache (unlike sh /opt/etc/init.d/S61unbound restart)
 #           unbound_manager    vpn=1
-#                              unbound will send its Root Server DNS requests via the VPN Client 1 tunnel (see vpnclient1-route-up)
+#                              unbound will send its Root Server DNS requests via the VPN Client 1 tunnel
 #           unbound_manager    vpn=disable
 #                              unbound will send its Root Server DNS requests via the WAN (see post-mount)
-#
+#           unbound_manager    vpn=5 delay=2
+#                              unbound will send its Root Server DNS requests via the VPN Client 5 tunnel
+#                              ('delay=' MUST be used if invoked by vpnclientX-up)
 #
 #  See https://github.com/MartineauUK/Unbound-Asuswrt-Merlin for additional help/documentation with this script.
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
@@ -905,13 +907,13 @@ _GetKEY() {
                     esac
 
                     [ "$menu1" != "vh" ] && nano $ACCESS ${CONFIG_DIR}unbound.conf  # v2.05
-                    
+
                     # Has the user edited 'unbound.conf'.....
                     if [ "$ACCESS" == "--unix" ];then                                             # v3.05
                        local POST_MD5="$(md5sum ${CONFIG_DIR}unbound.conf | awk '{print $1}')"    # v3.05
                        if [ "$PRE_MD5" != "$POST_MD5" ];then
                           echo -e "\nDo you want to restart unbound to apply your config changes?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
-                          read -r "ANS"   
+                          read -r "ANS"
                           [ "$ANS" == "y" ] && Restart_unbound                                     # v3.05
                        fi
                     fi
@@ -1321,19 +1323,29 @@ EOF
                         Diversion_to_unbound_list "all"                     # v1.25
                     fi
                 ;;
-                vpn*)                                                       # v3.00  [ vpn_id | disable]
+                vpn*)                                                       # v3.00  [ vpn_id [ debug ] | [ debug show ] | disable ]
                     # Allow using a nominated VPN tunnel to send DNS Root Server requests
+                    local ARG2=                                                 # v2.16
+                    if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then                # v2.16
+                        local ARG2="$(printf "%s" "$menu1" | cut -d' ' -f3)"
+                    fi
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
-                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                     fi
 
                     if [ "$(Unbound_Installed)" == "Y" ];then
                         if [ "$ARG" != "disable" ];then
-                            AUTO_REPLY9="?"                                # v3.05
-                            echo
-                            Option_Use_VPN_Tunnel "$AUTO_REPLY9" "$ARG"
-                            local RC=$?
+                            if [ "$ARG" == "debug" ] && [ "$ARG2" == "show" ];then  # v3.05
+                                local WANIP=$(nvram get wan0_ipaddr)                # v3.05
+                                grep -o "^.*DPT=53" /tmp/syslog.log | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"  # v3.05
+                                local RC=1
+                            else
+                                AUTO_REPLY9="?"                                     # v3.05
+                                echo
+                                Option_Use_VPN_Tunnel "$AUTO_REPLY9" "$ARG" "$ARG2"
+                                local RC=$?
+                            fi
                         else
                             Use_VPN_Tunnel "disable"
                             local RC=0
@@ -1401,7 +1413,7 @@ EOF
                     fi
 
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then                # v2.16
-                        TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                        TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                         if [ "$(which dig)" == "/opt/bin/dig" ];then
                             if [ "$ARG2" != "time" ];then                       # v2.16
                                 echo -e $cBGRA
@@ -2035,6 +2047,7 @@ Option_Use_VPN_Tunnel() {
     # Use VPN Client tunnel for unbound requests to Root Servers        # v3.00
      local ANS=$1
      local ARG=$2
+     local ARG2=$3
      if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
         echo -en $cBYEL"Option Auto Reply 'y'\t"
      fi
@@ -2043,7 +2056,7 @@ Option_Use_VPN_Tunnel() {
         echo -e "\nDo you want to route unbound requests through VPN Client ${cBMAG}'$ARG'$cRESET tunnel?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
         read -r "ANS"
      fi
-     [ "$ANS" == "y"  ] && { Use_VPN_Tunnel "$ARG"; return $?; } || return 1                # v3.00
+     [ "$ANS" == "y"  ] && { Use_VPN_Tunnel "$ARG" "$ARG2" ; return $?; } || return 1                # v3.00
 }
 Use_VPN_Tunnel() {
 
@@ -2051,7 +2064,9 @@ Use_VPN_Tunnel() {
 
     if [ -n "$(grep -E "^[#|o].*utgoing-interface:" /opt/var/lib/unbound/unbound.conf)" ];then
         [ "$1" = "y" ] && shift                                   # v3.05
-        local VPN_ID=$1                                           # v3.04 HotFix
+        local VPN_ID=$(echo "$1" | awk '{print $1}')              # v3.04 HotFix
+        local TRACK=$2                                            # v3.05
+        local TXT=
 
         case $VPN_ID in                                         # v3.05
         1|2|3|4|5)
@@ -2060,8 +2075,13 @@ Use_VPN_Tunnel() {
                     local VPN_CLIENT_GW=$(ip route | grep "dev tun1"${VPN_ID} | awk '{print $NF}')
                     if [ -n "$VPN_CLIENT_GW" ];then         # v3.05
                         sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$VPN_CLIENT_GW/2" ${CONFIG_DIR}unbound.conf
-                        echo -e $cBCYA"\n\tunbound requests via VPN Client ${cBMAG}$VPN_ID ($VPN_CLIENT_GW)$cBCYA tunnel ${cRESET}ENABLED"$cBGRA   # v3.04
-                        SayT "unbound requests via VPN Client $VPN_ID ($VPN_CLIENT_GW) tunnel ENABLED"
+                        if [ "$TRACK" == "debug" ] && [ -z "$(iptables -nvL OUTPUT | grep "DNS")" ];then   # v3.05
+                           iptables -I OUTPUT -p udp -m udp --dport 53 -m comment --comment "DNS request tracker" -j LOG
+                           local TXT=", and tracked in Syslog"
+                           #WANIP=$(nvram get wan0_ipaddr);grep -o "^.*DPT=53" /tmp/syslog.log | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"local TXT="and Tracked to Syslog"
+                        fi
+                        echo -e $cBCYA"\n\tunbound requests via VPN Client ${cBMAG}$VPN_ID ($VPN_CLIENT_GW)$cBCYA tunnel ${cRESET}ENABLED" ${TXT}$cBGRA   # v3.04
+                        SayT "unbound requests via VPN Client $VPN_ID ($VPN_CLIENT_GW) tunnel ENABLED" $TXT
                     else
                         Edit_config_options "outgoing-interface:"  "comment"   # v3.05
                         echo -e $cBRED"\a\n\n\t***ERROR unbound request via VPN Client ${cBMAG}$VPN_ID ($VPN_CLIENT_GW)$cBCYA tunnel ABORTED!\n"$cRESET   # v3.04 Hotfix
@@ -2079,6 +2099,7 @@ Use_VPN_Tunnel() {
                 #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh vpn=disable
                 #
                 Edit_config_options "outgoing-interface:"  "comment"
+                iptables -D OUTPUT -p udp -m udp --dport 53 -m comment --comment "DNS request tracker" -j LOG 2>/dev/null
                 echo -e $cBCYA"\n\tunbound requests via VPN Client tunnel ${cRESET}DISABLED"$cBGRA
                 SayT "unbound requests via VPN Client $VPN_ID tunnel DISABLED"
         ;;
@@ -3761,6 +3782,12 @@ case "$1" in
         VPN_ID=$(echo "$@" | sed -n "s/^.*vpn=//p" | awk '{print $1}')
         case $VPN_ID in
         1|2|3|4|5)
+                # Allow the asyncronous call from openvpn-event vpnclientX-up to ensure that the VPN Client has fully initialised
+                DELAY="$(echo "$@" | sed -n "s/^.*delay=//p")" # v3.05
+                if [ -n "$DELAY" ];then                        # v3.05
+                    [ -n "$(echo $DELAY | grep -E "^[1-9]+$")" ] && sleep $DELAY || { echo -e $cBRED"\a\n";Say "***ERROR Invalid arg 'delay=$DELAY' - must in range 1-99" ;exit_message 1;} # v3.05
+                fi
+
                 if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
                     Use_VPN_Tunnel "$VPN_ID"
                     [ $? -eq 0 ] && Restart_unbound
