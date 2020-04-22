@@ -1219,8 +1219,10 @@ EOF
                 ;;
                 u|uf*)                                                      # v3.00 v1.07
                     [ "$menu1" == "uf" ] && echo -e ${cRESET}$cWRED"\nForced Update"$cRESET"\n"  # v2.06 v1.07
+                    # Safeguard against cURL failure i.e. Github DOWN
+                    cp $0 $0.u                                             # v3.06
                     update_installer $menu1
-                    [ $? -eq 0 ] && exec "$0"                               # v1.18 Only exit if new script downloaded
+                    [ $? -eq 0 ] && { rm $0.u;exec "$0" "$@" } || mv $0.u $0     # v3.06 v1.18 Only exit if new script downloaded
 
                 ;;
                 rs*)                                                        # v1.07
