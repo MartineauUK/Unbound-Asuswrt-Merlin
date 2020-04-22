@@ -1077,7 +1077,7 @@ _GetKEY() {
                             # NOTE: Viewing 'unbound.conf' will now be inaccurate but '?' command will be correct
                             Edit_config_options "verbosity"       "comment"     # v3.06
                             echo -e $cBCYA"\nunbound logging DISABLED"$cRESET
-                            echo -e $(date "+%b %d %T") "unbound_manager: 'l0':  ============================================================== Stopped" >> $LOGFILE   # v3.06
+                            echo -e $(date "+%b %d %T") "unbound_manager: 'lx':  ============================================================== Stopped" >> $LOGFILE   # v3.06
                             cru a unboundLOG 2>/dev/null                        # v3.06
                             ;;
                         l|ln*)                                                  # v1.16
