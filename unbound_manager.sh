@@ -320,7 +320,7 @@ _quote() {
         comment)
                 if [ -z "$TO" ];then
                     #[ -z "$(grep "#$MATCH" $FN )" ] && sed $SEDACTION "/$MATCH/ s/\($MATCH.*$\)/#\1/" $FN|| echo -e $cRESET"\tAleady commented out '#$MATCH'"
-                    [ -z "$(grep "#[[:space:]]*$MATCH" $FN )" ] && sed $SEDACTION "$POS,$ {/$MATCH/ s/\($MATCH.*$\)/#\1/}" $FN|| echo -e $cRESET"\tAleady commented out '#$MATCH'"
+                    sed $SEDACTION "$POS,$ {/$MATCH/ s/\($MATCH.*$\)/#\1/}" $FN        # v3.06 Fix
                 else
                     sed $SEDACTION "$POS,$ {/$MATCH/,/$TO/ s/\(^[[:space:]]*\)\(.\)/\1#\2/}" $FN    # v2.05
                 fi
@@ -465,7 +465,6 @@ welcome_message() {
             else
                 MENU_Z="$(printf '%b2 %b = Remove unbound/unbound_manager\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
             fi
-
         fi
 
         Show_credits
@@ -473,6 +472,13 @@ welcome_message() {
         if [ "$(Unbound_Installed)" == "Y" ];then   # v2.12
             HDR="N"
             printf '+======================================================================+'   # 2.13
+
+            # The cron job should really be created from init-start or /init.d/S61unbound??????
+            if [ -n "$(awk '/^verbosity/ {print $2}' ${CONFIG_DIR}unbound.conf)" ] || [ "$(unbound_Control "oq" "verbosity" "value")" != "0" ];then   # v3.06
+                # Cron job 00:01 daily to check'n'delete log file when it is >10MB
+                cru d unboundLOG 2>/dev/null                                                              # v3.06
+                cru a unboundLOG "1 0 * * * find /opt/var/log/unbound.log -size +10M -exec rm -f {} \;"   # v3.06
+            fi
         fi
 
         # Identify currently installed eligible AUTO Reply options
@@ -1068,6 +1074,7 @@ _GetKEY() {
                             trap 'welcome_message' INT
                             tail $NUM -F $LOGFILE
                             # Cron job 00:01 daily to check'n'delete log file when it is >10MB
+                            cru d unboundLOG 2>/dev/null                        # v3.06
                             cru a unboundLOG "1 0 * * * find /opt/var/log/unbound.log -size +10M -exec rm -f {} \;"   # v3.06
                             ;;
                         lx)                                                     # v1.16
@@ -1077,14 +1084,14 @@ _GetKEY() {
                             # NOTE: Viewing 'unbound.conf' will now be inaccurate but '?' command will be correct
                             Edit_config_options "verbosity"       "comment"     # v3.06
                             echo -e $cBCYA"\nunbound logging DISABLED"$cRESET
-                            echo -e $(date "+%b %d %T") "unbound_manager: 'lx':  ============================================================== Stopped" >> $LOGFILE   # v3.06
-                            cru a unboundLOG 2>/dev/null                        # v3.06
+                            echo -e $(date "+%b %d %T") "unbound_manager: 'l0':  ============================================================== Stopped" >> $LOGFILE   # v3.06
+                            cru d unboundLOG 2>/dev/null                        # v3.06
                             ;;
                         l|ln*)                                                  # v1.16
                             # syslog-ng/scribe?
                             if [ "$(Get_unbound_config_option "use-syslog:")" == "yes" ];then   # v3.06 v2.00
                                 local LOGFILE="/opt/var/log/unbound.log"
-                                local TXT=" (syslog-ng/scribe)"                 # v2.00 v1.25 syslog-ng/scribe
+                                local TXT=" (syslog-ng/scribe)"                 # v3.06 v2.00 v1.25 syslog-ng/scribe
                             fi
                             NUM=
                             [ "${menu1:0:2}" == "ln" ] && NUM="-n $(echo "$menu1" | cut -d' ' -f2)" # v1.16
@@ -1102,6 +1109,9 @@ _GetKEY() {
                     esac
                 ;;
                 scribe*)                                                     # v3.06 v1.27
+
+                    local LOGFILE="/opt/var/logs/unbound.log"        # v3.06
+
                     local TXT=
 
                     local ARG=                                              # v3.06
@@ -1154,18 +1164,18 @@ EOF
                             Edit_config_options "use-syslog:"          "uncomment"     # v1.27
                             Edit_config_options "log-tag-queryreply:"  "uncomment"     # v2.05
                             Edit_config_options "verbosity"            "uncomment"     # v3.06
+                            Edit_config_options "log-queries:"         "uncomment"     # v3.06
+                            #cru d unboundLOG 2>/dev/null
 
-                            #[ "$(Get_unbound_config_option "use-syslog")" == "?" ]        && sed -i '/^log\-time\-ascii:/ause\-syslog: yes' ${CONFIG_DIR}unbound.conf
-                            #[ "$(Get_unbound_config_option "log-local-actions")" == "?" ] && sed -i '/^use\-syslog:/alog\-local\-actions: yes' ${CONFIG_DIR}unbound.conf
-
-                            #echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe) - Reloading 'unbound.conf' status="$cRESET
                             echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe)....."$cRESET     # v2.17
                             local TXT=
                             unset $TXT
+                            [ -f /opt/var/lib/unbound/unbound.log ] && echo -e $(date "+%b %d %T") "unbound_manager: 'scribe':  ============================================================== Started" >> /opt/var/lib/unbound/unbound.log # v3.06
                             Restart_unbound                                            # v2.17
                         fi
                     else
                         Edit_config_options "use-syslog:"          "comment"     # v3.06
+                        [ -f $LOGFILE ] && echo -e $(date "+%b %d %T") "unbound_manager: 'scribe disable':  ============================================================== Stopped" >> $LOGFILE   # v3.06
                         Restart_unbound                                          # v3.06
                     fi
                 ;;
