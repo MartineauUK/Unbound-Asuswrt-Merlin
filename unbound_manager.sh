@@ -477,7 +477,7 @@ welcome_message() {
             if [ -n "$(awk '/^verbosity/ {print $2}' ${CONFIG_DIR}unbound.conf)" ] || [ "$(unbound_Control "oq" "verbosity" "value")" != "0" ];then   # v3.06
                 # Cron job 00:01 daily to check'n'delete log file when it is >10MB
                 cru d unboundLOG 2>/dev/null                                                              # v3.06
-                cru a unboundLOG "1 0 * * * find /opt/var/log/unbound.log -size +10M -exec rm -f {} \;"   # v3.06
+                cru a unboundLOG "1 0 * * * /opt/bin/find /opt/var/log/unbound.log -size +10M -exec rm -f {} \;"   # v3.06
             fi
         fi
 
@@ -1075,7 +1075,7 @@ _GetKEY() {
                             tail $NUM -F $LOGFILE
                             # Cron job 00:01 daily to check'n'delete log file when it is >10MB
                             cru d unboundLOG 2>/dev/null                        # v3.06
-                            cru a unboundLOG "1 0 * * * find /opt/var/log/unbound.log -size +10M -exec rm -f {} \;"   # v3.06
+                            cru a unboundLOG "1 0 * * * /opt/bin/find /opt/var/log/unbound.log -size +10M -exec rm -f {} \;"   # v3.06
                             ;;
                         lx)                                                     # v1.16
                             $UNBOUNCTRLCMD -q set_option verbosity 0          # v 3.06 v2.05
