@@ -171,6 +171,22 @@ Chk_Entware() {
         done
         return "$READY"
 }
+Get_WAN_IF_Name () {
+
+    local IF_NAME=$(nvram get wan0_ifname)              # DHCP/Static ?
+
+    # Usually this is probably valid for both eth0/ppp0e ?
+    if [ "$(nvram get wan0_gw_ifname)" != "$IF_NAME" ];then
+        local IF_NAME=$(nvram get wan0_gw_ifname)
+    fi
+
+    if [ ! -z "$(nvram get wan0_pppoe_ifname)" ];then
+        local IF_NAME="$(nvram get wan0_pppoe_ifname)"      # PPPoE
+    fi
+
+    echo $IF_NAME
+
+}
 Convert_SECS_to_HHMMSS() {
 
     local SECS=$1
@@ -1429,7 +1445,7 @@ EOF
                         local RC=1
                     fi
                 ;;
-                bind*)                                                       # v3.06  [ any ] ]
+                bind*)                                                       # v3.06  [ any | disable ]
                     # Allow overriding default ANY interface to bind to WAN ONLY to send DNS Root Server requests
 
                     local ARG=
@@ -1438,7 +1454,7 @@ EOF
                     fi
 
                     if [ "$(Unbound_Installed)" == "Y" ];then
-                        if [ "$ARG" != "any" ];then
+                        if [ "$ARG" != "any" ] && [ "$ARG" != "disable" ];then      # v3.06 Hotfix
                                 AUTO_REPLY9="?"
                                 echo
                                 Option_BIND_WAN "$AUTO_REPLY9" "$ARG"
@@ -2240,8 +2256,8 @@ BIND_WAN() {
         case $INTERFACE in                                         # v3.06
         wan)
             Edit_config_options "outgoing-interface:"  "uncomment"
-            local WAN_IF=$(nvram get wan0_gw_ifname)
-            local WAN_GW=$(ip route | grep src | grep -v default | grep -E "dev vlan2[[:space:]]" | awk '{print $NF}')
+            local WAN_IF=$(Get_WAN_IF_Name)                     # v3.06 Hotfix
+            local WAN_GW=$(ip route | grep src | grep -v default | grep -E "dev $WAN_IF[[:space:]]" | awk '{print $NF}')    # v3.06 Hotfix
             if [ -n "$WAN_GW" ];then
                 sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$WAN_GW/2" ${CONFIG_DIR}unbound.conf
                 echo -e $cBCYA"\n\tunbound requests force BIND to ${cBMAG}WAN ($WAN_GW) ${cRESET}ENABLED"$cBGRA
@@ -3437,11 +3453,12 @@ Check_GUI_NVRAM() {
             # AUTO_REPLY 9 (used by BIND_WAN as well!)
             if [ "$(Get_unbound_config_option "outgoing-interface:" ${CONFIG_DIR}unbound.conf)" != "?" ];then            # v3.00
                 if [ -z "$STATUSONLY" ];then
-                    local WAN_IP=$(ip route | grep src | grep -v default | grep -E "dev vlan2[[:space:]]" | awk '{print $NF}')   # v3.06
+                    local WAN_IF=$(Get_WAN_IF_Name)                                                     # v3.06 Hotfix
+                    local WAN_IP=$(ip route | grep src | grep -v default | grep -E "dev $WAN_IF[[:space:]]" | awk '{print $NF}')   # v3.06
                     local BIND_IP=$(awk '/^outgoing-interface:/ {print $2}' ${CONFIG_DIR}unbound.conf)
                     local VPN_ID=$(ip route | grep "$BIND_IP" | awk '{print substr($3,5,1)}')    # v3.04 Hotfix
                     TXT="via VPN Client ${cBMAG}$VPN_ID ($BIND_IP)$cBGRE tunnel ENABLED"
-                    [ "$WAN_IP" == "$BIND_IP" ] && TXT="force BIND via ${cBMAG}WAN ($WAN_IP)$cBGRE ENABLED"
+                    [ "$WAN_IP" == "$BIND_IP" ] && TXT="force BIND via ${cBMAG}WAN ($WAN_IP) '${WAN_IF}'$cBGRE ENABLED"
                     echo -e $cBGRE"\t[✔] unbound requests $TXT" 2>&1
                 fi
             fi
