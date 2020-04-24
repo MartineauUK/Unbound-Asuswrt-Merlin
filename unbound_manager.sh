@@ -1427,7 +1427,7 @@ EOF
                         if [ "$ARG" != "disable" ];then
                             if [ "$ARG" == "debug" ] && [ "$ARG2" == "show" ];then  # v3.05
                                 local WANIP=$(nvram get wan0_ipaddr)                # v3.05
-                                grep -v -F "[BLOCKED" | grep -o "^.*DPT=53" /tmp/syslog.log | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"  # v3.06 Hotfix v3.05
+                                grep -v -F "[BLOCKED" /tmp/syslog.log | grep -o "^.*DPT=53"  | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"  # v3.06 Hotfix v3.05
                                 local RC=1
                             else
                                 AUTO_REPLY9="?"                                     # v3.05
