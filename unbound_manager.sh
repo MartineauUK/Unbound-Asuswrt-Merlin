@@ -629,7 +629,7 @@ welcome_message() {
 
                         if [ "$EASYMENU" == "N" ];then
                             MENU_I="$(printf '%bi %b = Update unbound and configuration %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
-                            MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit;vh=help)\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")" # v3.06
+                            MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (%bvx%b=Edit;%bvh%b=help)\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET" "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}")" # v3.06
                         else
                             MENU_VX="$(printf '%bv %b = View %b%s\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR'unbound.conf)" )"    # v3.00
                         fi
@@ -650,16 +650,16 @@ welcome_message() {
                             if [ "$(Unbound_Installed)" == "Y" ];then           # Installed?  v2.18 Hotfix @toazd
                                 if [ -n "$(pidof unbound)" ];then   # UP ?
                                     if [ "$EASYMENU" == "N" ];then
-                                        MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
+                                        MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (%box%b=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}")"
                                         MENU_CA="$(printf "%bca%b = Cache Size Optimisation  ([ 'reset' ])\n" "${cBYEL}" "${cRESET}")"
 
                                         # Takes 0.75 - 2 secs :-( unless 'fastmenu' option ENABLED! ;-)
                                         if [ -n "$(awk '/^verbosity/ {print $2}' ${CONFIG_DIR}unbound.conf)" ] || [ "$(unbound_Control "oq" "verbosity" "value")" != "0" ];then   # v3.06 v1.16
                                             LOGSTATUS=$cBGRE"LIVE "$cRESET
-                                            LOGGING_OPTION="(lx=Disable Logging)"
+                                            LOGGING_OPTION="(${cBYEL}lx${cRESET}=Disable Logging)"
                                         else
                                             LOGSTATUS=
-                                            LOGGING_OPTION="(lo=Enable Logging)"
+                                            LOGGING_OPTION="(${cBYEL}lo${cRESET}=Enable Logging)"
                                         fi
                                         MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
 
@@ -2397,10 +2397,10 @@ Backup_unbound_config() {
 }
 Check_config_add_and_postconf() {
 
+    local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"     # v3.07
     # If GUI 'server:' directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.addgui"' directive so values will override any previous ones # v3.07
     if [ -f $CONFIG_ADD ];then
         # Ensure GUI 'server:' directives can still be overridden so delete existing 'include: "/opt/share/unbound/configs/unbound.conf.add"'
-        local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"     # v3.07
         echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" $cBCYAfrom '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
         local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.add\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
         sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.07
