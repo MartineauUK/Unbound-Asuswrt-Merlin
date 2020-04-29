@@ -1,8 +1,10 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v3.07
+# shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
+#============================================================================================ © 2019-2020 Martineau v3.08
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
-# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id [ delay=nnn ] | 'disable' }
+# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
+#                              ['vpn='{vpn_id [ delay=nnn ] | 'disable' } ] [bind | nobind]
 #
 #           unbound_manager
 #                              Context Menu: Install with 'user option prompts (see advanced section below)
@@ -15,7 +17,7 @@
 #                                    |   6  = Install Graphical Statistics GUI Add-on TAB*                  |
 #                                    |   7  = Enable DNS Firewall*                                          |
 #
-#                              '*' - toggle' options; e.g. unbound already started, option '3' shows 'Stop' |
+#                              '*' - toggle' options; e.g. unbound already started, option '3' shows 'Stop'
 #
 #           unbound_manager    advanced
 #                              Context Menu: Install with user option prompts with Advanced Tools menu
@@ -55,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 26-Apr-2020
+# Last Updated Date: 29-Apr-2020
 #
 # Description:
 #
@@ -74,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.07"
+VERSION="3.08"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -1319,7 +1321,8 @@ EOF
                     echo -en $cBCYA"\nRestarting dnsmasq....."$cBGRE        # v2.09
                     service restart_dnsmasq
                     echo -en $cBCYA"\nunbound STOPPED."$cBGRE
-                    break
+                    SayT "unbound STOPPED"                                  # v3.08
+                    #break                                                  # v3.08
                 ;;
                 debug|dd|ddnouser)                # v1.07
 
@@ -2403,10 +2406,12 @@ Check_config_add_and_postconf() {
         # Ensure GUI 'server:' directives can still be overridden so delete existing 'include: "/opt/share/unbound/configs/unbound.conf.add"'
         echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" $cBCYAfrom '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
         local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.add\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
-        sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.07
+        [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.08 v3.07
         local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.addgui"  # v3.07
-        echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
-        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom GUI server directives\n" >>  ${CONFIG_DIR}unbound.conf  # v3.07
+        if [ -f $CONFIG_ADD ];then                                          # v3.08
+            echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
+            [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom GUI server directives\n" >>  ${CONFIG_DIR}unbound.conf  # v3.07
+        fi
     fi
 
     # If Custom 'server:' directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.add"' directive so values will override any previous ones # v2.18 Hotfix
@@ -2729,15 +2734,18 @@ unbound_Control() {
             case "$1" in
                 dump|save)
                     $UNBOUNCTRLCMD dump_cache > $FN
-                    [ "$1" == "save" ] && echo -e $cRESET"\a\n\tunbound cache SAVED to $cBGRE'/opt/share/unbound/configs/cache.txt'$cRESET - BEWARE, file will be DELETED on first RELOAD"$cRESET  2>&1
-
+                    if [ "$1" == "save" ];then
+                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
+                        echo -e $cRESET"\a\n\tunbound cache SAVED to $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET" ("$TIMESTAMP") - BEWARE, file will be DELETED on first RELOAD"$cRESET 2>&1   # v3.08
+                        SayT "unbound cache SAVED to '/opt/share/unbound/configs/cache.txt' - BEWARE, file will be DELETED on first RELOAD" $TIMESTAMP
+                    fi
                 ;;
                 load|rest)
                     if [ -s /opt/share/unbound/configs/cache.txt ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
-                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")     # v3.07
+                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
                         $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
-                        echo -e $cRESET"\a\n\tunbound cache RESTORED from $cBGRE'/opt/share/unbound/configs/cache.txt'$cRESET $TIMESTAMP "    # v3.07 v2.12
-                        SayT "unbound cache RESTORED from '/opt/share/unbound/configs/cache.txt' $TIMESTAMP"
+                        echo -e $cRESET"\a\n\tunbound cache RESTORED from $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET "("$TIMESTAMP")"    # v3.08 v2.12
+                        SayT "unbound cache RESTORED from '/opt/share/unbound/configs/cache.txt' ("$TIMESTAMP")"
                         rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
                     fi
                 ;;
@@ -2828,6 +2836,7 @@ unbound_Control() {
         ;;
         s|s*)                                                               # v2.07
             # xxx-cache.count values won't be shown without 'extended-statistics: yes' see 's+'/'s-' menu option
+            echo -e $cYEL
             $UNBOUNCTRLCMD stats$RESET | grep -E "total\.|cache\.count"  | column          # v1.08
             # Calculate %Cache HIT success rate
             local TOTAL=$($UNBOUNCTRLCMD stats$RESET | grep -oE "total.num.queries=.*" | cut -d'=' -f2)
@@ -2838,14 +2847,13 @@ unbound_Control() {
             else
                 local PCT=0                                             # v2.00
             fi
-            printf "\n%bSummary: Cache Hits success=%3.2f%%" "$cRESET" "$PCT"
+            printf "\n%bSummary: Cache Hits success=%b%3.2f%%" "$cBCYA" "$cRESET" "$PCT"
 
             if [ -n "$ADDFILTER" ];then                                 # v2.07 allow display of additional stat value(s)
                 # NOTE: 's+' aka 'extended-statistic[CODE][/CODE]s: yes' must be ACTIVE if you expect 's thread' to work!
                 echo -e "\n"
                 $UNBOUNCTRLCMD stats$RESET  | grep -E "$ADDFILTER" | column
             fi
-
         ;;
         oq|oq*)
             local CONFIG_VARIABLE
@@ -3006,8 +3014,7 @@ remove_existing_installation() {
         fi
 
         # Purge unbound directories
-        #(NOTE: Entware installs to '/opt/etc/unbound' but some kn*b-h*d wants '/opt/var/lib/unbound'
-        for DIR in "/opt/var/lib/unbound/adblock" "/opt/var/lib/unbound" "/opt/etc/unbound" "/jffs/addons/unbound";  do     # v2.00 v1.07
+        for DIR in "/opt/var/lib/unbound/adblock" "/opt/var/lib/unbound" "/jffs/addons/unbound";  do     # v3.08 v2.00 v1.07
             if [ -d "$DIR" ]; then
                 if ! rm "$DIR"/* >/dev/null 2>&1; then
                     printf '%bNo files found to remove in %b%s%b\n' "${cRESET}$cRED" "$cBGRE" "$DIR" "$cRESET"
@@ -4020,37 +4027,60 @@ case "$1" in
         Show_status "syslog"
         exit_message
         ;;
-    vpn*)                           # v3.00
-        VPN_ID=$(echo "$@" | sed -n "s/^.*vpn=//p" | awk '{print $1}')
-        case $VPN_ID in
-        1|2|3|4|5)
-                # Allow the asyncronous call from openvpn-event vpnclientX-up to ensure that the VPN Client has fully initialised
-                DELAY="$(echo "$@" | sed -n "s/^.*delay=//p")" # v3.05
-                if [ -n "$DELAY" ];then                        # v3.05
-                    [ -n "$(echo $DELAY | grep -E "(^[1-9]$)|^[1-9][0-9]$")" ] && sleep $DELAY || { echo -e $cBRED"\a\n";Say "***ERROR Invalid arg 'delay=$DELAY' - must in range 1-99" ;exit_message 1;} # v3.06 Fix @ugandy v3.05
-                fi
+    vpn*|bind|nobind)              # v3.08 v3.00
 
-                if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
-                    Use_VPN_Tunnel "$VPN_ID"
-                    [ $? -eq 0 ] && Restart_unbound
-                else
+        case "$1" in
+            vpn*)                   # v3.08
+                VPN_ID=$(echo "$@" | sed -n "s/^.*vpn=//p" | awk '{print $1}')
+                case $VPN_ID in
+                1|2|3|4|5)
+                        # Allow the asyncronous call from openvpn-event vpnclientX-up to ensure that the VPN Client has fully initialised
+                        DELAY="$(echo "$@" | sed -n "s/^.*delay=//p")" # v3.05
+                        if [ -n "$DELAY" ];then                        # v3.05
+                            [ -n "$(echo $DELAY | grep -E "(^[1-9]$)|^[1-9][0-9]$")" ] && sleep $DELAY || { echo -e $cBRED"\a\n";Say "***ERROR Invalid arg 'delay=$DELAY' - must in range 1-99" ;exit_message 1;} # v3.06 Fix @ugandy v3.05
+                        fi
+
+                        if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
+                            Use_VPN_Tunnel "$VPN_ID"
+                            [ $? -eq 0 ] && Restart_unbound
+                        else
+                            echo -e $cBRED"\n\a"
+                            Say "***ERROR VPN Client '$VPN_ID' is NOT Connected?"
+                        fi
+                ;;
+                disable)
+                        # Remember, 'post-mount' initialises Entware then you must include the following:
+                        #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh vpn=disable
+                        #
+                        Use_VPN_Tunnel "disable"
+                        [ $? -eq 0 ] && Restart_unbound
+                ;;
+                *)
                     echo -e $cBRED"\n\a"
-                    Say "***ERROR VPN Client '$VPN_ID' is NOT Connected?"
-                fi
-        ;;
-        disable)
-                # Remember, 'post-mount' initialises Entware then you must include the following:
-                #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh vpn=disable
-                #
-                Use_VPN_Tunnel "disable"
-                [ $? -eq 0 ] && Restart_unbound
-        ;;
-        *)
-            echo -e $cBRED"\n\a"
-            Say "***ERROR Invalid argument '$VPN_ID' must be numeric '1-5' or 'disable'"
+                    Say "***ERROR Invalid argument '$VPN_ID' must be numeric '1-5' or 'disable'"
+                esac
+                echo -e $cRESET
+                exit_message
+                ;;
+            *)                          # v3.08
+                case "$1" in
+                    bind)
+                        # Called from event script 'wan0-connected'
+                        BIND_WAN "wan"
+                        [ $? -eq 0 ] && Restart_unbound
+                        ;;
+                    nobind)
+                        # Remember, 'post-mount' initialises Entware then you must include the following:
+                        #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh nobind
+                        #
+                        BIND_WAN "any"
+                        [ $? -eq 0 ] && Restart_unbound
+                        ;;
+                esac
+                echo -e $cRESET
+                exit_message
+                ;;
         esac
-        echo -e $cRESET
-        exit_message
 esac
 
 
