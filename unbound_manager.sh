@@ -1,8 +1,9 @@
 #!/bin/sh
-#============================================================================================ © 2019-2020 Martineau v3.06
+#============================================================================================ © 2019-2020 Martineau v3.08
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
-# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ] ['vpn='{vpn_id [ delay=nnn ] | 'disable' }
+# Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
+#                              ['vpn='{vpn_id [ delay=nnn ] | 'disable' } ] [bind | nobind]
 #
 #           unbound_manager
 #                              Context Menu: Install with 'user option prompts (see advanced section below)
@@ -15,7 +16,7 @@
 #                                    |   6  = Install Graphical Statistics GUI Add-on TAB*                  |
 #                                    |   7  = Enable DNS Firewall*                                          |
 #
-#                              '*' - toggle' options; e.g. unbound already started, option '3' shows 'Stop' |
+#                              '*' - toggle' options; e.g. unbound already started, option '3' shows 'Stop'
 #
 #           unbound_manager    advanced
 #                              Context Menu: Install with user option prompts with Advanced Tools menu
@@ -55,7 +56,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 24-Apr-2020
+# Last Updated Date: 29-Apr-2020
 #
 # Description:
 #
@@ -74,7 +75,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.06"
+VERSION="3.08"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -362,10 +363,12 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t\t%s\n"     "$MENU__"  "$MENU_OQ"
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
     #[ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v3.00 its the default v2.15
-    [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"        "$MENUW_ADBLOCK"      # v3.03
+    [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"       "$MENUW_ADBLOCK"      # v3.03
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
-    printf "%s\t\t\t\t\t\t\t\t\t%s\n"                ""               "$MENUW_RPZ"    # v3.00
-    [ -n "$MENU_AD" ] && printf "%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v2.00 v1.25
+    printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_RPZ"    # v3.00
+    printf "%s\t\t%s\n"                          "$MENUW_BIND"     "$MENUW_VPN"    # v3.07
+
+    [ -n "$MENU_AD" ] && printf "\n%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v2.00 v1.25
     [ -n "$MENU_EL" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_EL"      # v2.15
     [ -n "$MENU_CA" ] && printf "%s\t%s\n"        "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
 
@@ -455,6 +458,19 @@ Show_status() {
         fi
     fi
 }
+Calculate_Percent() {                                                           # v3.07
+
+        local TOTAL=$1
+        local HITS=$2
+
+        if [ -n "$TOTAL" ] && [ $TOTAL -gt 0 ];then
+            local PCT=$((HITS*100/TOTAL))
+        else
+            local PCT=0
+        fi
+
+        echo $PCT
+}
 welcome_message() {
 
         # Reinstate CTRL-C if 'trap 'welcome_message' INT brought us here!      # 3.06 Fix
@@ -473,6 +489,8 @@ welcome_message() {
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
+                MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
+                MENUW_BIND="$(printf '%bbind%b = BIND unbound to WAN [debug | disable | debug show]\n' "${cBYEL}" "${cRESET}")"  # v3.07
                 MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block [uninstall]\n' "${cBYEL}" "${cRESET}")"  # v3.03
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -612,7 +630,7 @@ welcome_message() {
 
                         if [ "$EASYMENU" == "N" ];then
                             MENU_I="$(printf '%bi %b = Update unbound and configuration %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
-                            MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (vx=Edit;vh=help)\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET")" # v3.06
+                            MENU_VX="$(printf '%bv %b = View %b%s %bunbound Configuration (%bvx%b=Edit;%bvh%b=help)\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')"  "$cRESET" "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}")" # v3.06
                         else
                             MENU_VX="$(printf '%bv %b = View %b%s\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR'unbound.conf)" )"    # v3.00
                         fi
@@ -633,16 +651,16 @@ welcome_message() {
                             if [ "$(Unbound_Installed)" == "Y" ];then           # Installed?  v2.18 Hotfix @toazd
                                 if [ -n "$(pidof unbound)" ];then   # UP ?
                                     if [ "$EASYMENU" == "N" ];then
-                                        MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (ox=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}")"
+                                        MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (%box%b=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}")"
                                         MENU_CA="$(printf "%bca%b = Cache Size Optimisation  ([ 'reset' ])\n" "${cBYEL}" "${cRESET}")"
 
                                         # Takes 0.75 - 2 secs :-( unless 'fastmenu' option ENABLED! ;-)
                                         if [ -n "$(awk '/^verbosity/ {print $2}' ${CONFIG_DIR}unbound.conf)" ] || [ "$(unbound_Control "oq" "verbosity" "value")" != "0" ];then   # v3.06 v1.16
                                             LOGSTATUS=$cBGRE"LIVE "$cRESET
-                                            LOGGING_OPTION="(lx=Disable Logging)"
+                                            LOGGING_OPTION="(${cBYEL}lx${cRESET}=Disable Logging)"
                                         else
                                             LOGSTATUS=
-                                            LOGGING_OPTION="(lo=Enable Logging)"
+                                            LOGGING_OPTION="(${cBYEL}lo${cRESET}=Enable Logging)"
                                         fi
                                         MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
 
@@ -837,8 +855,8 @@ _GetKEY() {
                              fi
                             local TAG="Date Loaded by unbound_manager "$(date)")"
                             sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
-                            #echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
-                            #$UNBOUNCTRLCMD reload
+                            # Reapply local customisation 'include: unbound.conf.addgui'/'unbound.conf.add'
+                            Check_config_add_and_postconf                                               # v3.07
                             Restart_unbound
                         else
                              echo -e $cBCYA"Retrieving Example unbound configuration"$cBGRA
@@ -1302,7 +1320,8 @@ EOF
                     echo -en $cBCYA"\nRestarting dnsmasq....."$cBGRE        # v2.09
                     service restart_dnsmasq
                     echo -en $cBCYA"\nunbound STOPPED."$cBGRE
-                    break
+                    SayT "unbound STOPPED"                                  # v3.08
+                    #break                                                  # v3.08
                 ;;
                 debug|dd|ddnouser)                # v1.07
 
@@ -1326,9 +1345,17 @@ EOF
 
                     if [ "$(Unbound_Installed)" == "Y" ];then  # v2.01
                         echo -e $cBCYA"\n\tunbound Memory/Cache:\n"                         # v2.00
-                        CACHESIZE="$($UNBOUNCTRLCMD get_option key-cache-size)";echo -e $cRESET"\t'key-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
-                        CACHESIZE="$($UNBOUNCTRLCMD get_option msg-cache-size)";echo -e $cRESET"\t'msg-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
-                        CACHESIZE="$($UNBOUNCTRLCMD get_option rrset-cache-size)";echo -e $cRESET"\t'rrset-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE") | cut -d' ' -f1)"m)"
+                        local CACHESIZE="$($UNBOUNCTRLCMD get_option key-cache-size)";echo -e $cRESET"\t'key-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE"))")"
+
+                        local CACHESIZE="$($UNBOUNCTRLCMD get_option msg-cache-size)"
+                        local USED_CACHE=$($UNBOUNCTRLCMD stats_noreset | awk 'BEGIN {FS="[= ]"} /mem.cache.message=/ {print $2}') # v3.07
+                        local PCT="$(Calculate_Percent "$CACHESIZE" "$USED_CACHE")"
+                        echo -e $cRESET"\t'msg-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE"))")\t${cBGRE}$PCT% used$cRESET $USED_CACHE\t($(echo $(Size_Human "$USED_CACHE")))" # v3.07
+
+                        local CACHESIZE="$($UNBOUNCTRLCMD get_option rrset-cache-size)"
+                        local USED_CACHE=$($UNBOUNCTRLCMD stats_noreset | awk 'BEGIN {FS="[= ]"} /mem.cache.rrset=/ {print $2}') # v3.07
+                        local PCT="$(Calculate_Percent "$CACHESIZE" "$USED_CACHE")"
+                        echo -e $cRESET"\t'rrset-cache-size:'\t$cBMAG"$CACHESIZE" ("$(echo $(Size_Human "$CACHESIZE"))")\t${cBGRE}$PCT% used$cRESET $USED_CACHE\t($(echo $(Size_Human "$USED_CACHE")))" # v3.07
                     else
                         echo -e $cBCYA"\n\tunbound Memory/Cache:\n\n\t\t${cBMAG}n/a"        # v2.00
                     fi
@@ -1427,7 +1454,7 @@ EOF
                         if [ "$ARG" != "disable" ];then
                             if [ "$ARG" == "debug" ] && [ "$ARG2" == "show" ];then  # v3.05
                                 local WANIP=$(nvram get wan0_ipaddr)                # v3.05
-                                grep -v -F "[BLOCKED" /tmp/syslog.log | grep -o "^.*DPT=53"  | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"  # v3.06 Hotfix v3.05
+                                grep -v -F "[BLOCKED" /tmp/syslog.log | grep -o "^.*DPT=53"  | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"  # v3.07 v3.05
                                 local RC=1
                             else
                                 AUTO_REPLY9="?"                                     # v3.05
@@ -1447,18 +1474,27 @@ EOF
                 ;;
                 bind*)                                                       # v3.06  [ any | disable ]
                     # Allow overriding default ANY interface to bind to WAN ONLY to send DNS Root Server requests
-
+                    local ARG2=                                              # v3.07
+                    if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then
+                        local ARG2="$(printf "%s" "$menu1" | cut -d' ' -f3)"
+                    fi
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                     fi
 
                     if [ "$(Unbound_Installed)" == "Y" ];then
-                        if [ "$ARG" != "any" ] && [ "$ARG" != "disable" ];then      # v3.06 Hotfix
+                        if [ "$ARG" != "any" ] && [ "$ARG" != "disable" ];then      # v3.07
+                            if [ "$ARG" == "debug" ] && [ "$ARG2" == "show" ];then  # v3.07
+                                local WANIP=$(nvram get wan0_ipaddr)                # v3.07
+                                grep -v -F "[BLOCKED" /tmp/syslog.log | grep -o "^.*DPT=53"  | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"  # v3.07
+                                local RC=1
+                            else
                                 AUTO_REPLY9="?"
                                 echo
-                                Option_BIND_WAN "$AUTO_REPLY9" "$ARG"
+                                Option_BIND_WAN "$AUTO_REPLY9" "$ARG" "$ARG2"
                                 local RC=$?
+                            fi
                         else
                             BIND_WAN "any"
                             local RC=0
@@ -1691,25 +1727,21 @@ EOF
                             local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"         # v3.05
                         fi
 
-                        local DNS_INTERFACE="any"                                           # v3.05
-                        local TCPDUMP_PORTS="53 or 853"                                 # v3.05
+                        local DNS_INTERFACE="any"                                       # v3.05
+                        if [ "$ARG" != "?" ];then                                           # v3.07
+                            [ -n "$ARG" ] && local DNS_INTERFACE=$ARG                      # v3.07
+                            local TCPDUMP_PORTS="53 or 853"                                 # v3.05
 
-                        if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then                        # v3.05
-                           local TCPDUMP_PORTS="$(printf "%s" "$menu1" | cut -d' ' -f3-)"
-                        fi
-                        if [ -z "$ARG" ];then                                               # # v3.05
-                            if [ -n "$(grep -E "^outgoing-interface:" ${CONFIG_DIR}unbound.conf)"  ];then   # v3.05
-                               local VPN_CLIENT_GW="$(awk '/^outgoing-interface:/ {print $2}' ${CONFIG_DIR}unbound.conf)"
-                               local VPN_IF=$(ip route | grep "${VPN_CLIENT_GW}" | awk '{print $3}')
-                               local DNS_INTERFACE=$VPN_IF
+                            if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then                        # v3.05
+                                local TCPDUMP_PORTS="$(printf "%s" "$menu1" | cut -d' ' -f3-)"
                             fi
-                        else
-                            DNS_INTERFACE=$ARG                                              # v3.05
-                        fi
 
-                        echo -e $cBMAG"\a\n${LOGFILE}$TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
-                        trap 'welcome_message' INT
-                        [ -n "$(which tcpdump)" ] && tcpdump -i $DNS_INTERFACE 'port ('$TCPDUMP_PORTS')' -nn -tttt || echo -e $cBRED"\a\n\ttcpdump not installed!\n"  # v3.00
+                            echo -e $cBMAG"\a\n${LOGFILE}$TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
+                            trap 'welcome_message' INT
+                            [ -n "$(which tcpdump)" ] && tcpdump -i $DNS_INTERFACE 'port ('$TCPDUMP_PORTS')' -nn -tttt || echo -e $cBRED"\a\n\ttcpdump not installed!\n"  # v3.00
+                        else
+                            tcpdump -D                                  # v3.07
+                        fi
                     else
                         echo -e $cBRED"\a\n\tEntware's tcpdump NOT installed!"$cRESET       # v3.05
                     fi
@@ -1718,6 +1750,7 @@ EOF
                     printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
                 ;;
             esac
+set +x
         done
 }
 Check_Lock() {
@@ -2196,8 +2229,8 @@ Use_VPN_Tunnel() {
                            local TXT=", and tracked in Syslog"
                            #WANIP=$(nvram get wan0_ipaddr);grep -o "^.*DPT=53" /tmp/syslog.log | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"local TXT="and Tracked to Syslog"
                         fi
-                        echo -e $cBCYA"\n\tunbound requests via VPN Client ${cBMAG}$VPN_ID ($VPN_CLIENT_GW)$cBCYA tunnel ${cRESET}ENABLED" ${TXT}$cBGRA   # v3.04
-                        SayT "unbound requests via VPN Client $VPN_ID ($VPN_CLIENT_GW) tunnel ENABLED" $TXT
+                        echo -e $cBCYA"\n\tunbound requests via VPN Client ${cBMAG}$VPN_ID ($VPN_CLIENT_GW)$cBCYA tunnel ${cRESET}ENABLED"${TXT}$cBGRA   # v3.04
+                        SayT "unbound requests via VPN Client $VPN_ID ($VPN_CLIENT_GW) tunnel ENABLED"$TXT
                     else
                         Edit_config_options "outgoing-interface:"  "comment"   # v3.05
                         echo -e $cBRED"\a\n\n\t***ERROR unbound request via VPN Client ${cBMAG}$VPN_ID ($VPN_CLIENT_GW)$cBCYA tunnel ABORTED!\n"$cRESET   # v3.04 Hotfix
@@ -2247,11 +2280,13 @@ Option_BIND_WAN() {
 BIND_WAN() {
 
     local STATUS=0
+    local TRACK=$1                                            # v3.07
+    local TXT=
 
     if [ -n "$(grep -E "^[#|o].*utgoing-interface:" /opt/var/lib/unbound/unbound.conf)" ];then
-        [ "$1" = "y" ] && shift                                   # v3.05
-        local INTERFACE=$(echo "$1" | awk '{print $1}')
-        [ -z "$INTERFACE" ] && local INTERFACE="wan"
+
+        local INTERFACE="wan"
+        [ "$TRACK" == "any" ] && INTERFACE="any"
 
         case $INTERFACE in                                         # v3.06
         wan)
@@ -2260,8 +2295,13 @@ BIND_WAN() {
             local WAN_GW=$(ip route | grep src | grep -v default | grep -E "dev $WAN_IF[[:space:]]" | awk '{print $NF}')    # v3.06 Hotfix
             if [ -n "$WAN_GW" ];then
                 sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$WAN_GW/2" ${CONFIG_DIR}unbound.conf
-                echo -e $cBCYA"\n\tunbound requests force BIND to ${cBMAG}WAN ($WAN_GW) ${cRESET}ENABLED"$cBGRA
-                SayT "unbound requests force BIND via WAN ($WAN_GW) ENABLED"
+                if [ "$TRACK" == "debug" ] && [ -z "$(iptables -nvL OUTPUT | grep "DNS")" ];then   # v3.05
+                   iptables -I OUTPUT -p udp -m udp --dport 53 -m comment --comment "DNS request tracker" -j LOG
+                   local TXT=", and tracked in Syslog"
+                   #WANIP=$(nvram get wan0_ipaddr);grep -o "^.*DPT=53" /tmp/syslog.log | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"local TXT="and Tracked to Syslog"
+                fi
+                echo -e $cBCYA"\n\tunbound requests force BIND to ${cBMAG}WAN ($WAN_GW) ${cRESET}ENABLED"${TXT}$cBGRA   # v3.07
+                SayT "unbound requests force BIND via WAN ($WAN_GW) ENABLED"$TXT        # v3.07
             else
                 Edit_config_options "outgoing-interface:"  "comment"
                 echo -e $cBRED"\a\n\n\t***ERROR unbound request force BIND via ${cBMAG}WAN ($WAN_GW)$cBCYA ABORTED!\n"$cRESET   # v3.04 Hotfix
@@ -2269,11 +2309,12 @@ BIND_WAN() {
                 STATUS=1
             fi
         ;;
-        any|disable)
+        any)
             # Remember, 'post-mount' initialises Entware then you must include the following:
             #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh vpn=disable
             #
             Edit_config_options "outgoing-interface:"  "comment"
+            iptables -D OUTPUT -p udp -m udp --dport 53 -m comment --comment "DNS request tracker" -j LOG 2>/dev/null   # v3.07
             echo -e $cBCYA"\n\tunbound requests via ANY interface ${cRESET}ENABLED"$cBGRA
             SayT "unbound requests via ANY interface ENABLED"
         ;;
@@ -2358,12 +2399,25 @@ Backup_unbound_config() {
 }
 Check_config_add_and_postconf() {
 
-    # If 'server:' directives are to be included, append the 'include: $FN' directive so values will override any previous ones # v2.18 Hotfix
+    local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"     # v3.07
+    # If GUI 'server:' directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.addgui"' directive so values will override any previous ones # v3.07
+    if [ -f $CONFIG_ADD ];then
+        # Ensure GUI 'server:' directives can still be overridden so delete existing 'include: "/opt/share/unbound/configs/unbound.conf.add"'
+        echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" $cBCYAfrom '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
+        local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.add\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
+        [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.08 v3.07
+        local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.addgui"  # v3.07
+        echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
+        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom GUI server directives\n" >>  ${CONFIG_DIR}unbound.conf  # v3.07
+    fi
+
+    # If Custom 'server:' directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.add"' directive so values will override any previous ones # v2.18 Hotfix
     local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"              # v2.10
     if [ -f $CONFIG_ADD ];then
         echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA
         [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
+
     local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
     if [ -f $POSTCONF_SCRIPT ];then
         echo -e $cBCYA"Executing $cBGRE'$POSTCONF_SCRIPT'"$cBGRA
@@ -2677,13 +2731,18 @@ unbound_Control() {
             case "$1" in
                 dump|save)
                     $UNBOUNCTRLCMD dump_cache > $FN
-                    [ "$1" == "save" ] && echo -e $cRESET"\a\n\tunbound cache SAVED to $cBGRE'/opt/share/unbound/configs/cache.txt'$cRESET - BEWARE, file will be DELETED on first RELOAD"$cRESET  2>&1
-
+                    if [ "$1" == "save" ];then
+                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
+                        echo -e $cRESET"\a\n\tunbound cache SAVED to $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET" ("$TIMESTAMP") - BEWARE, file will be DELETED on first RELOAD"$cRESET 2>&1   # v3.08
+                        SayT "unbound cache SAVED to '/opt/share/unbound/configs/cache.txt' - BEWARE, file will be DELETED on first RELOAD" $TIMESTAMP
+                    fi
                 ;;
                 load|rest)
                     if [ -s /opt/share/unbound/configs/cache.txt ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
+                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
                         $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
-                        [ "$1" == "rest" ] && echo -e $cRESET"\a\n\tunbound cache RESTORED from $cBGRE'/opt/share/unbound/configs/cache.txt'$cRESET"    # v2.12
+                        echo -e $cRESET"\a\n\tunbound cache RESTORED from $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET "("$TIMESTAMP")"    # v3.08 v2.12
+                        SayT "unbound cache RESTORED from '/opt/share/unbound/configs/cache.txt' ("$TIMESTAMP")"
                         rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
                     fi
                 ;;
@@ -2774,23 +2833,24 @@ unbound_Control() {
         ;;
         s|s*)                                                               # v2.07
             # xxx-cache.count values won't be shown without 'extended-statistics: yes' see 's+'/'s-' menu option
+            echo -e $cYEL
             $UNBOUNCTRLCMD stats$RESET | grep -E "total\.|cache\.count"  | column          # v1.08
             # Calculate %Cache HIT success rate
             local TOTAL=$($UNBOUNCTRLCMD stats$RESET | grep -oE "total.num.queries=.*" | cut -d'=' -f2)
             local CACHEHITS=$($UNBOUNCTRLCMD stats$RESET | grep -oE "total.num.cachehits=.*" | cut -d'=' -f2)
             if [ -n "$TOTAL" ] && [ $TOTAL -gt 0 ];then                 # v2.00
-                local PCT=$((CACHEHITS*100/TOTAL))
+                #local PCT=$((CACHEHITS*100/TOTAL))
+                local PCT="$(Calculate_Percent "$TOTAL" "$CACHEHITS")"  # v3.07
             else
                 local PCT=0                                             # v2.00
             fi
-            printf "\n%bSummary: Cache Hits success=%3.2f%%" "$cRESET" "$PCT"
+            printf "\n%bSummary: Cache Hits success=%b%3.2f%%" "$cBCYA" "$cRESET" "$PCT"
 
             if [ -n "$ADDFILTER" ];then                                 # v2.07 allow display of additional stat value(s)
                 # NOTE: 's+' aka 'extended-statistic[CODE][/CODE]s: yes' must be ACTIVE if you expect 's thread' to work!
                 echo -e "\n"
                 $UNBOUNCTRLCMD stats$RESET  | grep -E "$ADDFILTER" | column
             fi
-
         ;;
         oq|oq*)
             local CONFIG_VARIABLE
@@ -2951,8 +3011,7 @@ remove_existing_installation() {
         fi
 
         # Purge unbound directories
-        #(NOTE: Entware installs to '/opt/etc/unbound' but some kn*b-h*d wants '/opt/var/lib/unbound'
-        for DIR in "/opt/var/lib/unbound/adblock" "/opt/var/lib/unbound" "/opt/etc/unbound" "/jffs/addons/unbound";  do     # v2.00 v1.07
+        for DIR in "/opt/var/lib/unbound/adblock" "/opt/var/lib/unbound" "/jffs/addons/unbound";  do     # v3.08 v2.00 v1.07
             if [ -d "$DIR" ]; then
                 if ! rm "$DIR"/* >/dev/null 2>&1; then
                     printf '%bNo files found to remove in %b%s%b\n' "${cRESET}$cRED" "$cBGRE" "$DIR" "$cRESET"
@@ -3249,8 +3308,8 @@ Valid_unbound_config_Syntax() {
     #
     local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|\
 interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:|tags:|access-control-tag:"   # v3.00 Hotfix
-    local DUPLICATES="$(sed '/^[[:space:]]*#/d' /opt/var/lib/unbound/unbound.conf | grep . | awk '{print $1}' | sort | uniq -cd | \
-                       grep -vE "$STATEMENTS")"
+    local DUPLICATES="$(sed '/^[[:space:]]*#/d' /opt/var/lib/unbound/unbound.conf | sed '/^[[:space:]]*$/d' | sed '/^$/d' | awk '{print $1}' | sort | uniq -cd | \
+                       grep -vE "$STATEMENTS")"                                            # v3.07
 
     if [ -z "$DUPLICATES"  ];then   # v3.00
        local CHK_Config_Syntax="$(unbound-checkconf $CHECKTHIS 2>/dev/null)"           # v2.03
@@ -3965,37 +4024,60 @@ case "$1" in
         Show_status "syslog"
         exit_message
         ;;
-    vpn*)                           # v3.00
-        VPN_ID=$(echo "$@" | sed -n "s/^.*vpn=//p" | awk '{print $1}')
-        case $VPN_ID in
-        1|2|3|4|5)
-                # Allow the asyncronous call from openvpn-event vpnclientX-up to ensure that the VPN Client has fully initialised
-                DELAY="$(echo "$@" | sed -n "s/^.*delay=//p")" # v3.05
-                if [ -n "$DELAY" ];then                        # v3.05
-                    [ -n "$(echo $DELAY | grep -E "(^[1-9]$)|^[1-9][0-9]$")" ] && sleep $DELAY || { echo -e $cBRED"\a\n";Say "***ERROR Invalid arg 'delay=$DELAY' - must in range 1-99" ;exit_message 1;} # v3.06 Fix @ugandy v3.05
-                fi
+    vpn*|bind|nobind)              # v3.08 v3.00
 
-                if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
-                    Use_VPN_Tunnel "$VPN_ID"
-                    [ $? -eq 0 ] && Restart_unbound
-                else
+        case "$1" in
+            vpn*)                   # v3.08
+                VPN_ID=$(echo "$@" | sed -n "s/^.*vpn=//p" | awk '{print $1}')
+                case $VPN_ID in
+                1|2|3|4|5)
+                        # Allow the asyncronous call from openvpn-event vpnclientX-up to ensure that the VPN Client has fully initialised
+                        DELAY="$(echo "$@" | sed -n "s/^.*delay=//p")" # v3.05
+                        if [ -n "$DELAY" ];then                        # v3.05
+                            [ -n "$(echo $DELAY | grep -E "(^[1-9]$)|^[1-9][0-9]$")" ] && sleep $DELAY || { echo -e $cBRED"\a\n";Say "***ERROR Invalid arg 'delay=$DELAY' - must in range 1-99" ;exit_message 1;} # v3.06 Fix @ugandy v3.05
+                        fi
+
+                        if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
+                            Use_VPN_Tunnel "$VPN_ID"
+                            [ $? -eq 0 ] && Restart_unbound
+                        else
+                            echo -e $cBRED"\n\a"
+                            Say "***ERROR VPN Client '$VPN_ID' is NOT Connected?"
+                        fi
+                ;;
+                disable)
+                        # Remember, 'post-mount' initialises Entware then you must include the following:
+                        #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh vpn=disable
+                        #
+                        Use_VPN_Tunnel "disable"
+                        [ $? -eq 0 ] && Restart_unbound
+                ;;
+                *)
                     echo -e $cBRED"\n\a"
-                    Say "***ERROR VPN Client '$VPN_ID' is NOT Connected?"
-                fi
-        ;;
-        disable)
-                # Remember, 'post-mount' initialises Entware then you must include the following:
-                #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh vpn=disable
-                #
-                Use_VPN_Tunnel "disable"
-                [ $? -eq 0 ] && Restart_unbound
-        ;;
-        *)
-            echo -e $cBRED"\n\a"
-            Say "***ERROR Invalid argument '$VPN_ID' must be numeric '1-5' or 'disable'"
+                    Say "***ERROR Invalid argument '$VPN_ID' must be numeric '1-5' or 'disable'"
+                esac
+                echo -e $cRESET
+                exit_message
+                ;;
+            *)                          # v3.08
+                case "$1" in
+                    bind)
+                        # Called from event script 'wan0-connected'
+                        BIND_WAN "wan"
+                        [ $? -eq 0 ] && Restart_unbound
+                        ;;
+                    nobind)
+                        # Remember, 'post-mount' initialises Entware then you must include the following:
+                        #   [ -n "$(which unbound_manager)" ] && sh /jffs/addons/unbound/unbound_manager.sh nobind
+                        #
+                        BIND_WAN "any"
+                        [ $? -eq 0 ] && Restart_unbound
+                        ;;
+                esac
+                echo -e $cRESET
+                exit_message
+                ;;
         esac
-        echo -e $cRESET
-        exit_message
 esac
 
 
