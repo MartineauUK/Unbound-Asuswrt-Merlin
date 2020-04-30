@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.08
+#============================================================================================ © 2019-2020 Martineau v3.09
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 29-Apr-2020
+# Last Updated Date: 30-Apr-2020
 #
 # Description:
 #
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.08"
+VERSION="3.09"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -115,11 +115,16 @@ SayT(){
    echo -e $$ $@ | logger -t "($(basename $0))"
 }
 # shellcheck disable=SC2034
-ANSIColours() {
-    cRESET="\e[0m";cBLA="\e[30m";cRED="\e[31m";cGRE="\e[32m";cYEL="\e[33m";cBLU="\e[34m";cMAG="\e[35m";cCYA="\e[36m";cGRA="\e[37m"
+ANSIColours () {
+    cRESET="\e[0m";cBLA="\e[30m";cRED="\e[31m";cGRE="\e[32m";cYEL="\e[33m";cBLU="\e[34m";cMAG="\e[35m";cCYA="\e[36m";cGRA="\e[37m";cFGRESET="\e[39m"
     cBGRA="\e[90m";cBRED="\e[91m";cBGRE="\e[92m";cBYEL="\e[93m";cBBLU="\e[94m";cBMAG="\e[95m";cBCYA="\e[96m";cBWHT="\e[97m"
     aBOLD="\e[1m";aDIM="\e[2m";aUNDER="\e[4m";aBLINK="\e[5m";aREVERSE="\e[7m"
+    aBOLDr="\e[21m";aDIMr="\e[22m";aUNDERr="\e[24m";aBLINKr="\e[25m";aREVERSEr="\e[27m"
     cWRED="\e[41m";cWGRE="\e[42m";cWYEL="\e[43m";cWBLU="\e[44m";cWMAG="\e[45m";cWCYA="\e[46m";cWGRA="\e[47m"
+    cYBLU="\e[93;48;5;21m"
+    cRED_="\e[41m";cGRE_="\e[42m"
+    xHOME="\e[H";xERASE="\e[2J";xERASEDOWN="\e[J";xERASEUP="\e[1J";xCSRPOS="\e[s";xPOSCSR="\e[u";xERASEEOL="\e[K"
+    xGoto="\e[Line;Columnf"
 }
 Get_Router_Model() {
 
@@ -485,7 +490,7 @@ welcome_message() {
                 MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
                 MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
                 MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENU_FM="$(printf '%bfastmenu%b = Disable SLOW unbound-control LAN SSL cert validation\n' "${cBYEL}" "${cRESET}")"
+                #MENU_FM="$(printf '%bfastmenu%b = Disable SLOW unbound-control LAN SSL cert validation\n' "${cBYEL}" "${cRESET}")"
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
@@ -607,7 +612,7 @@ welcome_message() {
                             UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b UPDATE %b%s%b >>>> %b%s\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBRED" "$cBMAG" "v$VERSION" "$cRESET" "$cBGRE" "v$REMOTE_VERSION_NUMDOT")" # v1.21
                         else
                             ALLOWUPGRADE="N"
-                            UPDATE_SCRIPT_ALERT="$(printf '%bu  = %bPush to Github PENDING for %b(Minor Hotfix) %b%s update >>>> %b%s %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cRESET" "$cBMAG" "v$VERSION")" # v11.21
+                            UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Minor Hotfix) %b%s update >>>> %b%s %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cRESET" "$cBMAG" "v$VERSION")" # v11.21
                         fi
                     else
                         if [ "$localmd5" != "$remotemd5" ]; then
@@ -654,14 +659,14 @@ welcome_message() {
                                     if [ "$EASYMENU" == "N" ];then
                                         MENU_OQ="$(printf "%boq%b = Query unbound Configuration option e.g 'oq verbosity' (%box%b=Set) e.g. 'ox log-queries yes'\n" "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}")"
                                         MENU_CA="$(printf "%bca%b = Cache Size Optimisation  ([ 'reset' ])\n" "${cBYEL}" "${cRESET}")"
-
+                                        local LOGLEVEL=$(unbound_Control "oq" "verbosity" "value")         # v3.09
                                         # Takes 0.75 - 2 secs :-( unless 'fastmenu' option ENABLED! ;-)
-                                        if [ -n "$(awk '/^verbosity/ {print $2}' ${CONFIG_DIR}unbound.conf)" ] || [ "$(unbound_Control "oq" "verbosity" "value")" != "0" ];then   # v3.06 v1.16
-                                            LOGSTATUS=$cBGRE"LIVE "$cRESET
+                                        if [ "$(awk '/^verbosity:.*[1-9]/ {print $2}' ${CONFIG_DIR}unbound.conf)" -gt 0 ] || [ "$LOGLEVEL" != "0" ];then   # v3.09 v3.08 v3.06 v1.16
+                                            LOGSTATUS=$cBGRE"LIVE ${cBCYA}(Loglevel="${LOGLEVEL}") "$cRESET
                                             LOGGING_OPTION="(${cBYEL}lx${cRESET}=Disable Logging)"
                                         else
                                             LOGSTATUS=
-                                            LOGGING_OPTION="(${cBYEL}lo${cRESET}=Enable Logging)"
+                                            LOGGING_OPTION="(${cBYEL}lo${cRESET}=Enable Logging [log_level])"
                                         fi
                                         MENU_L="$(printf "%bl %b = Show unbound %blog entries $LOGGING_OPTION\n" "${cBYEL}" "${cRESET}" "$LOGSTATUS")"
 
@@ -719,7 +724,7 @@ welcome_message() {
                         if [ -f /opt/etc/init.d/S61unbound ] || [ -f ${CONFIG_DIR}unbound.conf ];then       # v3.00
                             MENU_I="$(printf '%b1 %b = Update unbound files and configuration' "${cBYEL}" "${cRESET}")"
                         else
-                            MENU_I="$(printf '%b1 %b = Begin unbound Installation Process %b' "${cBYEL}" "${cRESET}")"
+                            MENU_I="$(printf '%b1 %b = Begin unbound Installation Process' "${cBYEL}" "${cRESET}")"
                         fi
                         if [ -n "$(pidof unbound)" ];then
                             MENU_S="$(printf '%b3 %b = %bStop%b unbound' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}" )"
@@ -761,15 +766,15 @@ welcome_message() {
                         MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
 
                         echo -en $cRESET
-                        printf "%s\t\t%s\n"            "$MENU_I"
-                        printf "%s\t\t%s\n"            "$MENU_Z"
-                        printf "%s\t\t%s\n"            "$MENU_S"
-                        printf "%s\t\t%s\n"            "$MENU_ST"
-                        printf "%s\t\t%s\n"            "$MENU_AD"
-                        printf "%s\t\t%s\n"            "$MENU_T"
-                        printf "%s\t\t%s\n"            "$MENUW_RPZ"         # v3.02 Hotfix
-                        printf "\n%s\t\t%s\n"          "$MENU__"
-                        printf "%s\t\t%s\n"            "$MENU_VX"
+                        printf "%s\t\t\n"            "$MENU_I"
+                        printf "%s\t\t\n"            "$MENU_Z"
+                        printf "%s\t\t\n"            "$MENU_S"
+                        printf "%s\t\t\n"            "$MENU_ST"
+                        printf "%s\t\t\n"            "$MENU_AD"
+                        printf "%s\t\t\n"            "$MENU_T"
+                        printf "%s\t\t\n"            "$MENUW_RPZ"         # v3.02 Hotfix
+                        printf "\n%s\t\t\n"          "$MENU__"
+                        printf "%s\t\t\n"            "$MENU_VX"
                     fi
                     printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
                 fi
@@ -816,7 +821,6 @@ _GetKEY() {
                                      [ -n "$(echo "$menu1" | grep -E "7.*\?")" ] && menu1="firewall ?"                  # v3.03
                                   fi
                     ;;
-                    e*) ;;
                     u|uf) ;;
                     "?") ;;
                     v|vx|vh) ;;                         # v3.06 v3.04
@@ -825,6 +829,7 @@ _GetKEY() {
                     rl) ;;                              # v3.04
                     "") ;;
                     easy|adv*) ;;
+                    e*) ;;
                     *) printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
                        continue
                        ;;
@@ -835,7 +840,7 @@ _GetKEY() {
                 0|splash)                                           # v2.12
                     HDR="ForceDisplay"                                            # v1.09
                 ;;
-                1|2|2*|i|iu|i*|"i?")
+                1|2|2*|i|iu|"i?"|i*)
 
                     USE_GITHUB_DEV="N"                                  # v2.06
                     if [ -n "$(echo "$menu1" | grep -o "dev")" ];then   # v2.06
@@ -843,17 +848,16 @@ _GetKEY() {
                         menu1="$(echo "$menu1" | sed 's/dev//g')"
                     fi
 
-                    local GET_CONFIGEXAMPLE_ONLY="N"                                  # v3.05
                     if [ -n "$(echo "$menu1" | grep -o "config")" ] || [ -n "$(echo "$menu1" | grep -o "example")" ];then   # v3.06
-
-                        local GET_CONFIGEXAMPLE_ONLY="Y"                              # v3.05 Only retrieve 'unbound.conf' or Example config.in
                         if [ -n "$(echo "$menu1" | grep -o "config")" ];then
-                             echo -e $cBCYA"Retrieving Custom unbound configuration"$cBGRA
-                             if [ "$USE_GITHUB_DEV" != "Y" ];then
-                                download_file $CONFIG_DIR unbound.conf martineau  # v3.05
-                             else
-                                download_file $CONFIG_DIR unbound.conf martineau dev # v3.05
-                             fi
+                            echo -e $cBCYA"Retrieving Custom unbound configuration"$cBGRA
+                            if [ "$USE_GITHUB_DEV" != "Y" ];then
+                               download_file $CONFIG_DIR unbound.conf martineau  # v3.05
+                            else
+                               download_file $CONFIG_DIR unbound.conf martineau dev # v3.05
+                            fi
+                            Edit_config_options "verbosity"       "uncomment"     # v3.09
+                            sed -i "/^verbosity:/ s/[^ ]*[^ ]/0/2" ${CONFIG_DIR}unbound.conf   # v3.09
                             local TAG="Date Loaded by unbound_manager "$(date)")"
                             sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
                             # Reapply local customisation 'include: unbound.conf.addgui'/'unbound.conf.add'
@@ -867,7 +871,6 @@ _GetKEY() {
                                 download_file /opt/share/unbound/configs doc/example.conf.in nlnetlabs  dev # v3.06
                              fi
                         fi
-
                     else
 
                         KEEPACTIVECONFIG="N"                                # v1.27
@@ -1052,7 +1055,7 @@ _GetKEY() {
                         if [ "$NEW_CONFIG" != "?" ];then                # v1.22
                             local PERFORMRELOAD="Y"
                             [ -z "$(echo "$NEW_CONFIG" | grep -E "\.conf$")" ] && NEW_CONFIG=$NEW_CONFIG".conf"
-                            [ "${NEWCONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.19
+                            [ "${NEW_CONFIG:0:1}" != "/" ] && NEW_CONFIG="/opt/share/unbound/configs/"$NEW_CONFIG    # v1.19
                             local TXT=
                             if [ -f $NEW_CONFIG ];then
                                 if [ "$(Valid_unbound_config_Syntax "$NEW_CONFIG")" == "Y" ];then # v2.03
@@ -1090,7 +1093,7 @@ _GetKEY() {
                         else
                             local FN="/opt/share/unbound/configs/unbound.conf.add"  # v3.00
                             if [ -n "$(echo "$NEW_CONFIG" | grep "reset")" ] && [ -f $FN ];then
-                                echo -en $cRESET"\nReset requested..disabling $cBGRE'unbound.conf.add'$cRESET - renamed $cBGRE'$FN"RESET"'"$cRESET
+                                echo -en $cRESET"\nReset requested..disabling $cBGRE'unbound.conf.add'$cRESET - renamed $cBGRE'${FN}RESET'"$cRESET
                                 mv $FN $FN"RESET"                               # v3.00 Always disable 'unbound.conf.add'
                             fi
                             Restart_unbound                                     # v3.00
@@ -1101,7 +1104,16 @@ _GetKEY() {
                     unset $TXT
                     #break
                 ;;
-                l|ln*|lo|lx)                                                    # v1.16
+                logtrace*)                                                      # v2.09
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                        # Turn on logging; perform the lookup;then turn off logging!
+
+                    else
+                        echo -e $cBRED"\a\n\t***ERROR Please specify valid domain for logtrace"
+                    fi
+                ;;
+                l|lx|ln*|lo*)                                                    # v1.16
 
                     [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }
 
@@ -1120,26 +1132,43 @@ _GetKEY() {
 
                     case $menu1 in
 
-                        lo)                                                     # v1.16
-                            $UNBOUNCTRLCMD -q set_option log-queries: yes
-                            Edit_config_options "log-queries:"    "uncomment"     # v3.06
-                            $UNBOUNCTRLCMD -q set_option log-replies: yes
-                            Edit_config_options "log-replies:"    "uncomment"     # v3.06
-                            $UNBOUNCTRLCMD -q set_option log-time-ascii: yes
-                            echo -e $(date "+%b %d %T") "unbound_manager: 'lo':  =================================================================================== Started" >> $LOGFILE   # v3.06
-                            $UNBOUNCTRLCMD -q set_option verbosity 1          # v3.06 v2.05
-                            Edit_config_options "verbosity"       "uncomment"     # v3.06
-                            echo -e $cBCYA"\nunbound logging ENABLED"$cRESET
-                            echo -e $cBMAG"\a\n${LOGFILE}$TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
-                            trap 'welcome_message' INT
-                            tail $NUM -F $LOGFILE
-                            # Cron job 00:01 daily to check'n'delete log file when it is >10MB
-                            cru d unboundLOG 2>/dev/null                        # v3.06
-                            cru a unboundLOG "1 0 * * * /opt/bin/find ${CONFIG_DIR}unbound.log -size +10M -exec rm -f {} \;"   # v3.06
+                        lo*)                                                            # v3.09 [ log_level ]v1.16
+
+                            local LOGLEVEL=1                                           # v3.08
+                            local TXT=
+                            if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                               local LOGLEVEL="$(printf "%s" "$menu1" | cut -d' ' -f2)" # v3.08
+                            fi
+
+                            if [ -n "$(echo $LOGLEVEL | grep -E "^[1-5]$")" ];then      # v3.09
+                                local TXT="(Loglevel="$LOGLEVEL")"
+                                $UNBOUNCTRLCMD -q set_option log-queries: yes
+                                Edit_config_options "log-queries:"    "uncomment"     # v3.06
+                                $UNBOUNCTRLCMD -q set_option log-replies: yes
+                                Edit_config_options "log-replies:"    "uncomment"     # v3.06
+                                $UNBOUNCTRLCMD -q set_option log-time-ascii: yes
+                                echo -e $(date "+%b %d %T") "unbound_manager: 'lo':  =================================================================================== Started Loglevel="$LOGLEVEL >> $LOGFILE   # v3.06
+                                $UNBOUNCTRLCMD -q verbosity $LOGLEVEL                         # v3.08 v3.06 v2.05
+                                $UNBOUNCTRLCMD -q set_option verbosity $LOGLEVEL
+                                Edit_config_options "verbosity"       "uncomment"     # v3.06
+                                sed -i "/^verbosity:/ s/[^ ]*[^ ]/$LOGLEVEL/2" ${CONFIG_DIR}unbound.conf   # v3.08
+                                echo -e $cBCYA"\nunbound logging $TXT ENABLED"$cRESET
+                                #[ $LOGLEVEL -gt 1 ] && Restart_unbound
+                                echo -e $cBMAG"\a\n${LOGFILE} $TXT\t\t${cBGRE}Press CTRL-C to stop\n"$cRESET
+                                trap 'welcome_message' INT
+                                tail $NUM -F $LOGFILE
+                                # Cron job 00:01 daily to check'n'delete log file when it is >10MB
+                                cru d unboundLOG 2>/dev/null                        # v3.06
+                                cru a unboundLOG "1 0 * * * /opt/bin/find ${CONFIG_DIR}unbound.log -size +10M -exec rm -f {} \;"   # v3.06
+                            else
+                                echo -e $cBRED"\a\n\t***ERROR Invalid arg 'log level' - must be in range 1-5"
+                            fi
                             ;;
                         lx)                                                     # v1.16
-                            $UNBOUNCTRLCMD -q set_option verbosity 0          # v 3.06 v2.05
-                            Edit_config_options "verbosity"       "comment"     # v3.06
+                            $UNBOUNCTRLCMD -q verbosity 0                     # v3.08 v3.06 v2.05
+                            $UNBOUNCTRLCMD -q set_option verbosity 0
+                            Edit_config_options "verbosity"       "uncomment"   # v3.08 v3.06
+                            sed -i "/^verbosity:/ s/[^ ]*[^ ]/0/2" ${CONFIG_DIR}unbound.conf
                             $UNBOUNCTRLCMD -q set_option log-queries: no
                             Edit_config_options "log-queries:"    "comment"     # v3.06
                             $UNBOUNCTRLCMD -q set_option log-replies: no
@@ -1226,6 +1255,7 @@ EOF
                             Edit_config_options "log-tag-queryreply:"  "uncomment"     # v2.05
                             Edit_config_options "verbosity"            "uncomment"     # v3.06
                             Edit_config_options "log-queries:"         "uncomment"     # v3.06
+                            Edit_config_options "log-replies:"         "uncomment"     # v3.08 Hotfix
                             #cru d unboundLOG 2>/dev/null
 
                             echo -en $cBGRE"\n$TXT${cRESET}Enabling syslog-ng logging (scribe)....."$cRESET     # v2.17
@@ -1282,7 +1312,7 @@ EOF
                         Check_GUI_NVRAM
                     fi
                 ;;
-                s*|sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp)                      # v2.07 v1.08
+                sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp|s*)                      # v2.07 v1.08
 
                     echo
                     unbound_Control "$menu1"                                # v1.16
@@ -1311,7 +1341,7 @@ EOF
 
                     #break
                 ;;
-                x|stop)                                                     # v2.01
+                x)                                                     # v2.01
 
                     [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
@@ -1534,7 +1564,7 @@ EOF
                     ;;
                     dnsinfo|dnsinfo*)
                     #https://mxtoolbox.com/SuperTool.aspx?action=dns%3a9.9.9.9&run=toolpage
-                    TESTHIS=
+                    TESTTHIS=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                     fi
@@ -1583,15 +1613,6 @@ EOF
                         fi
                     else
                         echo -e $cBRED"\a\n\t***ERROR Please specify valid domain for 'dig'"
-                    fi
-                ;;
-                logtrace*)                                                      # v2.09
-                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
-                        TESTTHIS="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
-                        # Turn on logging; perform the lookup;then turn off logging!
-
-                    else
-                        echo -e $cBRED"\a\n\t***ERROR Please specify valid domain for logtrace"
                     fi
                 ;;
                 option?*)
@@ -1946,7 +1967,7 @@ S02haveged_update() {
     echo -e $cBCYA"Updating S02haveged"$cGRA
 
     if [ -d "/opt/etc/init.d" ]; then
-        /opt/bin/find /opt/etc/init.d -type f -name S02haveged* | while IFS= read -r "line"; do
+        /opt/bin/find /opt/etc/init.d -type f -name "S02haveged*" | while IFS= read -r "line"; do
             rm "$line"
         done
     fi
@@ -2012,11 +2033,11 @@ Stubby_Integration() {
     else
         # Firmware may already contain stubby i.e. which stubby --> /usr/sbin/stubby '0.2.9' aka spoof 100002009
         ENTWARE_STUBBY_MAJVER=$(opkg info stubby | grep "^Version" | cut -d' ' -f2 | cut -d'-' -f1)
-        [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V) || FIRMWARE_STUBBY_VER="n/a"
+        [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V) || FIRMWARE_STUBBY_MAJVER="n/a"
 
         echo -e $cBCYA"Entware stubby Major version="$ENTWARE_STUBBY_MAJVER", Firmware stubby Major version="${FIRMWARE_STUBBY_MAJVER}$cBGRA
         ENTWARE_STUBBY_MAJVER=$(opkg info stubby | grep "^Version" | cut -d' ' -f2 | tr '-' ' ' | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}')
-        [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}') || FIRMWARE_STUBBY_VER="000000000"
+        [ -f /usr/sbin/stubby ] && FIRMWARE_STUBBY_MAJVER=$(/usr/sbin/stubby -V | awk 'BEGIN { FS = "." } {printf(1"%03d%03d%03d",$1,$2,$3)}') || FIRMWARE_STUBBY_MAJVER="000000000"
         opkg install stubby ca-bundle
 
         download_file /opt/etc/init.d S62stubby jackyaz         # v2.02 v1.10
@@ -2301,11 +2322,11 @@ BIND_WAN() {
                    local TXT=", and tracked in Syslog"
                    #WANIP=$(nvram get wan0_ipaddr);grep -o "^.*DPT=53" /tmp/syslog.log | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"local TXT="and Tracked to Syslog"
                 fi
-                echo -e $cBCYA"\n\tunbound requests force BIND to ${cBMAG}WAN ($WAN_GW) ${cRESET}ENABLED"${TXT}$cBGRA   # v3.07
+                echo -e $cBCYA"\n\tunbound requests force BIND to ${cBMAG}WAN ($WAN_GW) '$WAN_IF' ${cRESET}ENABLED"${TXT}$cBGRA   # v 3.09 v3.07
                 SayT "unbound requests force BIND via WAN ($WAN_GW) ENABLED"$TXT        # v3.07
             else
                 Edit_config_options "outgoing-interface:"  "comment"
-                echo -e $cBRED"\a\n\n\t***ERROR unbound request force BIND via ${cBMAG}WAN ($WAN_GW)$cBCYA ABORTED!\n"$cRESET   # v3.04 Hotfix
+                echo -e $cBRED"\a\n\n\t***ERROR unbound request force BIND via ${cBMAG}WAN ($WAN_GW) '$WAN_IF' $cBCYA ABORTED!\n"$cRESET   # v3.09 v3.04 Hotfix
                 SayT "unbound request force BIND via WAN ($WAN_GW) ABORTED!"
                 STATUS=1
             fi
@@ -2365,7 +2386,7 @@ DNS_Firewall() {
         echo -e $cGRA
         sh /jffs/addons/unbound/unbound_rpz.sh "install"                                # v3.02
         # Allow external definitions...created by @juched's 'unbound_rpz.sh'            # v3.03
-        echo -e $cBCYA"Adding $cBGRE'include: \"$FIREWALL_CONFIG\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA # v3.03 Hotfix
+        echo -e $cBCYA"Adding $cBGRE'include: \"$FIREWALL_CONFIG\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA # v3.03 Hotfix
         [ -z "$(grep "^include.*$FIREWALL_CONFIG" ${CONFIG_DIR}unbound.conf)" ] && echo -e "include: \"$FIREWALL_CONFIG\"\t\t# Custom DNS Firewall\n" >>  ${CONFIG_DIR}unbound.conf # v3.04 v3.03
         echo -e $cBCYA"\n\tunbound DNS Firewall ${cRESET}ENABLED"$cBGRA
         SayT "unbound DNS Firewall ENABLED"
@@ -2398,32 +2419,38 @@ Backup_unbound_config() {
     fi
     return 0
 }
+# shellcheck disable=SC2120
 Check_config_add_and_postconf() {
 
-    local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"     # v3.07
-    # If GUI 'server:' directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.addgui"' directive so values will override any previous ones # v3.07
+    local VERBOSE="Y"                                                       # v3.09
+
+    [ -n "$1" ] && local VERBOSE="N"                                        # v3.09
+
+    # If GUI 'server:' directives are to be included, insert 'include: "/opt/share/unbound/configs/unbound.conf.addgui"' BEFORE 'include: "/opt/share/unbound/configs/unbound.conf.add   # v3.07
+    local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.addgui"  # v3.07
     if [ -f $CONFIG_ADD ];then
-        # Ensure GUI 'server:' directives can still be overridden so delete existing 'include: "/opt/share/unbound/configs/unbound.conf.add"'
-        echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" $cBCYAfrom '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
-        local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.add\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
-        [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.08 v3.07
-        local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.addgui"  # v3.07
-        if [ -f $CONFIG_ADD ];then                                          # v3.08
-            echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
-            [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom GUI server directives\n" >>  ${CONFIG_DIR}unbound.conf  # v3.07
-        fi
+       if [ -f /opt/share/unbound/configs/unbound.conf.add ];then                                      # v3.08
+           local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"   # Temporary override for purposes of delete function...
+           # Delete existing 'include: "/opt/share/unbound/configs/unbound.conf.add"'
+           [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}from '${CONFIG_DIR}unbound.conf'"$cBGRA   # v3.07
+           local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.add\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
+           [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.08 v3.07
+           local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.addgui"   # Reinstate '.addgui
+       fi
+       [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
+       [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n" >>  ${CONFIG_DIR}unbound.conf
     fi
 
     # If Custom 'server:' directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.add"' directive so values will override any previous ones # v2.18 Hotfix
     local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"              # v2.10
     if [ -f $CONFIG_ADD ];then
-        echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" $cBCYAto '${CONFIG_DIR}unbound.conf'"$cBGRA
+        [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
         [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
 
     local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
     if [ -f $POSTCONF_SCRIPT ];then
-        echo -e $cBCYA"Executing $cBGRE'$POSTCONF_SCRIPT'"$cBGRA
+        [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Executing $cBGRE'$POSTCONF_SCRIPT'"$cBGRA
         sh $POSTCONF_SCRIPT "${CONFIG_DIR}unbound.conf"
     fi
 }
@@ -2490,8 +2517,6 @@ Customise_config() {
 
      echo -e $cBCYA"Customising unbound configuration Options:"$cRESET
 
-     Enable_Logging "$1"                                        # v1.16 Always create the log file, but ask user if it should be ENABLED
-
      Check_config_add_and_postconf                              # Allow users to customise 'unbound.conf'
 
 }
@@ -2517,7 +2542,7 @@ Restart_unbound() {
             :
         fi
 
-        Check_config_add_and_postconf                       # v2.15
+        #Check_config_add_and_postconf                       # v3.09 v2.15
 
         /opt/etc/init.d/S61unbound restart
 
@@ -2532,7 +2557,6 @@ Restart_unbound() {
             echo -en ${cRESET}$cBCYA"\nChecking status, please wait..... "$cRESET
             #WAIT=11     # 11 i.e. 10 secs should be adequate?
             WAIT=3                          # v3.00 Hopefully unbound initialization should be valid
-            INTERVAL=1
             I=0
              while [ $I -lt $((WAIT-1)) ]
                 do
@@ -2545,8 +2569,7 @@ Restart_unbound() {
                     fi
                     [ $I -eq 2 ] && Manage_cache_stats "restore"        # v2.17
                 done
-            [ -n "$(pidof unbound)" ] && echo -e ${cRESET}$cBGRE"unbound OK"
-            [ "$menu1" == "rsnouser" ] &&  sed -i 's/^username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
+            [ -n "$(pidof unbound)" ] && echo -e ${cRESET}$cBCYA"unbound ${cBGRE}OK"
         else
             echo -en $cBCYA
         fi
@@ -2565,7 +2588,9 @@ Skynet_BANNED_Countries() {
         skynetloc="$(grep -ow "skynetloc=.* # Skynet" /jffs/scripts/firewall-start 2>/dev/null | grep -vE "^#" | awk '{print $1}' | cut -c 11-)"
         skynetcfg="${skynetloc}/skynet.cfg"
         if [ -f "$skynetcfg" ]; then
+            # shellcheck disable=SC1090
             . "$skynetcfg"
+            # shellcheck disable=SC2154
             [ -n "$countrylist" ] && echo "Y" || echo "N"   # v2.09
         fi
     fi
@@ -2645,30 +2670,40 @@ Optimise_CacheSize() {
 }
 Enable_Logging() {
 
+    # ONLY called from install_unbound
+
+     local STATUS=0                          # v3.08
+
      local ANS=$1            # v1.20 v1.07
      if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
         echo -en $cBYEL"Option Auto Reply 'y'\t"
      fi
 
-     if [ "$USER_OPTION_PROMPTS" == "?" ];then
+     if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then         # v3.09
          # v1.16 allows dynamic Enable/Disable from unbound_manager main menu (Options lo/lx)
          #      but the log file needs to exist in the config so unbound will create it - ready to be used
-         echo -e "\nDo you want to ENABLE unbound logging? (${cBCYA}NO$cRESET recommended)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip"
+         echo -e "\nDo you want to ENABLE unbound logging? (${cBCYA}NO$cRESET recommended)\n\n\tReply$cBRED 'y'$cBGRE or press ENTER $cRESET to skip" >&2
          read -r "ANS"
      fi
+
+     # v3.09 'verbosity: X' directive is always ENABLED;
+     #       we now just explicitly ensure X is always either '0' or '1' during  initial install
+     Edit_config_options "verbosity:" "uncomment"                                        # v3.09
+     sed -i "/^verbosity:/ s/[^ ]*[^ ]/1/2" ${CONFIG_DIR}unbound.conf                    # v3.09
+
      if [ "$ANS" == "y"  ];then
          if [ -n "$(grep -oE "#[[:space:]]*verbosity:" ${CONFIG_DIR}unbound.conf)" ];then       # v1.27
-            #sed -i '/#verbosity:/,/#log-replies: yes/s/^# //' ${CONFIG_DIR}unbound.conf
-            Edit_config_options "verbosity:" "log-replies:" "uncomment"                    # v1.27
-
+            Edit_config_options "log-queries:"         "uncomment"     # v3.08
+            Edit_config_options "log-replies:"         "uncomment"     # v3.08
             echo -e $cBCYA"unbound Logging enabled - 'verbosity:" $(Get_unbound_config_option "verbosity:")"'"$cRESET
          fi
      else
-        sed -i '/# logfile:/s/^# //' ${CONFIG_DIR}unbound.conf
+        # For the initial install, ensure we log only the first 4-5 initialisation messages
+        local STATUS=1              # v3.09 ensure after the first 4-5 lines are logged, logging is DISABLED
      fi
 
-     # @dave14305 recommends 'log-time-ascii: yes'                          # v1.16
-     #[ -z "$(grep "log-time-ascii:" ${CONFIG_DIR}unbound.conf)" ] && sed -i '/^logfile: /alog-time-ascii: yes' ${CONFIG_DIR}unbound.conf    #v1.19
+     echo $STATUS                          # v3.09
+     return $STATUS                        # v3.09
 }
 Generate_unbound_SSL_Keys() {
 
@@ -2866,7 +2901,7 @@ unbound_Control() {
             if [ "$CONFIG_VARIABLE" != ""  ];then
                 local RESULT="$($UNBOUNCTRLCMD get_option $CONFIG_VARIABLE)"
                 if [ -z "$RETVAL" ];then                                # v2.04
-                    [ -z "$(echo "$RESULT" | grep -ow "error" )" ] && echo -e $cRESET"unbound-control $cBMAG'$CONFIG_VARIABLE'$cRESET $CBGRE'$RESULT'"  2>&1 || echo -e $cRESET"unbound-control get_option $cBMAG'$CONFIG_VARIABLE:'$cBRED $RESULT" 2>&1
+                    [ -z "$(echo "$RESULT" | grep -ow "error" )" ] && echo -e $cRESET"unbound-control $cBMAG'$CONFIG_VARIABLE'$cRESET $cBGRE'$RESULT'"  2>&1 || echo -e $cRESET"unbound-control get_option $cBMAG'$CONFIG_VARIABLE:'$cBRED $RESULT" 2>&1
                 else
                     echo "$RESULT"      # v2.04
                     return              # v2.04
@@ -2881,7 +2916,7 @@ unbound_Control() {
                 read -r "CONFIG_VARIABLE" "CONFIG_VALUE"
             else
                 CONFIG_VARIABLE=$(echo "$@" | awk '{print $2}')
-                CONFIG_VALUE=$(echo "$@" | awk '{print $3'})
+                CONFIG_VALUE=$(echo "$@" | awk '{print $3}')
             fi
 
             if [ -n "$CONFIG_VARIABLE" ] && [ -n "$CONFIG_VALUE" ];then
@@ -2999,7 +3034,6 @@ remove_existing_installation() {
 
         echo -en $cRESET
 
-        ln -f /opt/etc/unbound/unbound.conf 2>/dev/null
         mv /opt/etc/unbound/unbound.conf.Example /opt/etc/unbound/unbound.conf 2>/dev/null
 
         # Remove the unbound package
@@ -3017,7 +3051,7 @@ remove_existing_installation() {
         for DIR in "/opt/var/lib/unbound/adblock" "/opt/var/lib/unbound" "/jffs/addons/unbound";  do     # v3.08 v2.00 v1.07
             if [ -d "$DIR" ]; then
                 if ! rm "$DIR"/* >/dev/null 2>&1; then
-                    printf '%bNo files found to remove in %b%s%b\n' "${cRESET}$cRED" "$cBGRE" "$DIR" "$cRESET"
+                    printf '%bNo files found to remove in %b%s%b\n' "${cRESET}$cYEL" "$cBGRE" "$DIR" "$cRESET" # v3.09
                 fi
                 if ! rmdir "$DIR" >/dev/null 2>&1; then
                     printf '%b***ERROR trying to remove %b%s%b\n' "${cRESET}$cRED" "$cBGRE" "$DIR" "$cRESET"
@@ -3173,7 +3207,9 @@ install_unbound() {
 
         S61unbound_update
 
-        Customise_config                    "$AUTO_REPLY1"
+        Customise_config                                        # v3.08 Hotfix
+
+        local DISABLE_LOGGING=$(Enable_Logging "?")             # v3.09 v1.16 Always create the log file, but ask user if it should be ENABLED
 
         if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
             echo -en $cBGRE
@@ -3226,8 +3262,7 @@ install_unbound() {
         # e.g. fatal error: could not open autotrust file for writing, /root.key.22350-0-2a0796d0: Permission denied
         [ "$USER_OPTION_PROMPTS" == "?" ] && local INSTALLMETHOD="Manual install" || local INSTALLMETHOD="Auto install"
         echo -e $cRESET"\n$INSTALLMETHOD unbound Customisation complete $cBGRE$(($DIFFTIME / 60)) minutes and $(($DIFFTIME % 60)) seconds elapsed - ${cRESET}Please wait for up to ${cBCYA}10$cRESET seconds for ${cBCYA}status.....\n"$cRESET
-        WAIT=3     # 16 i.e. 15 secs should be adequate?        # v3.00
-        INTERVAL=1
+        local WAIT=3     # 16 i.e. 15 secs should be adequate?        # v3.00
         I=0
          while [ $I -lt $((WAIT-1)) ]
             do
@@ -3244,11 +3279,25 @@ install_unbound() {
                 #echo -e $cBCYA"Tagged 'unbound.conf' '$TAG' and backed up to '/opt/share/unbound/configs/user.conf'"$cRESET
                 # Backup the config to easily restore it 'rl user[.conf]'                 # v1.19
                 cp -f ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/user.conf      # v1.19
-
                 #sed -i "1i$TAG" /opt/share/unbound/configs/user.conf    # v1.19
-
                 #cmp -s ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/reset.conf || sed -i "1i$TAG" ${CONFIG_DIR}unbound.conf # v1.19
                 echo -e $cBGRE"\n\tInstallation of unbound completed\n"  # v1.04
+            fi
+
+            local LOGFILE="$(Get_unbound_config_option "logfile:"  | tr -d '"')"     # v3.09
+            if [ -n "$LOGFILE" ];then
+               [ "${LOGFILE:0:1}" != "/" ] && LOGFILE=${CONFIG_DIR}$LOGFILE        # v3.09 Ensure full pathname
+            fi
+
+            # v3.09 If User chose not to ENABLE logging, explicitly DISABLE it now unbound is UP
+            if [ $DISABLE_LOGGING -eq 1 ];then                        # v3.09
+               local LOGLEVEL=0
+               $UNBOUNCTRLCMD -q verbosity 0
+               $UNBOUNCTRLCMD -q set_option verbosity 0
+               sed -i "/^verbosity:/ s/[^ ]*[^ ]/$LOGLEVEL/2" ${CONFIG_DIR}unbound.conf      # v3.09
+               echo -e $(date "+%b %d %T") "unbound_manager: '--':  =================================================================================== Auto-Stopped Post-Install" >> $LOGFILE
+            else
+               echo -e $(date "+%b %d %T") "unbound_manager: '++':  =================================================================================== Started User-Install" >> $LOGFILE
             fi
         else
             echo -e $cBRED"\a\n\t***ERROR Unsuccessful installation of unbound detected\n" # v1.04
@@ -3452,7 +3501,7 @@ Check_GUI_NVRAM() {
             # Logging is deemed dynamic, so need to check both config and unbound-control??? or just unbound-control???
             # AUTO_REPLY 1
             if [ -n "$(pidof unbound)" ];then
-                if [ -n "$(awk '/^verbosity/ {print $2}' ${CONFIG_DIR}unbound.conf)" ] || [ "$(unbound_Control "oq" "verbosity" "value")" != "0" ];then   # v3.06 v2.04
+                if [ "$(awk '/^verbosity:.*[1-9]/ {print $2}' ${CONFIG_DIR}unbound.conf)" -gt 0 ] || [ "$(unbound_Control "oq" "verbosity" "value")" != "0" ];then   # v3.08 v3.06 v2.04
                     # But are queries/replies being logged?                  # v3.06
                     local TXT=
                     if [ "$(Get_unbound_config_option "log-replies:" ${CONFIG_DIR}unbound.conf)" == "?" ] && [ "$(Get_unbound_config_option "log-queries:" ${CONFIG_DIR}unbound.conf)" == "?" ];then   # v3.06
@@ -3461,7 +3510,7 @@ Check_GUI_NVRAM() {
                     [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound Logging" $TXT 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 1"      #v2.18
                 fi
             else
-                if [ -n "$(awk '/^verbosity/ {print $2}' ${CONFIG_DIR}unbound.conf)" ];then # v3.06
+                if [ "$(awk '/^verbosity:.*[1-9]/ {print $2}' ${CONFIG_DIR}unbound.conf)" -gt 0 ];then # v3.08 v3.06
                     [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound Logging" 2>&1
                 fi
             fi
@@ -3699,6 +3748,7 @@ Ad_Tracker_blocking() {
 Option_Disable_Firefox_DoH() {
 
         local ANS=$1                                        # v1.20
+
         if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
             echo -en $cBYEL"Option Auto Reply 'y'\t"
         fi
@@ -3818,8 +3868,6 @@ _quote() {
                             ;;
                     esac
                 fi
-
-                local THIS="$(_quote "$IP")"
 
                 # awk/cut  - Remove the EOL comments, and drop the first word;       sed - expand into individual lines
                 awk -F# '{print $1}' $FN | cut -d' ' -f2- | sed 's/ /\n/g' | grep . | sort > ${DIVERSION}X
@@ -4006,12 +4054,29 @@ case "$1" in
             echo -e $cBCYA"Recovery: Retrieving Custom unbound configuration"$cBGRA
             download_file $CONFIG_DIR unbound.conf martineau           # v2.17 HotFix v2.02
         fi
+        Edit_config_options "verbosity"       "uncomment"                   # v3.09
+        sed -i "/^verbosity:/ s/[^ ]*[^ ]/0/2" ${CONFIG_DIR}unbound.conf   # v3.09
         TAG="(Date Loaded by unbound_manager "$(date)")"
         [ -f ${CONFIG_DIR}unbound.conf ] && sed -i "1s/(Date Loaded.*/$TAG/" ${CONFIG_DIR}unbound.conf
-        echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
-        Manage_cache_stats "save"                               # v2.17 Hotfix
-        $UNBOUNCTRLCMD reload
-        Manage_cache_stats "restore"                            # v2.17 HotFix
+        if [ -f /opt/share/unbound/configs/unbound.conf.add ];then
+            echo -e $cBRED"\a"
+            mv /opt/share/unbound/configs/unbound.conf.add /opt/share/unbound/configs/unbound.conf.addRECOVERY
+            Say "Recovery: 'unbound.conf.add' renamed to 'unbound.conf.addRECOVERY'"
+        fi
+        if [ -f /opt/share/unbound/configs/unbound.conf.addgui ];then
+            echo -e $cBRED"\a"
+            mv /opt/share/unbound/configs/unbound.conf.addgui /opt/share/unbound/configs/unbound.conf.addguiRECOVERY
+            Say "Recovery: 'unbound.conf.addgui' renamed to 'unbound.conf.addguiRECOVERY'"
+        fi
+        echo -e $cRESET
+        if [ -n "$(pidof unbound)" ];then
+           echo -en $cBCYA"\nRecovery: Reloading 'unbound.conf'$TXT status="$cRESET
+           Manage_cache_stats "save"                               # v2.17 Hotfix
+           $UNBOUNCTRLCMD reload
+           Manage_cache_stats "restore"                            # v2.17 HotFix
+        else
+           service restart_dnsmasq                                                    # v3.09
+        fi
         exit_message
         ;;
     restart)                        # v2.14
