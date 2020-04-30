@@ -63,7 +63,7 @@
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -516,6 +516,11 @@ welcome_message() {
         if [ "$(Unbound_Installed)" == "Y" ];then   # v2.12
             HDR="N"
             printf '+======================================================================+'   # 2.13
+
+            if [ -n "$(grep  "^#verbosity:" ${CONFIG_DIR}unbound.conf)" ];then      # v3.09 Hotfix @Safemode
+                Edit_config_options "verbosity"       "uncomment"                     # v3.09 Hotfix
+                sed -i "/^verbosity:/ s/[^ ]*[^ ]/0/2" ${CONFIG_DIR}unbound.conf    # v3.09 Hotfix
+            fi
 
             # The cron job should really be created from init-start or /init.d/S61unbound??????
             if [ -n "$(awk '/^verbosity/ {print $2}' ${CONFIG_DIR}unbound.conf)" ] || [ "$(unbound_Control "oq" "verbosity" "value")" != "0" ];then   # v3.06
@@ -1132,7 +1137,7 @@ _GetKEY() {
 
                     case $menu1 in
 
-                        lo*)                                                            # v3.09 [ log_level ]v1.16
+                        lo*)                                                            # v3.08 [ log_level ]v1.16
 
                             local LOGLEVEL=1                                           # v3.08
                             local TXT=
