@@ -374,7 +374,7 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_RPZ"    # v3.00
     printf "%s\t\t%s\n"                          "$MENUW_BIND"     "$MENUW_VPN"    # v3.07
 
-    [ -n "$MENU_AD" ] && printf "\n%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v2.00 v1.25
+    printf "\n%s\t\t\t%s\n"    "$MENUW_SCRIBE"    "$MENU_AD"      # v3.09 Hotfix v2.00 v1.25
     [ -n "$MENU_EL" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_EL"      # v2.15
     [ -n "$MENU_CA" ] && printf "%s\t%s\n"        "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
 
