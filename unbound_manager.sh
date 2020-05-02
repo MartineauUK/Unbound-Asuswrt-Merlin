@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.10Beta2
+#============================================================================================ © 2019-2020 Martineau v3.10beta3
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 30-Apr-2020
+# Last Updated Date: 02-May-2020
 #
 # Description:
 #
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.10b2"
+VERSION="3.10b3"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -2319,7 +2319,11 @@ BIND_WAN() {
         wan)
             Edit_config_options "outgoing-interface:"  "uncomment"
             local WAN_IF=$(Get_WAN_IF_Name)                     # v3.06 Hotfix
-            local WAN_GW=$(ip route | grep src | grep -v default | grep -E "dev $WAN_IF[[:space:]]" | awk '{print $NF}')    # v3.06 Hotfix
+            if [ "$WAN_IF" != "ppp0" ];then                      # v3.10 Hotfix
+                local WAN_GW=$(ip route | grep src | grep -v default | grep -E "dev $WAN_IF[[:space:]]" | awk '{print $NF}')    # v3.06 Hotfix
+            else
+                local WAN_GW=$(route -n | grep UG | grep ppp0 | awk '{print $2}')     # v3.10 Fix
+            fi
             if [ -n "$WAN_GW" ];then
                 sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$WAN_GW/2" ${CONFIG_DIR}unbound.conf
                 if [ "$TRACK" == "debug" ] && [ -z "$(iptables -nvL OUTPUT | grep "DNS")" ];then   # v3.05
