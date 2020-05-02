@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.10beta
+#============================================================================================ © 2019-2020 Martineau v3.10Beta2
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.10"
+VERSION="3.10b2"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -2876,36 +2876,27 @@ unbound_Control() {
         ;;
         s|s*)                                                               # v2.07
             # xxx-cache.count values won't be shown without 'extended-statistics: yes' see 's+'/'s-' menu option
-            echo -e $cYEL
-            $UNBOUNCTRLCMD stats$RESET | grep -E "total\.|cache\.count"  | column          # v1.08
-            # Calculate %Cache HIT success rate
-            local TOTAL=$($UNBOUNCTRLCMD stats$RESET | grep -oE "total.num.queries=.*" | cut -d'=' -f2)
-            local CACHEHITS=$($UNBOUNCTRLCMD stats$RESET | grep -oE "total.num.cachehits=.*" | cut -d'=' -f2)
-            if [ -n "$TOTAL" ] && [ $TOTAL -gt 0 ];then                 # v2.00
-                #local PCT=$((CACHEHITS*100/TOTAL))
-                echo -e $cYEL"\n"
-                local PCT="$(Calculate_Percent "$TOTAL" "$CACHEHITS")"  # v3.07
-            else
-                local PCT=0                                             # v2.00
-            fi
 
             # If multi-threads then calculate cache hits per thread           # v3.10
             NUMTHREADS=$(unbound_Control "oq" "num-threads" "value")    # v3.10
 
-            printf "\n%bSummary: Cache Hits success=%b%3.2f%%" "$cBCYA" "$cRESET" "$PCT"
-
-            if [ $NUMTHREADS -gt 1 ];then                                 # v3.10
-                echo -e $cYEL"\n"
-
-                local LOGFILE="$(Get_unbound_config_option "logfile:"  | tr -d '"')"
-                if [ "$(Get_unbound_config_option "use-syslog:")" == "yes" ];then
-                    local LOGFILE="/opt/var/log/unbound.log"
-                    #local TXT=" (syslog-ng/scribe)"
+            # If multi-threads defined then skip the original 'Average' display in lieu of the individual Thead reports
+            if [ $NUMTHREADS -eq 1 ];then                                  # v3.10
+                echo -en $cYEL
+                $UNBOUNCTRLCMD stats$RESET | grep -E "total\.|cache\.count"  | column          # v1.08
+                # Calculate %Cache HIT success rate
+                local TOTAL=$($UNBOUNCTRLCMD stats$RESET | grep -oE "total.num.queries=.*" | cut -d'=' -f2)
+                local CACHEHITS=$($UNBOUNCTRLCMD stats$RESET | grep -oE "total.num.cachehits=.*" | cut -d'=' -f2)
+                if [ -n "$TOTAL" ] && [ $TOTAL -gt 0 ];then                 # v2.00
+                    local PCT="$(Calculate_Percent "$TOTAL" "$CACHEHITS")"  # v3.07
+                else
+                    local PCT=0                                             # v2.00
                 fi
 
-                if [ -n "$LOGFILE" ];then
-                   [ "${LOGFILE:0:1}" != "/" ] && LOGFILE=${CONFIG_DIR}$LOGFILE        # v1.26 Ensure full pathname
-                fi
+                printf "\n%bSummary: Cache Hits success=%b%3.2f%%" "$cBCYA" "$cRESET" "$PCT"
+
+            else
+                echo -en $cYEL
 
                 # grep cache $LOGFILE | tail -n $NUMTHREADS | awk '
                 # {
@@ -2913,31 +2904,21 @@ unbound_Control() {
                 # }'
 
                 local THREAD=0
-                $UNBOUNCTRLCMD stats$RESET | grep -E "thread$THREAD\.|cache\.count"  | column
-                local TOTAL=$($UNBOUNCTRLCMD stats$RESET | grep -oE "thread$THREAD.num.queries=.*" | cut -d'=' -f2)
-                local CACHEHITS=$($UNBOUNCTRLCMD stats$RESET | grep -oE "thread$THREAD.num.cachehits=.*" | cut -d'=' -f2)
-                if [ -n "$TOTAL" ] && [ $TOTAL -gt 0 ];then
-                    #local PCT=$((CACHEHITS*100/TOTAL))
-                    echo -e $cYEL"\n"
-                    local PCT="$(Calculate_Percent "$TOTAL" "$CACHEHITS")"
-                else
-                    local PCT=0
-                fi
-                printf "\n%bThread 0: Cache Hits success=%b%3.2f%%" "$cBCYA" "$cRESET" "$PCT"
-                echo -e $cYEL
-                local THREAD=1
-                $UNBOUNCTRLCMD stats$RESET | grep -E "thread$THREAD\.|cache\.count"  | column
-                local TOTAL=$($UNBOUNCTRLCMD stats$RESET | grep -oE "thread$THREAD.num.queries=.*" | cut -d'=' -f2)
-                local CACHEHITS=$($UNBOUNCTRLCMD stats$RESET | grep -oE "thread$THREAD.num.cachehits=.*" | cut -d'=' -f2)
-                if [ -n "$TOTAL" ] && [ $TOTAL -gt 0 ];then
-                    #local PCT=$((CACHEHITS*100/TOTAL))
-                    echo -e $cYEL"\n"
-                    local PCT="$(Calculate_Percent "$TOTAL" "$CACHEHITS")"
-                else
-                    local PCT=0
-                fi
+                while [ $THREAD -lt $NUMTHREADS ];do                        # v3.10
+                    echo -en $cYEL
+                    [ $THREAD -gt 0 ] && echo -e
+                    $UNBOUNCTRLCMD stats$RESET | grep -E "thread$THREAD\.|cache\.count"  | column
+                    local TOTAL=$($UNBOUNCTRLCMD stats$RESET | grep -oE "thread$THREAD.num.queries=.*" | cut -d'=' -f2)
+                    local CACHEHITS=$($UNBOUNCTRLCMD stats$RESET | grep -oE "thread$THREAD.num.cachehits=.*" | cut -d'=' -f2)
+                    if [ -n "$TOTAL" ] && [ $TOTAL -gt 0 ];then
+                        local PCT="$(Calculate_Percent "$TOTAL" "$CACHEHITS")"
+                    else
+                        local PCT=0
+                    fi
+                    printf "\n%bThread $THREAD Summary: Cache Hits success=%b%3.2f%%\n" "$cBCYA" "$cRESET" "$PCT"
 
-                printf "\n%bThread 1: Cache Hits success=%b%3.2f%%" "$cBCYA" "$cRESET" "$PCT"
+                    THREAD=$((THREAD + 1))
+                done
             fi
 
             if [ -n "$ADDFILTER" ];then                                 # v2.07 allow display of additional stat value(s)
