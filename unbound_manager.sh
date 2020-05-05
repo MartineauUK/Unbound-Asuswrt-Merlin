@@ -3892,12 +3892,16 @@ Option_Disable_dnsmasq() {                              # v3.10
 Disable_dnsmasq() {                                     # v3.10
 
         local ARG=$1
+        local ROUTER="$(nvram get lan_ipaddr_rt)"      # v3.10 Hotfix
 
         if [ "$ARG" == "disable" ];then
             echo -e $cBCYA"\nConfiguring 'unbound' to be the primary DNS for ALL LAN Clients.....\n"$cRESET
             sed -i "/^port: 53535/ s/[^ ]*[^ ]/53/2" ${CONFIG_DIR}unbound.conf
             sed -i "/^interface: 127\.0\.0\.1@53535/ s/[^ ]*[^ ]/0\.0\.0\.0/2" ${CONFIG_DIR}unbound.conf
-            Edit_config_options "access-control: 0.0.0.0/0 allow" "uncomment"
+            [ -n "$(grep "^#access-control: 0\.0\.0\.0\/0 allow" /opt/var/lib/unbound/unbound.conf)" ] && Edit_config_options "access-control: 0.0.0.0/0 allow" "uncomment"
+
+            [ -z "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "port=0                           # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
+            [ -z "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=lan,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
 
             echo -e $cBCYA"Converting dnsmasq local hosts to 'unbound'.....\n"$cRESET
             FN="/opt/share/unbound/configs/unbound.conf.localhosts"
@@ -3921,11 +3925,15 @@ Disable_dnsmasq() {                                     # v3.10
             echo -e $cBCYA"\nConfiguring 'dnsmasq' to be the primary DNS for ALL LAN Clients.....\n"$cRESET
             sed -i "/^port: 53/ s/[^ ]*[^ ]/53535/2" ${CONFIG_DIR}unbound.conf
             sed -i "/^interface: 0\.0\.0\.0/ s/[^ ]*[^ ]/127\.0\.0\.1@53535/2" ${CONFIG_DIR}unbound.conf
-            Edit_config_options "access-control: 0.0.0.0/0 allow" "comment"
+            [ -n "$(grep "^access-control: 0\.0\.0\.0\/0 allow" /opt/var/lib/unbound/unbound.conf)" ] && Edit_config_options "access-control: 0.0.0.0/0 allow" "comment"   # v3.10 Hotfix
+
+            [ -n "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && sed -i '/port=0/d' /jffs/configs/dnsmasq.conf.add   # v3.10 Hotfix
+            [ -n "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && sed -i "/dhcp-option=lan,6,$ROUTER/d" /jffs/configs/dnsmasq.conf.add   # v3.10 Hotfix
         fi
 
-        echo -en $cBCYA"Restarting dnsmasq....."$cBGRE
-        service restart_dnsmasq
+        echo -en $cBCYA"Stopping dnsmasq....."$cBGRE
+        service stop_dnsmasq                                                # v3.10 Hotfix
+        [ "$ARG" == "disable" ] && { echo -en ${cRESET}$cBCYA"\nChecking status, please wait for up to 10 secs.....";sleep 10; }   # v3.10 Hotfix!!!???
         echo -en $cRESET
 
         Restart_unbound
