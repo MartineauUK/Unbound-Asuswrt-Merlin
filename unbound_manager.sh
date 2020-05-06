@@ -1345,6 +1345,7 @@ EOF
                         [ "$NOCACHE" != "nocache" ] && { echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'nocache'$cBRED is valid"$cRESET; continue; }
                     fi
 
+                    echo -e
                     Restart_unbound "$NOCACHE" "$1"                         # v2.13 v2.12
 
                     #break
@@ -1634,7 +1635,8 @@ EOF
                             if [ "$ARG2" != "time" ];then                       # v2.16
                                 echo -e $cBGRA
                                 dig txt $TESTTHIS                               # v2.09 Hotfix
-                                dig $TESTTHIS @127.0.0.1 -p 53535               # v2.09 Hotfix
+                                [ -n "$(grep -E "^port: 53535" /opt/var/lib/unbound/unbound.conf)" ] && local DIGPORT=53535 || local DIGPORT=53
+                                dig $TESTTHIS @127.0.0.1 -p $DIGPORT               # v2.09 Hotfix
                             else
                                 # Test dig {domain} five times and print duration       # v2.16 testing for extended-statistic histogram
                                 local I=0
@@ -2592,9 +2594,9 @@ Restart_unbound() {
     if [ "$2" == "nochk" ] || [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
 
         if [ "$2" != "nochk" ];then                                                     # v2.13
-            echo -e $cBGRE
+            echo -en $cBCYA
             unbound-checkconf ${CONFIG_DIR}unbound.conf                                 # v2.03
-            echo -e
+            #echo -e
         fi
 
         # Don't save the cache if unbound is UP and 'rs nocache' requested.
@@ -2607,6 +2609,7 @@ Restart_unbound() {
 
         #Check_config_add_and_postconf                       # v3.09 v2.15
 
+        echo -en $cBCYA"Requesting unbound (${cRESET}S61unbound$cBCYA) restart....."$cBGRE
         /opt/etc/init.d/S61unbound restart
 
         local TAG="Date Loaded by unbound_manager "$(date)")"           # v3.06
@@ -2617,7 +2620,7 @@ Restart_unbound() {
         if [ -z "$1" ];then                                 # v2.15 If called by 'gen_adblock.sh' then skip the status check
             CHECK_GITHUB=1                                  # v1.27 force a GitHub version check to see if we are OK
             #echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
-            echo -en ${cRESET}$cBCYA"\nChecking status, please wait..... "$cRESET
+            echo -en ${cRESET}$cBCYA"Checking status, please wait..... "$cRESET
             #WAIT=11     # 11 i.e. 10 secs should be adequate?
             WAIT=3                          # v3.00 Hopefully unbound initialization should be valid
             I=0
@@ -2847,17 +2850,17 @@ unbound_Control() {
             case "$1" in
                 dump|save)
                     $UNBOUNCTRLCMD dump_cache > $FN
-                    if [ "$1" == "save" ];then
+                    #if [ "$1" == "save" ];then
                         local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
-                        echo -e $cRESET"\a\n\tunbound cache SAVED to $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET" ("$TIMESTAMP") - BEWARE, file will be DELETED on first RELOAD"$cRESET 2>&1   # v3.08
+                        echo -e $cRESET"\tunbound cache SAVED    to   $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET" ("$TIMESTAMP") - BEWARE, file will be DELETED on first RELOAD"$cRESET 2>&1   # v3.08
                         SayT "unbound cache SAVED to '/opt/share/unbound/configs/cache.txt' - BEWARE, file will be DELETED on first RELOAD" $TIMESTAMP
-                    fi
+                    #fi
                 ;;
                 load|rest)
                     if [ -s /opt/share/unbound/configs/cache.txt ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
                         local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
                         $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
-                        echo -e $cRESET"\a\n\tunbound cache RESTORED from $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET "("$TIMESTAMP")"    # v3.08 v2.12
+                        echo -e $cRESET"\n\tunbound cache RESTORED from $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET "("$TIMESTAMP")"    # v3.08 v2.12
                         SayT "unbound cache RESTORED from '/opt/share/unbound/configs/cache.txt' ("$TIMESTAMP")"
                         rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
                     fi
@@ -3882,8 +3885,8 @@ Option_Disable_dnsmasq() {                              # v3.10
 
         if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
 
-            echo -e "If you currently use or rely on dnsmasq features such as Diversion or IPSET auto-populate etc., then re-consider."
-            echo -e "\nDo you still want to DISABLE dnsmasq?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+            echo -e ${cRESET}$cBWHT"If you currently use or rely on dnsmasq features such as Diversion or IPSET auto-populate etc., then re-consider."
+            echo -e "\nDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
             read -r "ANS"
         fi
         [ "$ANS" == "y"  ] && Disable_dnsmasq "$@"
@@ -3931,12 +3934,19 @@ Disable_dnsmasq() {                                     # v3.10
             [ -n "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && sed -i "/dhcp-option=lan,6,$ROUTER/d" /jffs/configs/dnsmasq.conf.add   # v3.10 Hotfix
         fi
 
-        echo -en $cBCYA"Stopping dnsmasq....."$cBGRE
-        service stop_dnsmasq                                                # v3.10 Hotfix
-        [ "$ARG" == "disable" ] && { echo -en ${cRESET}$cBCYA"\nChecking status, please wait for up to 10 secs.....";sleep 10; }   # v3.10 Hotfix!!!???
+        # If bypassing dnsmasq, DNS Privacy aka Stubby listens on 127.0.1.1:53,
+        #    so briefly bounce Stubby to allow unbound access to 0.0.0.0:53
+        if [ "$ARG" == "disable" ] && [ "$(nvram get dnspriv_enable)" == "1" ] ;then         # v3.10 Hotfix @dave14305
+            echo -en $cBCYA"Stopping Stubby....."$cBGRE
+            service stop_stubby                                                               # v3.10 Hotfix
+            Restart_unbound
+            # Let the watchdog kick it (silently) back to life in approx 10 secs!!!
+            #echo -en $cBCYA"Restarting Stubby....."$cBGRE
+            #service start_stubby
+        else
+            Restart_unbound
+        fi
         echo -en $cRESET
-
-        Restart_unbound
 
 }
 Diversion_to_unbound_list() {
