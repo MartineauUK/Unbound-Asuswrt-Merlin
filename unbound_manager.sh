@@ -3955,6 +3955,8 @@ _quote() {
             else
                echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
             fi
+            echo -en $cBCYA"\n"$(date "+%H:%M:%S")" Restarting "$cRESET"dnsmasq"$cBGRE   # v3.10 Hotfix
+            service restart_dnsmasq
          else
             echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Configuring "$cRESET"dnsmasq"$cBCYA" to be the "$cRESET"primary DNS"$cBCYA" for ALL LAN Clients.....\n"$cRESET
             [ -n "$(grep "^interface: 127.0.0.1@53$" ${CONFIG_DIR}unbound.conf)" ] && sed -i 's/^interface: 127\.0\.0\.1@53$/#interface: 127\.0\.0\.1@53/' ${CONFIG_DIR}unbound.conf
@@ -3969,8 +3971,7 @@ _quote() {
             # Wipe the 'include: unbound.conf.localhosts'
             #true > $FN
         fi
-        echo -en $cBCYA"\n"$(date "+%H:%M:%S")" Restarting "$cRESET"dnsmasq"$cBGRE   # v3.19 Hotfix
-        service restart_dnsmasq
+
         Restart_unbound
         local RC=$?
 
