@@ -3969,7 +3969,8 @@ _quote() {
             # Wipe the 'include: unbound.conf.localhosts'
             #true > $FN
         fi
-
+        echo -en $cBCYA"\n"$(date "+%H:%M:%S")" Restarting "$cRESET"dnsmasq"$cBGRE   # v3.19 Hotfix
+        service restart_dnsmasq
         Restart_unbound
         local RC=$?
 
