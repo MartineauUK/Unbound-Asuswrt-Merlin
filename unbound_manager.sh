@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 05-May-2020
+# Last Updated Date: 07-May-2020
 #
 # Description:
 #
@@ -809,6 +809,7 @@ _GetKEY() {
             fi
             local TXT=
             unset $TXT
+            HDR="N"
 
             # Translate v3.00 (restricted) Easy menu but Advanced mode commands remain for consistency backward compatibility.
             if [ "$EASYMENU" == "Y" ];then
@@ -1388,8 +1389,15 @@ EOF
                             Option_Disable_dnsmasq "$AUTO_REPLY11" "$ARG"   # unbound will be the DNS server for ALl LAN Clients
                             local RC=$?
                         else
-                            Disable_dnsmasq                                 # Reinstate dnsmasq as the DNS reolver for ALL LAN Clients.
-                            local RC=0
+                            case "$ARG" in
+                                "") Disable_dnsmasq                                 # Reinstate dnsmasq as the DNS reolver for ALL LAN Clients.
+                                    local RC=0
+                                    ;;
+                                *)
+                                 echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'disable'$cBRED is valid"$cRESET
+                                 continue
+                                ;;
+                            esac
                         fi
                     else
                         echo -e $cBRED"\a\n\tunbound NOT installed!"$cRESET
@@ -2588,15 +2596,22 @@ Customise_config() {
 Restart_unbound() {
 
     local NOCACHE=$1
+    local STATUS=0
 
     # v2.12 moved to Restart_unbound() function
 
     if [ "$2" == "nochk" ] || [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
 
         if [ "$2" != "nochk" ];then                                                     # v2.13
-            echo -en $cBCYA
-            unbound-checkconf ${CONFIG_DIR}unbound.conf                                 # v2.03
-            #echo -e
+           echo -e ${cBCYA}$(date "+%H:%M:%S")" Checking 'unbound.conf' for syntax errors....."
+           local CHK_Config_Syntax="$(unbound-checkconf ${CONFIG_DIR}unbound.conf 2>/dev/null)"           # v2.03
+           if [ -n "$(echo "$CHK_Config_Syntax" | grep -o "no errors in")" ];then         # v2.03
+              echo -en $cBGRE
+           else
+              echo -en $cBRED"\a"
+              echo "$CHK_Config_Syntax"
+           fi
+
         fi
 
         # Don't save the cache if unbound is UP and 'rs nocache' requested.
@@ -2609,7 +2624,7 @@ Restart_unbound() {
 
         #Check_config_add_and_postconf                       # v3.09 v2.15
 
-        echo -en $cBCYA"Requesting unbound (${cRESET}S61unbound$cBCYA) restart....."$cBGRE
+        echo -e ${cBCYA}$(date "+%H:%M:%S")" Requesting unbound (${cRESET}S61unbound$cBCYA) restart....."$cBGRE
         /opt/etc/init.d/S61unbound restart
 
         local TAG="Date Loaded by unbound_manager "$(date)")"           # v3.06
@@ -2620,7 +2635,7 @@ Restart_unbound() {
         if [ -z "$1" ];then                                 # v2.15 If called by 'gen_adblock.sh' then skip the status check
             CHECK_GITHUB=1                                  # v1.27 force a GitHub version check to see if we are OK
             #echo -en $cRESET"\nPlease wait for up to ${cBYEL}10 seconds${cRESET} for status....."$cRESET
-            echo -en ${cRESET}$cBCYA"Checking status, please wait..... "$cRESET
+            echo -e ${cRESET}${cBCYA}$(date "+%H:%M:%S")" Checking status, please wait..... "$cRESET
             #WAIT=11     # 11 i.e. 10 secs should be adequate?
             WAIT=3                          # v3.00 Hopefully unbound initialization should be valid
             I=0
@@ -2631,11 +2646,12 @@ Restart_unbound() {
                     if [ -z "$(pidof unbound)" ];then
                         echo -e $cBRED"\a\n\n\t${aREVERSE}***ERROR unbound went AWOL after $I seconds${cRESET}.....\n\n\t${cBRED}Try option ${cBMAG}'debug'$cRESET and check for unbound.conf or runtime errors!"$cRESET
                         SayT "***ERROR unbound went AWOL after $I seconds.... Try 'unbound -dv' and check for unbound.conf or runtime errors!"
+                        STATUS=1
                         break
                     fi
                     [ $I -eq 2 ] && Manage_cache_stats "restore"        # v2.17
                 done
-            [ -n "$(pidof unbound)" ] && echo -e ${cRESET}$cBCYA"unbound ${cBGRE}OK"
+            [ -n "$(pidof unbound)" ] && echo -e ${cRESET}${cBCYA}$(date "+%H:%M:%S")" unbound ${cBGRE}OK"$cRESET
         else
             echo -en $cBCYA
         fi
@@ -2644,7 +2660,10 @@ Restart_unbound() {
         unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
         echo -e $cBRED"\n***ERROR ${cRESET}requested re(Start) of unbound ABORTed! - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file"$cBGRE
         SayT "***ERROR requested re(Start) of unbound ABORTed! - use option 'vx'$cRESET to correct 'unbound.conf' or ${cBMAG}'rl' to load a valid configuration file"   # v2.14
+        STATUS=1
     fi
+
+    return $STATUS
 }
 Skynet_BANNED_Countries() {
 
@@ -2849,18 +2868,16 @@ unbound_Control() {
 
             case "$1" in
                 dump|save)
+                    echo -e ${cBCYA}$(date "+%H:%M:%S")" Saving ${cRESET}unbound cache$cBCYA to $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET 2>&1   # v3.08
                     $UNBOUNCTRLCMD dump_cache > $FN
-                    #if [ "$1" == "save" ];then
-                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
-                        echo -e $cRESET"\tunbound cache SAVED    to   $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET" ("$TIMESTAMP") - BEWARE, file will be DELETED on first RELOAD"$cRESET 2>&1   # v3.08
-                        SayT "unbound cache SAVED to '/opt/share/unbound/configs/cache.txt' - BEWARE, file will be DELETED on first RELOAD" $TIMESTAMP
-                    #fi
+                    local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
+                    SayT "unbound cache SAVED to '/opt/share/unbound/configs/cache.txt' - BEWARE, file will be DELETED on first RELOAD" $TIMESTAMP
                 ;;
                 load|rest)
                     if [ -s /opt/share/unbound/configs/cache.txt ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
                         local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
+                        echo -e ${cBCYA}$(date "+%H:%M:%S")" Restoring ${cRESET}unbound cache$cBCYA from $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET "("$TIMESTAMP")"    # v3.08 v2.12
                         $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
-                        echo -e $cRESET"\n\tunbound cache RESTORED from $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET "("$TIMESTAMP")"    # v3.08 v2.12
                         SayT "unbound cache RESTORED from '/opt/share/unbound/configs/cache.txt' ("$TIMESTAMP")"
                         rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
                     fi
@@ -3717,7 +3734,7 @@ Option_Ad_Tracker_Blocker() {
             echo -en $cBYEL"Option Auto Reply 'y'\t"
         fi
 
-        if [ "$USER_OPTION_PROMPTS" == "?" ];then
+        if [ "$USER_OPTION_PROMPTS" == "?" ] || [  "$ANS" == "?" ];then
             echo -e "\nDo you want to install Ad and Tracker (Ad Block) blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
             read -r "ANS"
         fi
@@ -3884,68 +3901,102 @@ Option_Disable_dnsmasq() {                              # v3.10
         fi
 
         if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
-
-            echo -e ${cRESET}$cBWHT"If you currently use or rely on dnsmasq features such as Diversion or IPSET auto-populate etc., then re-consider."
-            echo -e "\nDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+            local TXT="\tIf you currently use or rely on dnsmasq features such as ${cBCYA}Diversion/x3mRouting${cRESET} etc., then re-consider."
+            [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)"
+            echo -e ${cRESET}$cBWHT${TXT}${TXTX}
+            echo -e $cRESET"\n\tDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
             read -r "ANS"
         fi
         [ "$ANS" == "y"  ] && Disable_dnsmasq "$@"
 
 }
 Disable_dnsmasq() {                                     # v3.10
+_quote() {
+  echo $1 | sed 's/[]\/()$*.^|[]/\\&/g'
+}
 
         local ARG=$1
         local ROUTER="$(nvram get lan_ipaddr_rt)"      # v3.10 Hotfix
+        local UNBOUND_LISTEN=${ROUTER%.*}.1
+        local UNBOUND_LISTENSED=$(_quote "$UNBOUND_LISTEN")
+
+        local FN="/opt/share/unbound/configs/unbound.conf.localhosts"
 
         if [ "$ARG" == "disable" ];then
-            echo -e $cBCYA"\nConfiguring 'unbound' to be the primary DNS for ALL LAN Clients.....\n"$cRESET
+            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Configuring "$cRESET"unbound"$cBCYA" to be the "$cRESET"primary DNS"$cBCYA" for ALL LAN Clients.....\n"$cRESET
             sed -i "/^port: 53535/ s/[^ ]*[^ ]/53/2" ${CONFIG_DIR}unbound.conf
-            sed -i "/^interface: 127\.0\.0\.1@53535/ s/[^ ]*[^ ]/0\.0\.0\.0/2" ${CONFIG_DIR}unbound.conf
-            [ -n "$(grep "^#access-control: 0\.0\.0\.0\/0 allow" /opt/var/lib/unbound/unbound.conf)" ] && Edit_config_options "access-control: 0.0.0.0/0 allow" "uncomment"
+            sed -i "/^interface: 127\.0\.0\.1@53535/ s/[^ ]*[^ ]/$UNBOUND_LISTENSED/2" ${CONFIG_DIR}unbound.conf
+            Edit_config_options "interface: 127.0.0.1@53" "uncomment"
+            [ "${ROUTER:0:8}" != "192.168." ] && sed -i "s~^#access-control: 0\.0\.0\.0/0 allow~access-control: $UNBOUND_LISTENSED/24 allow~1" ${CONFIG_DIR}unbound.conf
+            #=====================================TEMPORARY HACK PENDING 'unbound.conf' v1.10 ===========================================
+            sed -i 's~access-control: 192.168.0.0/24 allow~access-control: 192.168.0.0/16 allow~' ${CONFIG_DIR}unbound.conf   # v3.10 Hotfix
+            #============================================================================================================================
 
             [ -z "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "port=0                           # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
             [ -z "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=lan,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
 
-            echo -e $cBCYA"Converting dnsmasq local hosts to 'unbound'.....\n"$cRESET
-            FN="/opt/share/unbound/configs/unbound.conf.localhosts"
-
             local DOMAIN=$(nvram get lan_domain)
+            if [ -n "$DOMAIN" ];then                                                # v3.10 Hotfix @dave14305/@milan
+                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq local hosts to 'unbound'....."$cRESET
+                echo -e "# Replicate dnsmasq's local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
 
-            echo -e "# Replicate dnsmasq's local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
+                # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
+                for PAIR in $(nvram get dhcp_staticlist | tr '<' ' ')
+                    do
+                        local MAC=$(echo "$PAIR" | cut -d'>' -f1)
+                        local IP_ADDR=$(echo "$PAIR" | cut -d'>' -f2)
+                        local NAME=$(nvram get dhcp_hostnames | tr '<>' ' ' | grep -oE "$MAC.*" | cut -d' ' -f2)
+                        echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
+                        echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
+                    done
 
-            # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
-            for PAIR in $(nvram get dhcp_staticlist | tr '<' ' ')
-                do
-                    local MAC=$(echo "$PAIR" | cut -d'>' -f1)
-                    local IP_ADDR=$(echo "$PAIR" | cut -d'>' -f2)
-                    local NAME=$(nvram get dhcp_hostnames | tr '<>' ' ' | grep -oE "$MAC.*" | cut -d' ' -f2)
-                    echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
-                    echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
-                done
-
-                Check_config_add_and_postconf                       # v3.10
+                    echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
+                    Check_config_add_and_postconf                       # v3.10
+            else
+               echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
+            fi
          else
-            echo -e $cBCYA"\nConfiguring 'dnsmasq' to be the primary DNS for ALL LAN Clients.....\n"$cRESET
+            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Configuring "$cRESET"dnsmasq"$cBCYA" to be the "$cRESET"primary DNS"$cBCYA" for ALL LAN Clients.....\n"$cRESET
+            [ -n "$(grep "^interface: 127.0.0.1@53$" ${CONFIG_DIR}unbound.conf)" ] && sed -i 's/^interface: 127\.0\.0\.1@53$/#interface: 127\.0\.0\.1@53/' ${CONFIG_DIR}unbound.conf
             sed -i "/^port: 53/ s/[^ ]*[^ ]/53535/2" ${CONFIG_DIR}unbound.conf
-            sed -i "/^interface: 0\.0\.0\.0/ s/[^ ]*[^ ]/127\.0\.0\.1@53535/2" ${CONFIG_DIR}unbound.conf
-            [ -n "$(grep "^access-control: 0\.0\.0\.0\/0 allow" /opt/var/lib/unbound/unbound.conf)" ] && Edit_config_options "access-control: 0.0.0.0/0 allow" "comment"   # v3.10 Hotfix
+            sed -i "/^interface: $UNBOUND_LISTENSED/ s/[^ ]*[^ ]/127\.0\.0\.1@53535/2" ${CONFIG_DIR}unbound.conf
+            if [ -n "$(grep "^access-control: $UNBOUND_LISTEN/24 allow" ${CONFIG_DIR}unbound.conf)" ];then
+                sed -i "s~^access-control: $UNBOUND_LISTENSED/24 allow~#access-control: 0\.0\.0\.0/0 allow~1" ${CONFIG_DIR}unbound.conf   # v3.10 Hotfix
+            fi
 
             [ -n "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && sed -i '/port=0/d' /jffs/configs/dnsmasq.conf.add   # v3.10 Hotfix
             [ -n "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && sed -i "/dhcp-option=lan,6,$ROUTER/d" /jffs/configs/dnsmasq.conf.add   # v3.10 Hotfix
+            # Wipe the 'include: unbound.conf.localhosts'
+            #true > $FN
         fi
 
-        # If bypassing dnsmasq, DNS Privacy aka Stubby listens on 127.0.1.1:53,
-        #    so briefly bounce Stubby to allow unbound access to 0.0.0.0:53
-        if [ "$ARG" == "disable" ] && [ "$(nvram get dnspriv_enable)" == "1" ] ;then         # v3.10 Hotfix @dave14305
-            echo -en $cBCYA"Stopping Stubby....."$cBGRE
-            service stop_stubby                                                               # v3.10 Hotfix
-            Restart_unbound
-            # Let the watchdog kick it (silently) back to life in approx 10 secs!!!
-            #echo -en $cBCYA"Restarting Stubby....."$cBGRE
-            #service start_stubby
-        else
-            Restart_unbound
+        Restart_unbound
+        local RC=$?
+
+        if [ $RC -eq 0 ];then
+            # @tomsk , if bypass dnsmasq and Diversion is running then replace with Ad Block   # v3.10
+            if [ "$ARG" == "disable" ];then
+               if [ -n "$(grep diversion /etc/dnsmasq.conf)" ];then
+                  Option_Ad_Tracker_Blocker "?"
+                  local RC=$?
+
+                  # If Ad Block installed then
+                  if [ $RC -eq 0 ];then
+                     # Prompt to manually terminate Diversion or kill it dead?          # v3.10
+                     echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Terminating 'Diversion'....."$cRESET
+                     /opt/bin/diversion disable
+                  fi
+               fi
+            else
+               # dnsmasq reinstated so disable Ad Block and restart Diversion
+               if [ -n "$(which diversion)" ];then
+                  echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Starting 'Diversion'....."$cRESET
+                  /opt/bin/diversion enable
+                  Ad_Tracker_blocking "uninstall"
+               fi
+            fi
         fi
+
         echo -en $cRESET
 
 }
