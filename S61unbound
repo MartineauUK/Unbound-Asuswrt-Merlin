@@ -1,0 +1,38 @@
+#!/bin/sh
+VER="1.01"
+
+# v1.01 08-May-2020 Martineau Allow dnsmasq bypass; (Stop dnsmasq to release '127.0.0.1@53')
+if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
+        # Wait for NTP before starting
+        ntptimer=0
+        while [ "$(nvram get ntp_ready)" = "0" ] && [ "$ntptimer" -lt "300" ]; do
+                ntptimer=$((ntptimer+1))
+                [ "$ntptimer" -eq "1" ] && logger -st "S61unbound" "Waiting for NTP to sync before starting Unbound..."
+                sleep 1
+        done
+
+        if [ "$ntptimer" -ge "300" ]; then
+                logger -st "S61unbound" "NTP failed to sync after 5 minutes - please check immediately!"
+                exit 1
+        fi
+		
+		# Default unbound+dnsmasq uses 'port: 53535'; if not then assume dnsmasq bypass ('port 53')
+		[ -z "$(grep "^port: 53535" /opt/var/lib/unbound/unbound.conf)" ] && service stop_dnsmasq # (Release '127.0.0.1@53')
+		
+        logger -t S61unbound "$1 Unbound DNS server $0"		
+fi
+
+
+# set environment PATH to system binaries
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH
+export TZ=$(cat /etc/TZ)
+ENABLED=yes
+PROCS=unbound
+ARGS="-c /opt/var/lib/unbound/unbound.conf"
+PREARGS="nohup"
+PRECMD=""
+POSTCMD="service restart_dnsmasq"
+DESC=$PROCS
+PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+. /opt/etc/init.d/rc.func
