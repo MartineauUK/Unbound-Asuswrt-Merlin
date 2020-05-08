@@ -3975,7 +3975,7 @@ _quote() {
                             echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
                             echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
                         else
-                            echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in 'nvram show dhcp_hostnames'"   # v3.11
+                            echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in 'nvram get dhcp_hostnames'"   # v3.11
                         fi
                     done
 
