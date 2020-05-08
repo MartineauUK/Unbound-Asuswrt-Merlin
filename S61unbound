@@ -16,10 +16,11 @@ if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
                 exit 1
         fi
 		
+		TXT=
 		# Default unbound+dnsmasq uses 'port: 53535'; if not then assume dnsmasq bypass ('port 53')
-		[ -z "$(grep "^port: 53535" /opt/var/lib/unbound/unbound.conf)" ] && service stop_dnsmasq # (Release '127.0.0.1@53')
+		[ -z "$(grep "^port: 53535" /opt/var/lib/unbound/unbound.conf)" ] && { service stop_dnsmasq; TXT="(bypass dnsmasq)"; } # (Release '127.0.0.1@53')
 		
-        logger -t S61unbound "$1 Unbound DNS server $0"		
+        logger -t S61unbound "$1 Unbound DNS server $TXT $0"		
 fi
 
 
