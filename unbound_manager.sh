@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.11beta2
+#============================================================================================ © 2019-2020 Martineau v3.11beta3
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.11b2"
+VERSION="3.11b3"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -1287,7 +1287,7 @@ EOF
                 sd|dnsmasqstats)                                            # v1.18
                     [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
                     # Is scribe / Diversion running?
-                    if grep -q diversion /etc/dnsmasq.conf ;then
+                    if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then   # v3.11
                         [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"     # v1.28
                     fi
                     echo -e $cBGRA
@@ -3639,7 +3639,7 @@ Check_GUI_NVRAM() {
                     [ -n "$(grep -m 1 "always_nxdomain" /opt/var/lib/unbound/adblock/adservers)" ] && PIXELSERVTXT= || PIXELSERVTXT="(via pixelserv-tls) " # v3.00
                     local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Whitelist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v3.00 v2.14 v2.04
                     # Check if Diversion is also running
-                    [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v2.18 Hotfix v1.24
+                    [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v3.11 v2.18 Hotfix v1.24
                 fi
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 3"     #v2.18
             fi
@@ -3926,7 +3926,7 @@ Option_Disable_dnsmasq() {                              # v3.10
 
         if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
             local TXT="\tIf you currently use or rely on dnsmasq features such as ${cBCYA}Diversion/x3mRouting${cRESET} etc., then re-consider."
-            [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)"
+            [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ] && local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)" # v3.11
             echo -e ${cRESET}$cBWHT${TXT}${TXTX}
             echo -e $cRESET"\n\tDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
             read -r "ANS"
@@ -3967,11 +3967,16 @@ _quote() {
                 # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
                 for PAIR in $(nvram get dhcp_staticlist | tr '<' ' ')
                     do
+                        local NAME=                                             # v3.11
                         local MAC=$(echo "$PAIR" | cut -d'>' -f1)
                         local IP_ADDR=$(echo "$PAIR" | cut -d'>' -f2)
                         local NAME=$(nvram get dhcp_hostnames | tr '<>' ' ' | grep -oE "$MAC.*" | cut -d' ' -f2)
-                        echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
-                        echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
+                        if [ -n "$NAME" ];then                                                                      # v3.11
+                            echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
+                            echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
+                        else
+                            echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in 'nvram show dhcp_hostnames'"   # v3.11
+                        fi
                     done
 
                     echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
@@ -4002,7 +4007,7 @@ _quote() {
         if [ $RC -eq 0 ];then
             # @tomsk , if bypass dnsmasq and Diversion is running then replace with Ad Block   # v3.10
             if [ "$ARG" == "disable" ];then
-               if [ -n "$(grep diversion /etc/dnsmasq.conf)" ];then
+               if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then   # v3.11
                   Option_Ad_Tracker_Blocker "?"
                   local RC=$?
 
@@ -4014,11 +4019,13 @@ _quote() {
                   fi
                fi
             else
-               # dnsmasq reinstated so disable Ad Block and restart Diversion
+               # dnsmasq reinstated so restart Diversion if installed and it isn't already UP; then stop Ad Block
                if [ -n "$(which diversion)" ];then
-                  echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Starting 'Diversion'....."$cRESET
-                  /opt/bin/diversion enable
-                  Ad_Tracker_blocking "uninstall"
+                  if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=disabled" ];then
+                     echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Starting 'Diversion'....."$cRESET
+                     /opt/bin/diversion enable
+                  fi
+                  Ad_Tracker_blocking "uninstall"                                   # v3.11 Only terminate if Diversion running
                fi
             fi
         fi
