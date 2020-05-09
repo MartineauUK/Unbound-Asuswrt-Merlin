@@ -771,7 +771,7 @@ welcome_message() {
                                 MENU_AD="$(printf '%b5 %b = n/a Install Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}$cGRA")"
                             fi
                         fi
-                        if [ -f /opt/share/unbound/configs/ipytforce ];then                                              # v3.11
+                        if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then                        # v3.11 HotFix
                             MENUW_YOUTUBE="$(printf '%b8 %b = Uninstall YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
                         else
                             MENUW_YOUTUBE="$(printf '%b8 %b = Install YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
