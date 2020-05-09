@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.10
+#============================================================================================ © 2019-2020 Martineau v3.11
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,13 +57,13 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 07-May-2020
+# Last Updated Date: 09-May-2020
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.10"
+VERSION="3.11"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -370,6 +370,7 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
     #[ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v3.00 its the default v2.15
     [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"       "$MENUW_ADBLOCK"      # v3.03
+    printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_YOUTUBE"   # v3.11
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
     printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_RPZ"    # v3.00
     printf "%s\t\t%s\n"                          "$MENUW_BIND"     "$MENUW_VPN"    # v3.07
@@ -499,6 +500,7 @@ welcome_message() {
                 MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
                 MENUW_BIND="$(printf '%bbind%b = BIND unbound to WAN [debug | disable | debug show]\n' "${cBYEL}" "${cRESET}")"  # v3.07
                 MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block [uninstall | update]\n' "${cBYEL}" "${cRESET}")"  # v3.03
+                MENUW_YOUTUBE="$(printf '%byoutube%b = Install YouTube Ad Block [uninstall | update]\n' "${cBYEL}" "${cRESET}")"  # v3.11
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -565,6 +567,7 @@ welcome_message() {
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o6. Install Graphical Statistics GUI (Add-ons) TAB     %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o7. Integrate with DoT (%bAdvanced Users%b)                %b    %b |\n' "$cBRED" "$cRESET" "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o8. Enable DNS Firewall                                %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o9. Install YouTube Ad Blocking                        %b    %b |\n' "$YES_NO" "$cRESET"   # v3.11
                 printf '|                                                                      |\n'
 
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
@@ -768,6 +771,11 @@ welcome_message() {
                                 MENU_AD="$(printf '%b5 %b = n/a Install Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}$cGRA")"
                             fi
                         fi
+                        if [ -f /opt/share/unbound/configs/ipytforce ];then                                              # v3.11
+                            MENUW_YOUTUBE="$(printf '%b8 %b = Uninstall YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
+                        else
+                            MENUW_YOUTUBE="$(printf '%b8 %b = Install YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
+                        fi
 
                         MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
 
@@ -779,8 +787,10 @@ welcome_message() {
                         printf "%s\t\t\n"            "$MENU_AD"
                         printf "%s\t\t\n"            "$MENU_T"
                         printf "%s\t\t\n"            "$MENUW_RPZ"         # v3.02 Hotfix
+                        printf "%s\t\t\n"            "$MENUW_YOUTUBE"     # v3.11
                         printf "\n%s\t\t\n"          "$MENU__"
                         printf "%s\t\t\n"            "$MENU_VX"
+
                     fi
                     printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
                 fi
@@ -828,6 +838,7 @@ _GetKEY() {
                                      [ -n "$(echo "$menu1" | grep -E "7.*\?")" ] && menu1="firewall ?"                  # v3.03
                                   fi
                     ;;
+                    8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;   #v3.11
                     u|uf) ;;
                     "?") ;;
                     v|vx|vh) ;;                         # v3.06 v3.04
@@ -857,7 +868,9 @@ _GetKEY() {
                         menu1="$(echo "$menu1" | sed 's/dev//g')"
                     fi
 
-                    if [ -n "$(echo "$menu1" | grep -o "config")" ] || [ -n "$(echo "$menu1" | grep -o "example")" ];then   # v3.06
+                    if [ -n "$(echo "$menu1" | grep -o "config")" ]  || \
+                       [ -n "$(echo "$menu1" | grep -o "example")" ] || \
+                       [ -n "$(echo "$menu1" | grep -o "s61unbound")" ];then   # v3.06
                         if [ -n "$(echo "$menu1" | grep -o "config")" ];then
                             echo -e $cBCYA"Retrieving Custom unbound configuration"$cBGRA
                             if [ "$USE_GITHUB_DEV" != "Y" ];then
@@ -872,13 +885,16 @@ _GetKEY() {
                             # Reapply local customisation 'include: unbound.conf.addgui'/'unbound.conf.add'
                             Check_config_add_and_postconf                                               # v3.07
                             Restart_unbound
-                        else
+                        elif [ -n "$(echo "$menu1" | grep -o "example")" ];then
                              echo -e $cBCYA"Retrieving Example unbound configuration"$cBGRA
                              if [ "$USE_GITHUB_DEV" != "Y" ];then
                                 download_file /opt/share/unbound/configs doc/example.conf.in nlnetlabs      # v3.06
                              else
                                 download_file /opt/share/unbound/configs doc/example.conf.in nlnetlabs  dev # v3.06
                              fi
+                        elif [ -n "$(echo "$menu1" | grep -o "s61unbound")" ];then
+                               echo
+                              [ "$USE_GITHUB_DEV" != "Y" ] && S61unbound_update || S61unbound_update dev # v3.10
                         fi
                     else
 
@@ -1282,7 +1298,7 @@ EOF
                 sd|dnsmasqstats)                                            # v1.18
                     [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
                     # Is scribe / Diversion running?
-                    if grep -q diversion /etc/dnsmasq.conf ;then
+                    if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then   # v3.11
                         [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"     # v1.28
                     fi
                     echo -e $cBGRA
@@ -1364,16 +1380,17 @@ EOF
                     SayT "unbound STOPPED"                                  # v3.08
                     #break                                                  # v3.08
                 ;;
-                debug|dd|ddnouser)                # v1.07
+                debug)                #  v3.10 v1.07
 
                     [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; continue; }    # v2.01
 
                     echo
-                    [ "$menu1" == "ddnouser" ] &&  sed -i '/^username:.*\"nobody\"/s/nobody//' ${CONFIG_DIR}unbound.conf
+
                     echo -e $cBYEL
+                    netstat -anp | grep LISTEN | grep -v unix | awk -v OFS='\t' '{gsub(":"," ",$4); print $0}' | sort -g -k4 -k5   # v3.11
+                    [ -n "$(pidof unbound)" ] && echo -e $cBCYA"\n\tWarning ${cRESET}unbound$cBCYA is running so $cRESET'unbound -dv'$cBCYA may show sockets already in use by ${cRESET}unbound$cBYEL\n"   # v3.11
                     unbound -dv
                     echo -e $cRESET
-                    [ "$menu1" == "ddnouser" ] &&  sed -i 's/username:.*\"\"/username: \"nobody\"/' ${CONFIG_DIR}unbound.conf
                     break
                 ;;
                 dnsmasq*)                                                                 # v3.10 [disable]
@@ -1440,7 +1457,7 @@ EOF
                     echo -e $cBCYA"\n\tAbout ${cRESET}unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ ${cRESET}"
                     echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
                 ;;
-                adblock*)                                           # v3.10 v2.18   [ track | update | uninstall ]
+                adblock*)                                           # v3.10 v2.18   [ youtube | track | update | uninstall ]
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
@@ -1461,6 +1478,28 @@ EOF
                         local RC=1
                     fi
                 ;;
+                youtube*)                                           # v3.11   [ update | uninstall ]
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                    fi
+
+                    if [ "$(Unbound_Installed)" == "Y" ];then
+                        if [ "$ARG" != "uninstall" ];then
+                            AUTO_REPLY12="?"
+                            echo
+                            [ "$ARG" != "update" ] && Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG" ||  YouTube_Adblock "update"    # v3.11
+                            local RC=$?
+                        else
+                            YouTube_Adblock "uninstall"
+                            local RC=0
+                        fi
+                    else
+                        echo -e $cBRED"\a\n\tunbound NOT installed!?"$cRESET
+                        local RC=1
+                    fi
+                ;;
+
                 easy|adv*)                                          # v2.07
                     # v2.07 When unbound_manager invoked from amtm, 'easy' mode is the default.
                     #       Allow user to save their preferred mode e.g. 'advanced' as the default across amtm sessions
@@ -2020,7 +2059,7 @@ S61unbound_update() {
             rm "$line"
         done
     fi
-    download_file /opt/etc/init.d S61unbound jackyaz                                         # v 2.02 v1.11
+    download_file /opt/etc/init.d S61unbound martineau $1         # v3.11 v2.02 v1.11
 
     chmod 755 /opt/etc/init.d/S61unbound >/dev/null 2>&1
 }
@@ -3634,7 +3673,7 @@ Check_GUI_NVRAM() {
                     [ -n "$(grep -m 1 "always_nxdomain" /opt/var/lib/unbound/adblock/adservers)" ] && PIXELSERVTXT= || PIXELSERVTXT="(via pixelserv-tls) " # v3.00
                     local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Whitelist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v3.00 v2.14 v2.04
                     # Check if Diversion is also running
-                    [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v2.18 Hotfix v1.24
+                    [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v3.11 v2.18 Hotfix v1.24
                 fi
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 3"     #v2.18
             fi
@@ -3690,6 +3729,15 @@ Check_GUI_NVRAM() {
             # AUTO_REPLY 11
             if [ "$(Get_unbound_config_option "port:" ${CONFIG_DIR}unbound.conf)" == "53" ];then            # v3.10
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Unbound is the Primary DNS for ALL LAN Clients $cRED(dnsmaq DNS features DISABLED e.g. IPSET auto-populate)" 2>&1
+            fi
+
+            # AUTO_REPLY 12
+            if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then            # v3.11
+                if [ -s /opt/share/unbound/configs/ipytforce ];then
+                   local IPYT=$(cat /opt/share/unbound/configs/ipytforce)
+                fi
+                [ -n "$IPYT" ] && local TXT="${cRESET}(Forcing to use YT IP ${cBMAG}$IPYT$cRESET)" || local TXT=${cRESET}$cRED_".....Please play YouTube video to acquire YouTube Ad Server IP Address"$cRESET
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] YouTube Ad Blocking $TXT" 2>&1
             fi
         fi
 
@@ -3747,10 +3795,11 @@ Ad_Tracker_blocking() {
     if [ "$1" != "uninstall" ];then                                                 # v2.18
 
         if [ "$1" != "update" ];then                       # v3.10
-            echo -e $cBCYA"Installing Ads and Tracker Blocking....."$cRESET     # v1.06
+            echo -e $cBCYA"Installing Ads and Tracker (Ad Block) Blocking....."$cRESET     # v3.11 v1.06
 
-            download_file ${CONFIG_DIR} adblock/gen_adblock.sh  juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
-            download_file ${CONFIG_DIR} adblock/permlist        juched   dos2unix   # v2.17 v2.14 v2.02 v1.17
+            download_file ${CONFIG_DIR} adblock/gen_adblock.sh    juched       dos2unix   # v2.17 v2.14 v2.02 v1.17
+            download_file ${CONFIG_DIR} adblock/permlist          juched       dos2unix   # v2.17 v2.14 v2.02 v1.17
+            download_file ${CONFIG_DIR} adblock/gen_ytadblock.sh  juched   dev dos2unix   # v3.11
 
             # Ad Block User customisable files...
             #       blocklist='/opt/share/unbound/configs/blockhost'
@@ -3817,7 +3866,7 @@ Ad_Tracker_blocking() {
             cru d adblock 2>/dev/null
             cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh   # v1.0.3 Restarts unbound using 'unbound_manager restart' to save/restore cache
 
-            [ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+            [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }           # v3.11
             if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
                 $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
             fi
@@ -3854,15 +3903,78 @@ Ad_Tracker_blocking() {
         fi
 
         # Remove Ad and Tracker cron job /jffs/scripts/services-start   # v1.07
-        echo -e $cBCYA"Removing Ad and Tracker Update cron job"$cRESET
+        echo -e $cBCYA"Removing Ad and Tracker (Ad Block) Update cron job"$cRESET   # v3.11
         if grep -qF "gen_adblock" $FN; then
             sed -i '/gen_adblock/d' $FN
         fi
+
         cru d adblock 2>/dev/null
 
         CURRENT_AUTO_OPTIONS=$(echo "$CURRENT_AUTO_OPTIONS" | sed 's/3//' | sed 's/^ //')   # v2.18 Hotfix Remove option from AUTO install
     fi
 
+}
+Option_YouTube_Adblock() {
+
+    local ANS=$1
+    shift
+    if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+        echo -en $cBYEL"Option Auto Reply 'y'\t"
+    fi
+
+    if [ "$USER_OPTION_PROMPTS" == "?" ] || [  "$ANS" == "?" ];then
+        echo -e "\nDo you want to install YouTube Video Ad blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+        read -r "ANS"
+    fi
+    [ "$ANS" == "y"  ] && { YouTube_Adblock "$@" ; return 0; } || return 1   # v3.11
+}
+YouTube_Adblock() {                                                          # v3.11
+
+    local FN="/jffs/scripts/services-start"
+
+    if [ "$1" != "uninstall" ];then                                                 # v2.18
+
+        if [ "$1" != "update" ];then
+            echo -e $cBCYA"Installing YouTube Video Ad Blocking....."$cRESET     # v3.11
+
+            download_file ${CONFIG_DIR} adblock/gen_ytadblock.sh  juched   dev dos2unix   # v3.11
+
+            # Create cron job to refresh the YouTub Ads/Tracker lists                         # v3.11
+            echo -e $cBCYA"Creating Daily cron job for YouTube Ad Tracker update"$cBGRA       # v3.11
+            cru d ytadblock 2>/dev/null
+            cru a ytadblock "*/5 * * *" ${CONFIG_DIR}adblock/gen_ytadblock.sh                 # v3.11
+
+            [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+            if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
+                $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"*/5 * * * *\" ${CONFIG_DIR}adblock/gen_ytadblock.sh\t# unbound_manager")" )
+            fi
+
+            chmod +x $FN                                            # v1.11 Hack????
+
+            echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_ytadblock.sh'....."$cBGRA
+            chmod +x ${CONFIG_DIR}adblock/gen_ytadblock.sh
+            sh ${CONFIG_DIR}adblock/gen_ytadblock.sh                         # v3.11
+
+            echo -e $cBCYA
+        else
+            echo -e $cBCYA"Updating YouTube Video Ad Blocking....."$cBGRA     # v3.11
+            sh /opt/var/lib/unbound/adblock/gen_ytadblock.sh                  # v3.11
+            echo -en $cRESET
+        fi
+    else
+        # v3.11 uninstall YouTube Ad Block
+        echo -e
+        AUTO_REPLY12=
+
+        # Remove YouTube Video Ad cron job /jffs/scripts/services-start # v3.11
+        if grep -qF "gen_ytadblock" $FN; then
+            sed -i '/gen_ytadblock/d' $FN
+        fi
+
+        cru d ytadblock 2>/dev/null                                     # v3.11
+        echo -e $cBCYA"Removing YouTube Video Ad Server YT IP"$cRESET
+        rm -rf /opt/share/unbound/configs/ipytforce 2>/dev/null         # v3.11
+    fi
 }
 Option_Disable_Firefox_DoH() {
 
@@ -3902,7 +4014,7 @@ Option_Disable_dnsmasq() {                              # v3.10
 
         if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
             local TXT="\tIf you currently use or rely on dnsmasq features such as ${cBCYA}Diversion/x3mRouting${cRESET} etc., then re-consider."
-            [ -n "$(grep diversion /etc/dnsmasq.conf)" ] && local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)"
+            [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ] && local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)" # v3.11
             echo -e ${cRESET}$cBWHT${TXT}${TXTX}
             echo -e $cRESET"\n\tDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
             read -r "ANS"
@@ -3917,7 +4029,7 @@ _quote() {
 
         local ARG=$1
         local ROUTER="$(nvram get lan_ipaddr_rt)"      # v3.10 Hotfix
-        local UNBOUND_LISTEN=${ROUTER%.*}.1
+        local UNBOUND_LISTEN=$ROUTER                  # v3.11 Hotfix
         local UNBOUND_LISTENSED=$(_quote "$UNBOUND_LISTEN")
 
         local FN="/opt/share/unbound/configs/unbound.conf.localhosts"
@@ -3943,11 +4055,16 @@ _quote() {
                 # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
                 for PAIR in $(nvram get dhcp_staticlist | tr '<' ' ')
                     do
+                        local NAME=                                             # v3.11
                         local MAC=$(echo "$PAIR" | cut -d'>' -f1)
                         local IP_ADDR=$(echo "$PAIR" | cut -d'>' -f2)
                         local NAME=$(nvram get dhcp_hostnames | tr '<>' ' ' | grep -oE "$MAC.*" | cut -d' ' -f2)
-                        echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
-                        echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
+                        if [ -n "$NAME" ];then                                                                      # v3.11
+                            echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
+                            echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
+                        else
+                            echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in 'nvram get dhcp_hostnames'"   # v3.11
+                        fi
                     done
 
                     echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
@@ -3978,7 +4095,7 @@ _quote() {
         if [ $RC -eq 0 ];then
             # @tomsk , if bypass dnsmasq and Diversion is running then replace with Ad Block   # v3.10
             if [ "$ARG" == "disable" ];then
-               if [ -n "$(grep diversion /etc/dnsmasq.conf)" ];then
+               if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then   # v3.11
                   Option_Ad_Tracker_Blocker "?"
                   local RC=$?
 
@@ -3990,11 +4107,13 @@ _quote() {
                   fi
                fi
             else
-               # dnsmasq reinstated so disable Ad Block and restart Diversion
+               # dnsmasq reinstated so restart Diversion if installed and it isn't already UP; then stop Ad Block
                if [ -n "$(which diversion)" ];then
-                  echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Starting 'Diversion'....."$cRESET
-                  /opt/bin/diversion enable
-                  Ad_Tracker_blocking "uninstall"
+                  if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=disabled" ];then
+                     echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Starting 'Diversion'....."$cRESET
+                     /opt/bin/diversion enable
+                  fi
+                  Ad_Tracker_blocking "uninstall"                                   # v3.11 Only terminate if Diversion running
                fi
             fi
         fi
