@@ -3731,7 +3731,7 @@ Check_GUI_NVRAM() {
             fi
 
             # AUTO_REPLY 12
-            if [ -f /opt/share/unbound/configs/ipytforce ];then            # v3.11
+            if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then            # v3.11
                 if [ -s /opt/share/unbound/configs/ipytforce ];then
                    local IPYT=$(cat /opt/share/unbound/configs/ipytforce)
                 fi
@@ -3794,7 +3794,7 @@ Ad_Tracker_blocking() {
     if [ "$1" != "uninstall" ];then                                                 # v2.18
 
         if [ "$1" != "update" ];then                       # v3.10
-            echo -e $cBCYA"Installing Ads and Tracker and YouTube Video Ad Blocking....."$cRESET     # v3.11 v1.06
+            echo -e $cBCYA"Installing Ads and Tracker (Ad Block) Blocking....."$cRESET     # v3.11 v1.06
 
             download_file ${CONFIG_DIR} adblock/gen_adblock.sh    juched       dos2unix   # v2.17 v2.14 v2.02 v1.17
             download_file ${CONFIG_DIR} adblock/permlist          juched       dos2unix   # v2.17 v2.14 v2.02 v1.17
@@ -3902,7 +3902,7 @@ Ad_Tracker_blocking() {
         fi
 
         # Remove Ad and Tracker cron job /jffs/scripts/services-start   # v1.07
-        echo -e $cBCYA"Removing Ad and Tracker and YouTube Update cron job"$cRESET   # v3.11
+        echo -e $cBCYA"Removing Ad and Tracker (Ad Block) Update cron job"$cRESET   # v3.11
         if grep -qF "gen_adblock" $FN; then
             sed -i '/gen_adblock/d' $FN
         fi
@@ -3922,7 +3922,7 @@ Option_YouTube_Adblock() {
     fi
 
     if [ "$USER_OPTION_PROMPTS" == "?" ] || [  "$ANS" == "?" ];then
-        echo -e "\nDo you want to install YouTube Ad blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+        echo -e "\nDo you want to install YouTube Video Ad blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
         read -r "ANS"
     fi
     [ "$ANS" == "y"  ] && { YouTube_Adblock "$@" ; return 0; } || return 1   # v3.11
@@ -3971,6 +3971,7 @@ YouTube_Adblock() {                                                          # v
         fi
 
         cru d ytadblock 2>/dev/null                                     # v3.11
+		echo -e $cBCYA"Removing YouTube Video Ad Server YT IP"$cRESET
         rm -rf /opt/share/unbound/configs/ipytforce 2>/dev/null         # v3.11
     fi
 }
