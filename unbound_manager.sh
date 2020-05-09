@@ -1298,7 +1298,7 @@ EOF
                 sd|dnsmasqstats)                                            # v1.18
                     [ -n "$(ps | grep -v grep | grep -F "syslog-ng")" ] && SYSLOG="/opt/var/log/messages" || SYSLOG="/tmp/syslog.log"
                     # Is scribe / Diversion running?
-                    if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then   # v3.11
+                    if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
                         [ -f /opt/var/log/dnsmasq.log ] && SYSLOG="/opt/var/log/dnsmasq.log"     # v1.28
                     fi
                     echo -e $cBGRA
@@ -3673,7 +3673,9 @@ Check_GUI_NVRAM() {
                     [ -n "$(grep -m 1 "always_nxdomain" /opt/var/lib/unbound/adblock/adservers)" ] && PIXELSERVTXT= || PIXELSERVTXT="(via pixelserv-tls) " # v3.00
                     local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Whitelist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v3.00 v2.14 v2.04
                     # Check if Diversion is also running
-                    [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ] && local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v3.11 v2.18 Hotfix v1.24
+                    if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
+                        local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v3.11 v2.18 Hotfix v1.24
+                    fi
                 fi
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Ad and Tracker Blocking"$cRESET" ($TXT)" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 3"     #v2.18
             fi
@@ -3976,7 +3978,7 @@ YouTube_Adblock() {                                                          # v
         rm -rf /opt/share/unbound/configs/ipytforce 2>/dev/null
         rm -rf /opt/var/lib/unbound/adblock/gen_ytadblock.sh 2>/dev/null
         rm -rf /opt/var/lib/unbound/adblock/ytadblock 2>/dev/null
-        
+
         Restart_unbound                                                 # v3.11 Hotfix
     fi
 }
@@ -4018,7 +4020,9 @@ Option_Disable_dnsmasq() {                              # v3.10
 
         if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
             local TXT="\tIf you currently use or rely on dnsmasq features such as ${cBCYA}Diversion/x3mRouting${cRESET} etc., then re-consider."
-            [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ] && local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)" # v3.11
+            if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
+               local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)" # v3.11
+            fi
             echo -e ${cRESET}$cBWHT${TXT}${TXTX}
             echo -e $cRESET"\n\tDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
             read -r "ANS"
@@ -4099,7 +4103,7 @@ _quote() {
         if [ $RC -eq 0 ];then
             # @tomsk , if bypass dnsmasq and Diversion is running then replace with Ad Block   # v3.10
             if [ "$ARG" == "disable" ];then
-               if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then   # v3.11
+               if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
                   Option_Ad_Tracker_Blocker "?"
                   local RC=$?
 
@@ -4113,7 +4117,7 @@ _quote() {
             else
                # dnsmasq reinstated so restart Diversion if installed and it isn't already UP; then stop Ad Block
                if [ -n "$(which diversion)" ];then
-                  if [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=disabled" ];then
+                  if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=disabled" ];then    # v3.11 Hotfix
                      echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Starting 'Diversion'....."$cRESET
                      /opt/bin/diversion enable
                   fi
