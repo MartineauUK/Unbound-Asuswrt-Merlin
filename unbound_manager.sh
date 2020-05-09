@@ -3944,11 +3944,11 @@ YouTube_Adblock() {                                                          # v
             # Create cron job to refresh the YouTub Ads/Tracker lists                         # v3.11
             echo -e $cBCYA"Creating Daily cron job for YouTube Ad Tracker update"$cBGRA       # v3.11
             cru d ytadblock 2>/dev/null
-            cru a ytadblock "*/5 * * *" ${CONFIG_DIR}adblock/gen_ytadblock.sh                 # v3.11
+            cru a ytadblock "*/5 * * * *" ${CONFIG_DIR}adblock/gen_ytadblock.sh                 # v3.11 Hotfix v3.11
 
             [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
             if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
-                $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"*/5 * * * *\" ${CONFIG_DIR}adblock/gen_ytadblock.sh\t# unbound_manager")" )
+                $(Smart_LineInsert "$FN" "$(echo -e "cru a ytadblock \"*/5 * * * *\" ${CONFIG_DIR}adblock/gen_ytadblock.sh\t# unbound_manager")" )   # v3.11 Hotfix
             fi
 
             chmod +x $FN                                            # v1.11 Hack????
