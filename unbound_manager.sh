@@ -3801,7 +3801,6 @@ Ad_Tracker_blocking() {
 
             download_file ${CONFIG_DIR} adblock/gen_adblock.sh    juched       dos2unix   # v2.17 v2.14 v2.02 v1.17
             download_file ${CONFIG_DIR} adblock/permlist          juched       dos2unix   # v2.17 v2.14 v2.02 v1.17
-            download_file ${CONFIG_DIR} adblock/gen_ytadblock.sh  juched   dev dos2unix   # v3.11
 
             # Ad Block User customisable files...
             #       blocklist='/opt/share/unbound/configs/blockhost'
@@ -3947,7 +3946,7 @@ YouTube_Adblock() {                                                          # v
             cru a ytadblock "*/5 * * * *" ${CONFIG_DIR}adblock/gen_ytadblock.sh                 # v3.11 Hotfix v3.11
 
             [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
-            if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
+            if [ -z "$(grep -E "gen_ytadblock" /jffs/scripts/services-start | grep -v "^#")" ];then   # v3.11 Hotfix
                 $(Smart_LineInsert "$FN" "$(echo -e "cru a ytadblock \"*/5 * * * *\" ${CONFIG_DIR}adblock/gen_ytadblock.sh\t# unbound_manager")" )   # v3.11 Hotfix
             fi
 
