@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.11beta3
+#============================================================================================ © 2019-2020 Martineau v3.11rc1
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 08-May-2020
+# Last Updated Date: 09-May-2020
 #
 # Description:
 #
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.11b3"
+VERSION="3.11rc1"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -370,6 +370,7 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
     #[ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v3.00 its the default v2.15
     [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"       "$MENUW_ADBLOCK"      # v3.03
+    printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_YOUTUBE"   # v3.11
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
     printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_RPZ"    # v3.00
     printf "%s\t\t%s\n"                          "$MENUW_BIND"     "$MENUW_VPN"    # v3.07
@@ -499,6 +500,7 @@ welcome_message() {
                 MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
                 MENUW_BIND="$(printf '%bbind%b = BIND unbound to WAN [debug | disable | debug show]\n' "${cBYEL}" "${cRESET}")"  # v3.07
                 MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block [uninstall | update]\n' "${cBYEL}" "${cRESET}")"  # v3.03
+                MENUW_YOUTUBE="$(printf '%byoutube%b = Install YouTube Ad Block [uninstall | update]\n' "${cBYEL}" "${cRESET}")"  # v3.11
                 MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -565,6 +567,7 @@ welcome_message() {
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o6. Install Graphical Statistics GUI (Add-ons) TAB     %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o7. Integrate with DoT (%bAdvanced Users%b)                %b    %b |\n' "$cBRED" "$cRESET" "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o8. Enable DNS Firewall                                %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o9. Install YouTube Ad Blocking                        %b    %b |\n' "$YES_NO" "$cRESET"   # v3.11
                 printf '|                                                                      |\n'
 
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
@@ -768,6 +771,11 @@ welcome_message() {
                                 MENU_AD="$(printf '%b5 %b = n/a Install Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}$cGRA")"
                             fi
                         fi
+                        if [ -f /opt/share/unbound/configs/ipytforce ];then                                              # v3.11
+                            MENUW_YOUTUBE="$(printf '%b8 %b = Uninstall YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
+                        else
+                            MENUW_YOUTUBE="$(printf '%b8 %b = Install YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
+                        fi
 
                         MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
 
@@ -779,8 +787,10 @@ welcome_message() {
                         printf "%s\t\t\n"            "$MENU_AD"
                         printf "%s\t\t\n"            "$MENU_T"
                         printf "%s\t\t\n"            "$MENUW_RPZ"         # v3.02 Hotfix
+                        printf "%s\t\t\n"            "$MENUW_YOUTUBE"     # v3.11
                         printf "\n%s\t\t\n"          "$MENU__"
                         printf "%s\t\t\n"            "$MENU_VX"
+
                     fi
                     printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
                 fi
@@ -828,6 +838,7 @@ _GetKEY() {
                                      [ -n "$(echo "$menu1" | grep -E "7.*\?")" ] && menu1="firewall ?"                  # v3.03
                                   fi
                     ;;
+                    8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;   #v3.11
                     u|uf) ;;
                     "?") ;;
                     v|vx|vh) ;;                         # v3.06 v3.04
@@ -1466,6 +1477,28 @@ EOF
                         local RC=1
                     fi
                 ;;
+                youtube*)                                           # v3.11   [ update | uninstall ]
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                    fi
+
+                    if [ "$(Unbound_Installed)" == "Y" ];then
+                        if [ "$ARG" != "uninstall" ];then
+                            AUTO_REPLY12="?"
+                            echo
+                            [ "$ARG" != "update" ] && Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG" ||  YouTube_Adblock "update"    # v3.11
+                            local RC=$?
+                        else
+                            YouTube_Adblock "uninstall"
+                            local RC=0
+                        fi
+                    else
+                        echo -e $cBRED"\a\n\tunbound NOT installed!?"$cRESET
+                        local RC=1
+                    fi
+                ;;
+
                 easy|adv*)                                          # v2.07
                     # v2.07 When unbound_manager invoked from amtm, 'easy' mode is the default.
                     #       Allow user to save their preferred mode e.g. 'advanced' as the default across amtm sessions
@@ -3696,6 +3729,15 @@ Check_GUI_NVRAM() {
             if [ "$(Get_unbound_config_option "port:" ${CONFIG_DIR}unbound.conf)" == "53" ];then            # v3.10
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Unbound is the Primary DNS for ALL LAN Clients $cRED(dnsmaq DNS features DISABLED e.g. IPSET auto-populate)" 2>&1
             fi
+
+            # AUTO_REPLY 12
+            if [ -f /opt/share/unbound/configs/ipytforce ];then            # v3.11
+                if [ -s /opt/share/unbound/configs/ipytforce ];then
+                   local IPYT=$(cat /opt/share/unbound/configs/ipytforce)
+                fi
+                [ -n "$IPYT" ] && local TXT="${cRESET}(Forcing to use YT IP ${cBMAG}$IPYT$cRESET)" || local TXT=$cRESET".....Please play YouTube video to acquire YouTube Ad Server IP Address"
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] YouTube Ad Blocking $TXT" 2>&1
+            fi
         fi
 
         local TXT=
@@ -3818,26 +3860,17 @@ Ad_Tracker_blocking() {
                 sed -i "/adblock\/adservers/s/^#//" ${CONFIG_DIR}unbound.conf                                       # v1.11
             fi
 
-            # Create cron job to refresh the YouTub Ads/Tracker lists                         # v3.11
-            echo -e $cBCYA"Creating Daily cron job for YouTube Ad Tracker update"$cBGRA       # v3.11
-            cru d ytadblock 2>/dev/null
-            cru a ytadblock "*/5 * * *" ${CONFIG_DIR}adblock/gen_ytadblock.sh                 # v3.11
-
             # Create cron job to refresh the Ads/Tracker lists  # v1.07
             echo -e $cBCYA"Creating Daily cron job for Ad and Tracker update"$cBGRA
             cru d adblock 2>/dev/null
             cru a adblock "0 5 * * *" ${CONFIG_DIR}adblock/gen_adblock.sh   # v1.0.3 Restarts unbound using 'unbound_manager restart' to save/restore cache
 
-            [ ! -f /jffs/scripts/services-start ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+            [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }           # v3.11
             if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
                 $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
             fi
 
             chmod +x $FN                                            # v1.11 Hack????
-
-            echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_ytadblock.sh'....."$cBGRA
-            chmod +x ${CONFIG_DIR}adblock/gen_ytadblock.sh
-            sh ${CONFIG_DIR}adblock/gen_ytadblock.sh                         # v3.11
 
             echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_adblock.sh'....."$cBGRA
             chmod +x ${CONFIG_DIR}adblock/gen_adblock.sh
@@ -3853,9 +3886,6 @@ Ad_Tracker_blocking() {
         else
             echo -e $cBCYA"Updating Ads and Tracker Blocking....."$cBGRA     # v3.10
             sh /opt/var/lib/unbound/adblock/gen_adblock.sh                    # v3.10
-            echo -en $cRESET
-            echo -e $cBCYA"Updating YouTube Video Ad Blocking....."$cBGRA     # v3.11
-            sh /opt/var/lib/unbound/adblock/gen_ytadblock.sh                  # v3.11
             echo -en $cRESET
         fi
     else
@@ -3876,17 +3906,73 @@ Ad_Tracker_blocking() {
         if grep -qF "gen_adblock" $FN; then
             sed -i '/gen_adblock/d' $FN
         fi
-        # Remove YouTube Video Ad cron job /jffs/scripts/services-start # v3.11
-        if grep -qF "gen_ytadblock" $FN; then
-            sed -i '/gen_ytadblock/d' $FN
-        fi
+
         cru d adblock 2>/dev/null
-        cru d ytadblock 2>/dev/null                                     # v3.11
-        rm -rf /opt/share/unbound/configs/ipytforce 2>/dev/null         # v3.11
 
         CURRENT_AUTO_OPTIONS=$(echo "$CURRENT_AUTO_OPTIONS" | sed 's/3//' | sed 's/^ //')   # v2.18 Hotfix Remove option from AUTO install
     fi
 
+}
+Option_YouTube_Adblock() {
+
+    local ANS=$1
+    shift
+    if [ "$USER_OPTION_PROMPTS" != "?" ] && [ "$ANS" == "y"  ];then
+        echo -en $cBYEL"Option Auto Reply 'y'\t"
+    fi
+
+    if [ "$USER_OPTION_PROMPTS" == "?" ] || [  "$ANS" == "?" ];then
+        echo -e "\nDo you want to install YouTube Ad blocking?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+        read -r "ANS"
+    fi
+    [ "$ANS" == "y"  ] && { YouTube_Adblock "$@" ; return 0; } || return 1   # v3.11
+}
+YouTube_Adblock() {                                                          # v3.11
+
+    local FN="/jffs/scripts/services-start"
+
+    if [ "$1" != "uninstall" ];then                                                 # v2.18
+
+        if [ "$1" != "update" ];then
+            echo -e $cBCYA"Installing YouTube Video Ad Blocking....."$cRESET     # v3.11
+
+            download_file ${CONFIG_DIR} adblock/gen_ytadblock.sh  juched   dev dos2unix   # v3.11
+
+            # Create cron job to refresh the YouTub Ads/Tracker lists                         # v3.11
+            echo -e $cBCYA"Creating Daily cron job for YouTube Ad Tracker update"$cBGRA       # v3.11
+            cru d ytadblock 2>/dev/null
+            cru a ytadblock "*/5 * * *" ${CONFIG_DIR}adblock/gen_ytadblock.sh                 # v3.11
+
+            [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+            if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
+                $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"*/5 * * * *\" ${CONFIG_DIR}adblock/gen_ytadblock.sh\t# unbound_manager")" )
+            fi
+
+            chmod +x $FN                                            # v1.11 Hack????
+
+            echo -e $cBCYA"Executing '${CONFIG_DIR}adblock/gen_ytadblock.sh'....."$cBGRA
+            chmod +x ${CONFIG_DIR}adblock/gen_ytadblock.sh
+            sh ${CONFIG_DIR}adblock/gen_ytadblock.sh                         # v3.11
+
+            echo -e $cBCYA
+        else
+            echo -e $cBCYA"Updating YouTube Video Ad Blocking....."$cBGRA     # v3.11
+            sh /opt/var/lib/unbound/adblock/gen_ytadblock.sh                  # v3.11
+            echo -en $cRESET
+        fi
+    else
+        # v3.11 uninstall YouTube Ad Block
+        echo -e
+        AUTO_REPLY12=
+
+        # Remove YouTube Video Ad cron job /jffs/scripts/services-start # v3.11
+        if grep -qF "gen_ytadblock" $FN; then
+            sed -i '/gen_ytadblock/d' $FN
+        fi
+
+        cru d ytadblock 2>/dev/null                                     # v3.11
+        rm -rf /opt/share/unbound/configs/ipytforce 2>/dev/null         # v3.11
+    fi
 }
 Option_Disable_Firefox_DoH() {
 
