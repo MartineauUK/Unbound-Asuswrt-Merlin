@@ -3973,7 +3973,11 @@ YouTube_Adblock() {                                                          # v
 
         cru d ytadblock 2>/dev/null                                     # v3.11
         echo -e $cBCYA"Removing YouTube Video Ad Server YT IP"$cRESET
-        rm -rf /opt/share/unbound/configs/ipytforce 2>/dev/null         # v3.11
+        rm -rf /opt/share/unbound/configs/ipytforce 2>/dev/null
+        rm -rf /opt/var/lib/unbound/adblock/gen_ytadblock.sh 2>/dev/null
+        rm -rf /opt/var/lib/unbound/adblock/ytadblock 2>/dev/null
+        
+        Restart_unbound                                                 # v3.11 Hotfix
     fi
 }
 Option_Disable_Firefox_DoH() {
