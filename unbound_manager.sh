@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 09-May-2020
+# Last Updated Date: 10-May-2020
 #
 # Description:
 #
@@ -3737,8 +3737,9 @@ Check_GUI_NVRAM() {
             if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then            # v3.11
                 if [ -s /opt/share/unbound/configs/ipytforce ];then
                    local IPYT=$(cat /opt/share/unbound/configs/ipytforce)
+                   local IPYTDOMAINS=$(awk 'END{print NR} ' /opt/var/lib/unbound/adblock/ytadblock)   # v3.11 Hotfix
                 fi
-                [ -n "$IPYT" ] && local TXT="${cRESET}(Forcing to use YT IP ${cBMAG}$IPYT$cRESET)" || local TXT=${cRESET}$cRED_".....Please play YouTube video to acquire YouTube Ad Server IP Address"$cRESET
+                [ -n "$IPYT" ] && local TXT="${cRESET}(Forcing to use YT IP ${cBMAG}$IPYT$cRESET, No. of YouTube Video Ad ${cBGRE}domains=${cBMAG}${IPYTDOMAINS}${cRESET})" || local TXT=${cRESET}$cRED_".....Please play YouTube video to acquire YouTube Ad Server IP Address"$cRESET
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] YouTube Ad Blocking $TXT" 2>&1
             fi
         fi
