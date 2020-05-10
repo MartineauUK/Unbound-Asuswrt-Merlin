@@ -3869,7 +3869,7 @@ Ad_Tracker_blocking() {
 
             [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }           # v3.11
             if [ -z "$(grep -E "gen_adblock" /jffs/scripts/services-start | grep -v "^#")" ];then
-                $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * *\" ${CONFIG_DIR}adblock/gen_adblock.sh\t# unbound_manager")" )  # v1.13
+                $(Smart_LineInsert "$FN" "$(echo -e "cru a adblock \"0 5 * * * ${CONFIG_DIR}adblock/gen_adblock.sh\"\t# unbound_manager")" )  # v3.11 Hotfix v1.13
             fi
 
             chmod +x $FN                                            # v1.11 Hack????
@@ -3947,7 +3947,7 @@ YouTube_Adblock() {                                                          # v
 
             [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
             if [ -z "$(grep -E "gen_ytadblock" /jffs/scripts/services-start | grep -v "^#")" ];then   # v3.11 Hotfix
-                $(Smart_LineInsert "$FN" "$(echo -e "cru a ytadblock \"*/5 * * * *\" ${CONFIG_DIR}adblock/gen_ytadblock.sh\t# unbound_manager")" )   # v3.11 Hotfix
+                $(Smart_LineInsert "$FN" "$(echo -e "cru a ytadblock \"*/5 * * * * ${CONFIG_DIR}adblock/gen_ytadblock.sh\"\t# unbound_manager")" )   # v3.11 Hotfix
             fi
 
             chmod +x $FN                                            # v1.11 Hack????
