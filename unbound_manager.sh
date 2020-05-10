@@ -4066,12 +4066,13 @@ _quote() {
                         local NAME=                                             # v3.11
                         local MAC=$(echo "$PAIR" | cut -d'>' -f1)
                         local IP_ADDR=$(echo "$PAIR" | cut -d'>' -f2)
-                        local NAME=$(nvram get dhcp_hostnames | tr '<>' ' ' | grep -oE "$MAC.*" | cut -d' ' -f2)
+                        [ -f /etc/hosts.dnsmasq ] && local NAME="$(awk -v ip="${IP_ADDR}" '$1 == ip {print $2}' /etc/hosts.dnsmasq)"   # v3.11 Hotfix @glehel
+                        [ -z "$NAME" ] && local NAME=$(nvram get dhcp_hostnames | tr '<>' ' ' | grep -oE "$MAC.*" | cut -d' ' -f2)
                         if [ -n "$NAME" ];then                                                                      # v3.11
                             echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
                             echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
                         else
-                            echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in 'nvram get dhcp_hostnames'"   # v3.11
+                            echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in '/etc/hosts.dnsmasq' or 'nvram get dhcp_hostnames'"   # v3.11
                         fi
                     done
 
