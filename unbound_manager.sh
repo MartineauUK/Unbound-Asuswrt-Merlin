@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 11-May-2020
+# Last Updated Date: 12-May-2020
 #
 # Description:
 #
@@ -1777,7 +1777,7 @@ EOF
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                     fi
                     # https://www.dnsknowledge.com/unbound/configure-unbound-dns-over-tls-on-linux/
-                    if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep -F "DNS-Over-TLS support" ${CONFIG_DIR}unbound.conf)" ];then
+                    if [ "$(Unbound_Installed)" == "Y" ] && [ -n "$(grep "forward-zone:#DoT" ${CONFIG_DIR}unbound.conf)" ];then   # v3.12 Hotfix
                         if [ "$ARG" != "disable" ];then
                             AUTO_REPLY6="?"
                             Option_DoT_Forwarder          "$AUTO_REPLY6"
@@ -2235,7 +2235,7 @@ DoT_Forwarder() {
     [ "$(nvram get ipv6_service)" != "disabled" ] && local TO="forward-addr: 2620:fe::9" || local TO="forward-addr: 149.112"
 
     if [ "$1" != "off" ];then
-        echo -e $cBCYA"\n\tEnabling DoT with unbound now as a ${cBWHT}Forwarder....."$cBGRA     # v2.12
+        echo -e $cBCYA"\n\tEnabling DoT with unbound now as a ${cBWHT}Forwarder.\n"$cBGRA     # v2.12
         #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
         #forward-zone:      # DNS-Over-TLS support
         #name: "."
@@ -2249,10 +2249,10 @@ DoT_Forwarder() {
         #forward-addr: 2620:fe::fe@853#dns.quad9.net
         #forward-addr: 2620:fe::9@853#dns.quad9.net
         #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        Edit_config_options "DNS-Over-TLS support" "$TO" "uncomment"
+        Edit_config_options "forward-zone:#DoT" "$TO" "uncomment"                   # v3.12 Hotfix @joe scian
     else
-        Edit_config_options "DNS-Over-TLS support" "$TO" "comment"
-        echo -e $cBCYA"\n\tunbound DoT disabled."$cBGRA
+        [ -n "$(grep "^forward-zone:#DoT" ${CONFIG_DIR}unbound.conf)" ] && Edit_config_options "forward-zone:#DoT" "$TO" "comment"   # v3.12 Hotfix @joe scian
+        echo -e $cBCYA"\n\tunbound DoT disabled.\n"$cBGRA
     fi
 }
 Option_GUI_Stats_TAB() {
