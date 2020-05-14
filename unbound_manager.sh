@@ -2440,7 +2440,7 @@ BIND_WAN() {
             if [ "$WAN_IF" != "ppp0" ];then                      # v3.10 Hotfix
                 local WAN_GW=$(ip route | grep src | grep -v default | grep -E "dev $WAN_IF[[:space:]]" | awk '{print $NF}')    # v3.06 Hotfix
             else
-                local WAN_GW=$(ifconfig ppp0 |  grep -Po '(\d+\.){3}\d+') | awk '{print $1}'     # vv3.12 3.10 Fix
+                local WAN_GW=$(ip -o -4  address show | grep ppp0 | awk ' { gsub(/\/.*/, "", $4); print $4 } ')     # v3.12 Hotfix 3.10 Fix
             fi
             if [ -n "$WAN_GW" ];then
                 sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$WAN_GW/2" ${CONFIG_DIR}unbound.conf
