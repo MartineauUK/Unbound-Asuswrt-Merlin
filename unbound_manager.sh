@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.12
+#============================================================================================ © 2019-2020 Martineau v3.13
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 12-May-2020
+# Last Updated Date: 15-May-2020
 #
 # Description:
 #
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.12"
+VERSION="3.13"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -1504,10 +1504,14 @@ EOF
                     else
                         if [ "$(Unbound_Installed)" == "Y" ];then                                  # v3.12
                             if [ "$ARG" != "uninstall" ];then
-                                AUTO_REPLY12="?"
-                                echo
-                                [ "$ARG" != "update" ] && Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG" ||  YouTube_Adblock "update"    # v3.11
-                                local RC=$?
+                                if [ "$ARG" != "newip" ];then                                     # v3.13
+                                    AUTO_REPLY12="?"
+                                    echo
+                                    [ "$ARG" != "update" ] && Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG" ||  YouTube_Adblock "update"    # v3.11
+                                    local RC=$?
+                                else
+                                    ${CONFIG_DIR}/adblock/gen_ytadblock.sh "force_newip"           # v3.13
+                                fi
                             else
                                 YouTube_Adblock "uninstall"
                                 local RC=0
@@ -2437,10 +2441,10 @@ BIND_WAN() {
         wan)
             Edit_config_options "outgoing-interface:"  "uncomment"
             local WAN_IF=$(Get_WAN_IF_Name)                     # v3.06 Hotfix
-            if [ "$WAN_IF" != "ppp0" ];then                      # v3.10 Hotfix
+            if [ "${WAN_IF:0:3}" != "ppp" ];then                # v3.13 v3.10 Hotfix
                 local WAN_GW=$(ip route | grep src | grep -v default | grep -E "dev $WAN_IF[[:space:]]" | awk '{print $NF}')    # v3.06 Hotfix
             else
-                local WAN_GW=$(route -n | grep UG | grep ppp0 | awk '{print $2}')     # v3.10 Fix
+                local WAN_GW=$(ip -o -4  address show | grep $WAN_IF | awk ' { gsub(/\/.*/, "", $4); print $4 } ')     # v3.13 Hotfix 3.10 Fix
             fi
             if [ -n "$WAN_GW" ];then
                 sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$WAN_GW/2" ${CONFIG_DIR}unbound.conf
