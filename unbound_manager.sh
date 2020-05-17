@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.13
+#============================================================================================ © 2019-2020 Martineau v3.14
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 15-May-2020
+# Last Updated Date: 17-May-2020
 #
 # Description:
 #
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.13"
+VERSION="3.14"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -750,8 +750,13 @@ welcome_message() {
                             else
                                 MENUW_RPZ="$(printf '%b7 %b = Disable DNS Firewall [?]' "${cBYEL}" "${cRESET}")"  # v3.02 Hotfix
                             fi
-                        else
 
+                            if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then                    # v3.11 HotFix
+                               MENUW_YOUTUBE="$(printf '%b8 %b = Uninstall YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
+                            else
+                               MENUW_YOUTUBE="$(printf '%b8 %b = Install YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
+                            fi
+                        else
                             if [ -f /opt/etc/init.d/S61unbound ];then
                                 MENU_S="$(printf '%b3 %b = %bStart%b unbound' "${cBYEL}" "${cRESET}" "${cBGRE}" "${cRESET}")"
                             else
@@ -760,7 +765,7 @@ welcome_message() {
                             MENU_ST="$(printf '%b4 %b = n/a Show unbound statistics' "${cBYEL}" "${cRESET}$cGRA")"
                             MENU_T="$(printf '%b6 %b = n/a Install Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}$cGRA")"
                             MENUW_RPZ="$(printf '%b7 %b = n/a Enable DNS Firewall' "${cBYEL}" "${cRESET}$cGRA")"   # v3.02 Hotfix
-
+                            MENUW_YOUTUBE="$(printf '%b8 %b = n/a Install YouTube Ad blocker' "${cBYEL}" "${cRESET}$cGRA")"   # v3.14
                         fi
                         if [ -f ${CONFIG_DIR}unbound.conf ] && [ -n "$(grep -E "^[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
                             MENU_AD="$(printf '%b5 %b = Uninstall Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}")"
@@ -771,11 +776,7 @@ welcome_message() {
                                 MENU_AD="$(printf '%b5 %b = n/a Install Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}$cGRA")"
                             fi
                         fi
-                        if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then                        # v3.11 HotFix
-                            MENUW_YOUTUBE="$(printf '%b8 %b = Uninstall YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
-                        else
-                            MENUW_YOUTUBE="$(printf '%b8 %b = Install YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
-                        fi
+
 
                         MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
 
@@ -839,7 +840,7 @@ _GetKEY() {
                                   fi
                     ;;
                     8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;   #v3.11
-                    u|uf) ;;
+                    u|uf*) ;;                           # v3.14
                     "?") ;;
                     v|vx|vh) ;;                         # v3.06 v3.04
                     l|lo|lx) ;;                         # v3 .12
@@ -1691,7 +1692,7 @@ EOF
                     echo -e  $cBCYA"\t\t\t\tClick ${cBYEL}https://cmdns.dev.dns-oarc.net/ ${cRESET}to view Check My DNS."   # v2.09 Credit @rgnldo
                     echo -e  $cBCYA"Click ${cBYEL}https://root-servers.org/ ${cRESET}to view Live Root Server status"
                 ;;
-                dig*|di*)                                                       # v2.09 'dig {domain} ['time']'
+                dig*)                                                       # v2.09 'dig {domain} ['time']'
 
                     # dig txt qnamemintest.internet.nl                          # @rgnldo
                     # dig qnamemintest.internet.nl @127.0.0.1 -p 53535          # @rgnldo
@@ -3206,6 +3207,14 @@ remove_existing_installation() {
             echo -e $cBCYA"@juched's"$cRESET $(GUI_Stats_TAB "uninstall") # v3.00 HotFix
         fi
 
+        # Remove YouTube Video Ad cron job /jffs/scripts/services-start # v3.14
+        if grep -qF "gen_ytadblock" /jffs/scripts/services-start; then  # v3.14
+            echo -e $cBCYA"Removing YouTube Video Ad Blocker Update cron job"$cRESET
+            sed -i '/gen_ytadblock/d' /jffs/scripts/services-start      # v3.14
+        fi
+
+        cru d ytadblock 2>/dev/null                                     # v3.11
+
         # Remove 3rd Party scripts
         sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start            # v2.18 HotFix
         sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event             # v2.18 HotFix
@@ -3258,6 +3267,10 @@ remove_existing_installation() {
 
         Check_dnsmasq_postconf "del"
         echo -en $cBCYA"Restarting dnsmasq....."$cBGRE      # v1.14
+
+        # If bypass dnsmasq assume /jffs/addons/unbound.postconf won't be executed to remove 'port=0' from /etc/dnsmasq.conf
+        sed -i '/unbound_manager/d' /jffs/configs/dnsmasq.conf.add   # v3.14
+
         service restart_dnsmasq             # v1.14 relocated - Just in case reboot is skipped!
 
         Script_alias "delete"                   # v2.01
@@ -3567,8 +3580,8 @@ Record_CNT() {
 
     if [ -f $FN ];then      # v2.17
         dos2unix $FN
-        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' $FN
-        echo "$(wc -l < $FN)"
+        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' $FN               #Strip trailing blank lines
+        echo $(grep -vE "^#" $FN | grep . | awk 'END{print NR}')   # v3.14
     else
         echo "n/a"              # v2.17
     fi
