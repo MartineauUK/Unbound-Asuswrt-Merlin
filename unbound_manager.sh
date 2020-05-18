@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.15
+#============================================================================================ © 2019-2020 Martineau v3.15b
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4100,7 +4100,7 @@ _quote() {
             local DOMAIN=$(nvram get lan_domain)
             if [ -n "$DOMAIN" ];then                                                # v3.10 Hotfix @dave14305/@milan
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting '/etc/hosts.dnsmasq' local hosts to 'unbound'....."$cRESET
-                echo -e "# Replicate dnsmasq's local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
+                echo -e "# Replicate '/etc/hosts.dnsmasq' local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
 
                 # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
                 for PAIR in $(nvram get dhcp_staticlist | tr '<' ' ')
@@ -4148,7 +4148,9 @@ _quote() {
                 #
                 # Yeah I read/process the file twice!!
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
+                echo -e "\n\n# Replicate 'address=/  directives\n" >> $FN
                 awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\" static"}' /etc/dnsmasq.conf >> $FN # v3.15
+                echo -e "\n\n# Replicate 'server=/  directives\n" >> $FN
                 awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
                 
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
