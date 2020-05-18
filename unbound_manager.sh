@@ -749,7 +749,7 @@ welcome_message() {
                             fi
 
                             if ! grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then                  # v3.02 Hotfix
-                                MENUW_RPZ="$(printf '%b7 %b = %bEnable%b DNS Firewall' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"   # v3.15 v3.02 Hotfix
+                                MENUW_RPZ="$(printf '%b7 %b = %bEnable%b    DNS Firewall' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"   # v3.15 v3.02 Hotfix
                             else
                                 MENUW_RPZ="$(printf '%b7 %b = %bDisable  %b DNS Firewall [?]' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"  # v3.15 v3.02 Hotfix
                             fi
@@ -4083,7 +4083,7 @@ Option_Disable_dnsmasq() {                              # v3.10
         if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
             local TXT="\tIf you currently use or rely on dnsmasq features such as ${cBCYA}Diversion/x3mRouting${cRESET} etc., then re-consider."
             if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
-               local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)" # v3.11
+               local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (It will be auto-DISABLED if Ad Block is ACTIVE)" # v3.15 v3.11
             fi
             echo -e ${cRESET}$cBWHT${TXT}${TXTX}
             echo -e $cRESET"\n\tDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
@@ -4169,9 +4169,9 @@ _quote() {
                 # Yeah I read/process the file twice!!
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
                 echo -e "\n\n# Replicate 'address=/  directives\n" >> $FN
-                awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\" static"}' /etc/dnsmasq.conf >> $FN # v3.15
+                [ -n "$(grep "^address=/" /etc/dnsmasq.conf)" ] && awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\" static"}' /etc/dnsmasq.conf >> $FN # v3.15
                 echo -e "\n\n# Replicate 'server=/  directives\n" >> $FN
-                awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
+                [ -n "$(grep "^server=/" /etc/dnsmasq.conf)"] && awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
 
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
                 Check_config_add_and_postconf                       # v3.10
