@@ -4085,7 +4085,7 @@ _quote() {
         local FN="/opt/share/unbound/configs/unbound.conf.localhosts"
 
         if [ "$ARG" == "disable" ];then
-            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Configuring "$cRESET"unbound"$cBCYA" to be the "$cRESET"primary DNS"$cBCYA" for ALL LAN Clients.....\n"$cRESET
+            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Configuring "$cRESET"unbound"$cBCYA" to be the "$cRESET"primary DNS"$cBCYA" for ALL LAN Clients....."$cRESET
             sed -i "/^port: 53535/ s/[^ ]*[^ ]/53/2" ${CONFIG_DIR}unbound.conf
             sed -i "/^interface: 127\.0\.0\.1@53535/ s/[^ ]*[^ ]/$UNBOUND_LISTENSED/2" ${CONFIG_DIR}unbound.conf
             Edit_config_options "interface: 127.0.0.1@53" "uncomment"
@@ -4137,24 +4137,25 @@ _quote() {
                         done < /etc/hosts
                 fi
 
+                # Migrate 'address=/' and 'server=/' directives                 # v3.15
+                # e.g.
+                #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com A 127.0.0.1"
+                #
+                #       server=/uk.pool.ntp.org/1.1.1.1         forward-zone:
+                #                                                   name: "uk.pool.ntp.org"
+                #                                                   forward-addr: 1.1.1.1
+                #                                                   forward-first: yes
+                #
+                # Yeah I read/process the file twice!!
+                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
+                awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\" static"}' /etc/dnsmasq.conf >> $FN # v3.15
+                awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
+                
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
                 Check_config_add_and_postconf                       # v3.10
             else
                echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
             fi
-
-            # Migrate 'address=/' and 'server=/' directives                 # v3.15
-            # e.g.
-            #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com A 127.0.0.1"
-            #
-            #       server=/uk.pool.ntp.org/1.1.1.1         forward-zone:
-            #                                                   name: "uk.pool.ntp.org"
-            #                                                   forward-addr: 1.1.1.1
-            #                                                   forward-first: yes
-            #
-            # Yeah I read/process the file twice!!
-            awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\" static"}' /etc/dnsmasq.conf >> $FN # v3.15
-            awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
 
             echo -en $cBCYA"\n"$(date "+%H:%M:%S")" Restarting "$cRESET"dnsmasq"$cBGRE   # v3.10 Hotfix
             service restart_dnsmasq
