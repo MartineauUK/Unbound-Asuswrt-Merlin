@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.15b
+#============================================================================================ © 2019-2020 Martineau v3.15b3
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -1470,7 +1470,7 @@ EOF
                     #$UNBOUNCTRLCMD get_option thread
 
                     echo -e $cBCYA"\n\tAbout ${cRESET}unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ , ${cBCYA}Manual$cBYEL https://nlnetlabs.nl/documentation/unbound/unbound.conf/${cRESET}"
-                    echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
+                    #echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
 
                 ;;
                 adblock*)                                           # v3.10 v2.18   [ youtube | track | update | uninstall ]
@@ -4160,6 +4160,7 @@ _quote() {
                 # Migrate 'address=/' and 'server=/' directives                 # v3.15
                 # e.g.
                 #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com A 127.0.0.1"
+                #       address=/use-application-dns.net/       local-zone: "use-application-dns.net" always_nxdomain
                 #
                 #       server=/uk.pool.ntp.org/1.1.1.1         forward-zone:
                 #                                                   name: "uk.pool.ntp.org"
@@ -4169,9 +4170,9 @@ _quote() {
                 # Yeah I read/process the file twice!!
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
                 echo -e "\n\n# Replicate 'address=/  directives\n" >> $FN
-                [ -n "$(grep "^address=/" /etc/dnsmasq.conf)" ] && awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\" static"}' /etc/dnsmasq.conf >> $FN # v3.15
+                [ -n "$(grep "^address=/" /etc/dnsmasq.conf)" ] && awk 'BEGIN {FS="/"}  /^address=/  { if ( NF == 3 && $3 != "" ) {print "local-zone: \""$2" A "$3"\" static"} else {print "local-zone: \""$2"\" always_nxdomain"} }' /etc/dnsmasq.conf  >> $FN # v3.15
                 echo -e "\n\n# Replicate 'server=/  directives\n" >> $FN
-                [ -n "$(grep "^server=/" /etc/dnsmasq.conf)"] && awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
+                [ -n "$(grep "^server=/" /etc/dnsmasq.conf)" ] && awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
 
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
                 Check_config_add_and_postconf                       # v3.10
