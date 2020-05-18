@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.15b
+#============================================================================================ © 2019-2020 Martineau v3.15
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -607,6 +607,9 @@ welcome_message() {
                     LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')             # v1.04
                     REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
 
+                    local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/master/unbound_manager.sh$cRESET)"
+                    [ "${VERSION#????}" == "b" ] && local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/dev/unbound_manager.sh$cRESET)"
+
                     # As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
                     if [ -n "$REMOTE_VERSION_NUMDOT" ];then
                         [ ! -f /jffs/addons/unbound/unbound_manager.md5 ] && echo $remotemd5 > /jffs/addons/unbound/unbound_manager.md5   # v2.03 v1.09
@@ -615,7 +618,7 @@ welcome_message() {
                     [ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0            # v1.11
 
                     # MD5 Mismatch due to local development?
-                    if { [ "$(awk '{print $1}' /jffs/addons/unbound/unbound_manager.md5)" == "$remotemd5" ]; } && [ "$localmd5" != "$remotemd5" ];then # v1.28
+                    if [ "${VERSION#????}" == "b" ] || { [ "$(awk '{print $1}' /jffs/addons/unbound/unbound_manager.md5)" == "$remotemd5" ]; } && [ "$localmd5" != "$remotemd5" ];then # v 3.15 v1.28
                         if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then      # v1.09
                             ALLOWUPGRADE="N"                                                # v1.09
                             UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b UPDATE %b%s%b >>>> %b%s\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBRED" "$cBMAG" "v$VERSION" "$cRESET" "$cBGRE" "v$REMOTE_VERSION_NUMDOT")" # v1.21
@@ -627,9 +630,9 @@ welcome_message() {
                         if [ "$localmd5" != "$remotemd5" ]; then
                             if [ $REMOTE_VERSION_NUM -ge $LOCAL_VERSION_NUM ];then      # v1.27
                                 if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then  # v1.27
-                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b %s\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT" "$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/master/unbound_manager.sh$cRESET)")"   # v3.15 v1.21
+                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b %s\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT" "$CHANGELOG")"   # v3.15 v1.21
                                 else
-                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Minor Hotfix) %b%s %b%s -> %b %s\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT" "$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/master/unbound_manager.sh$cRESET)")"   # v3.15
+                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Minor Hotfix) %b%s %b%s -> %b %s\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT" "$CHANGELOG")"   # v3.15
                                 fi
                             fi
                         fi
@@ -1433,7 +1436,7 @@ EOF
                     fi
                 ;;
                 about|"?")                     # v1.17
-                    echo -e $cBGRE"\n\tVersion="${VERSION}$cBCYA"\t\t\t\t\t"Change Log: $cBYEL"https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/master/unbound_manager.sh"   # v3.15
+                    echo -e $cBGRE"\n\tVersion="${VERSION}$cBCYA"\t\t\t\t\t"$CHANGELOG   # v3.15
                     echo -e $cBMAG"\tLocal\t\t\\t\t\t\tmd5="$localmd5       # v2.00
                     echo -e $cBMAG"\tGithub\t\t\t\t\t\tmd5="$remotemd5      # v2.00
                     echo -e $cBMAG"\t/jffs/addons/unbound/unbound_manager.md5\tmd5="$(cat /jffs/addons/unbound/unbound_manager.md5)
