@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.14
+#============================================================================================ © 2019-2020 Martineau v3.15
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 16-May-2020
+# Last Updated Date: 18-May-2020
 #
 # Description:
 #
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.14"
+VERSION="3.15"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -781,16 +781,12 @@ welcome_message() {
                         MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
 
                         echo -en $cRESET
-                        printf "%s\t\t\n"            "$MENU_I"
-                        printf "%s\t\t\n"            "$MENU_Z"
-                        printf "%s\t\t\n"            "$MENU_S"
-                        printf "%s\t\t\n"            "$MENU_ST"
-                        printf "%s\t\t\n"            "$MENU_AD"
-                        printf "%s\t\t\n"            "$MENU_T"
-                        printf "%s\t\t\n"            "$MENUW_RPZ"         # v3.02 Hotfix
-                        printf "%s\t\t\n"            "$MENUW_YOUTUBE"     # v3.11
-                        printf "\n%s\t\t\n"          "$MENU__"
-                        printf "%s\t\t\n"            "$MENU_VX"
+                        printf "%s\t\t\t\t%s\n"                 "$MENU_I" "$MENU_AD"           # v3.15
+                        printf "%s\t\t\t\t\t%s\n"               "$MENU_Z" "$MENU_T"
+                        printf "%s\t\t\t\t\t\t\t%s\n"           "$MENU_S" "$MENUW_RPZ"         # v3.02 Hotfix
+                        printf "%s\t\t\t\t\t\\t%s\n"            "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
+                        printf "\n%s\t\t\t\t\t%s\n"             "$MENU__"
+                        printf "%s\t\t%s\n"                     "$MENU_VX"
 
                     fi
                     printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
@@ -4121,12 +4117,45 @@ _quote() {
                             echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in '/etc/hosts.dnsmasq' or 'nvram get dhcp_hostnames'"   # v3.11
                         fi
                     done
+                if [ -f /etc/hosts ];then                                        # v3.15
+                    echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts' local hosts to 'unbound'....."$cRESET
+                    echo -e "# Replicate '/etc/hosts' local hosts\n" >> $FN       # v3.15
+                    while IFS= read -r LINE || [ -n "$LINE" ]                   # v3.15
+                        do
+                            # Ignore comment/empty lines...
+                            if [ -z "$LINE" ] || [ -n "$(echo "$LINE" | grep -E "^\#")" ];then
+                                #Say "***DEBUG Ignoring Comment/Blank LINE=>$LINE<"     # ***TESTING***
+                                continue
+                            fi
+                            local IP_ADDR=$(echo "$LINE" | awk '{print $1}')
+                            local NAMES="$(printf "%s" "$LINE" | cut -d' ' -f2-)"
+                            for NAME in $NAMES
+                                do
+                                    echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
+                                    echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
+                                done
+                        done < /etc/hosts
+                fi
 
-                    echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
-                    Check_config_add_and_postconf                       # v3.10
+                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
+                Check_config_add_and_postconf                       # v3.10
             else
                echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
             fi
+            
+            # Migrate 'address=/' and 'server=/' directives                 # v3.15
+            # e.g.
+            #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com A 127.0.0.1"
+            #
+            #       server=/uk.pool.ntp.org/1.1.1.1         forward-zone:
+            #                                                   name: "uk.pool.ntp.org"
+            #                                                   forward-addr: 1.1.1.1
+            #                                                   forward-first: yes
+            #
+            # Yeah I read/process the file twice!!
+            awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\""}' /etc/dnsmasq.conf >> $FN # v3.15
+            awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf   # v3.15
+            
             echo -en $cBCYA"\n"$(date "+%H:%M:%S")" Restarting "$cRESET"dnsmasq"$cBGRE   # v3.10 Hotfix
             service restart_dnsmasq
          else
