@@ -750,7 +750,7 @@ welcome_message() {
                             else
                                 MENUW_RPZ="$(printf '%b7 %b = Disable DNS Firewall [?]' "${cBYEL}" "${cRESET}")"  # v3.02 Hotfix
                             fi
-                            
+
                             if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then                    # v3.11 HotFix
                                MENUW_YOUTUBE="$(printf '%b8 %b = Uninstall YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
                             else
@@ -3202,7 +3202,7 @@ remove_existing_installation() {
         if [ -f /tmp/menuTree.js ] && [ -n "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
             echo -e $cBCYA"@juched's"$cRESET $(GUI_Stats_TAB "uninstall") # v3.00 HotFix
         fi
-        
+
         # Remove YouTube Video Ad cron job /jffs/scripts/services-start # v3.14
         if grep -qF "gen_ytadblock" /jffs/scripts/services-start; then  # v3.14
             echo -e $cBCYA"Removing YouTube Video Ad Blocker Update cron job"$cRESET
@@ -4099,7 +4099,7 @@ _quote() {
 
             local DOMAIN=$(nvram get lan_domain)
             if [ -n "$DOMAIN" ];then                                                # v3.10 Hotfix @dave14305/@milan
-                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq local hosts to 'unbound'....."$cRESET
+                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting '/etc/hosts.dnsmasq' local hosts to 'unbound'....."$cRESET
                 echo -e "# Replicate dnsmasq's local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
 
                 # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
@@ -4142,7 +4142,7 @@ _quote() {
             else
                echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
             fi
-            
+
             # Migrate 'address=/' and 'server=/' directives                 # v3.15
             # e.g.
             #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com A 127.0.0.1"
@@ -4153,9 +4153,9 @@ _quote() {
             #                                                   forward-first: yes
             #
             # Yeah I read/process the file twice!!
-            awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\""}' /etc/dnsmasq.conf >> $FN # v3.15
+            awk 'BEGIN {FS="/"} /^address=/ {print "local-zone: \""$2" A "$3"\" static"}' /etc/dnsmasq.conf >> $FN # v3.15
             awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf   # v3.15
-            
+
             echo -en $cBCYA"\n"$(date "+%H:%M:%S")" Restarting "$cRESET"dnsmasq"$cBGRE   # v3.10 Hotfix
             service restart_dnsmasq
          else
