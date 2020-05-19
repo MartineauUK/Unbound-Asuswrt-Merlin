@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.14
+#============================================================================================ © 2019-2020 Martineau v3.15
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,13 +57,13 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 17-May-2020
+# Last Updated Date: 19-May-2020
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,ttgapers  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.14"
+VERSION="3.15"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -89,7 +89,6 @@ CONFIG_DIR="/opt/var/lib/unbound/"
 UNBOUNCTRLCMD="unbound-control"                    # v2.12 [using the '-c' parameter is recommended v1.27]
 ENTWARE_UNBOUND="unbound-checkconf unbound-control-setup unbound-control unbound-anchor unbound-daemon"         # v2.02
 SILENT="s"                                         # Default is no progress messages for file downloads # v1.08
-ALLOWUPGRADE="Y"                                   # Default is allow script download from Github      # v1.09
 CHECK_GITHUB=1                                     # Only check Github MD5 every nn times
 MAX_OPTIONS=5                                      # Available Installation Options 1 thru 5 see $AUTO_REPLYx
 USER_OPTION_PROMPTS="?"                            # Global reset if ANY Auto-Options specified
@@ -382,7 +381,7 @@ Show_Advanced_Menu() {
     printf "\n%s\t\t%s\n"           "$MENUW_DIG"     "$MENUW_LOOKUP" # v2.11
     printf "%s\t\t\t\t%s\n"         "$MENUW_DNSINFO" "$MENUW_DNSSEC"                 # v2.12 v1.28
     printf "%s\\n\n"                "$MENUW_LINKS"              # v1.28
-    printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
+    #printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
     printf '\n%b[Enter] %bLeave %bAdvanced Tools Menu\n' "${cBGRE}" "$cBCYA" "${cRESET}" # v1.21
 }
 Unbound_Installed() {
@@ -486,7 +485,7 @@ welcome_message() {
         # No need to recreate the STATIC menu items on each invocation
         if [ -z "$MENU_Z" ];then                                # v2.12
             if [ "$EASYMENU" != "Y" ];then
-                MENU_Z="$(printf '%bz %b = Remove unbound/unbound_manager\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
+                MENU_Z="$(printf '%bz %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
                 MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
                 MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
                 MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
@@ -510,7 +509,7 @@ welcome_message() {
                 MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
                 MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
             else
-                MENU_Z="$(printf '%b2 %b = Remove unbound/unbound_manager\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
+                MENU_Z="$(printf '%b2 %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
             fi
         fi
 
@@ -576,7 +575,7 @@ welcome_message() {
                     printf '|   3  = Advanced Tools                                                |\n'
                 fi
                 printf '|                                                                      |\n'
-                printf '|     See SNBForums thread %b%s%b for helpful     |\n' "$cBGRE" "https://tinyurl.com/s89z3mm" "$cRESET"
+                printf '|     See SNBForums thread %b%s%b for legacy      |\n' "$cBGRE" "https://tinyurl.com/s89z3mm" "$cRESET"
                 printf '|         user tips on unbound usage/configuration.                    |\n'
                 printf '+======================================================================+\n'
 
@@ -607,6 +606,9 @@ welcome_message() {
                     LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')             # v1.04
                     REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
 
+                    local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/master/unbound_manager.sh$cRESET)"
+                    [ "${VERSION#????}" == "b" ] && local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/dev/unbound_manager.sh$cRESET)"
+
                     # As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
                     if [ -n "$REMOTE_VERSION_NUMDOT" ];then
                         [ ! -f /jffs/addons/unbound/unbound_manager.md5 ] && echo $remotemd5 > /jffs/addons/unbound/unbound_manager.md5   # v2.03 v1.09
@@ -615,21 +617,19 @@ welcome_message() {
                     [ -z "$REMOTE_VERSION_NUM" ] && REMOTE_VERSION_NUM=0            # v1.11
 
                     # MD5 Mismatch due to local development?
-                    if { [ "$(awk '{print $1}' /jffs/addons/unbound/unbound_manager.md5)" == "$remotemd5" ]; } && [ "$localmd5" != "$remotemd5" ];then # v1.28
+                    if [ "${VERSION#????}" == "b" ] || { [ "$(awk '{print $1}' /jffs/addons/unbound/unbound_manager.md5)" == "$remotemd5" ]; } && [ "$localmd5" != "$remotemd5" ];then # v 3.15 v1.28
                         if [ $REMOTE_VERSION_NUM -lt $LOCAL_VERSION_NUM ];then      # v1.09
-                            ALLOWUPGRADE="N"                                                # v1.09
                             UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Major) %b%s%b UPDATE %b%s%b >>>> %b%s\n\n' "${cBRED}" "${cBGRE}" "$cRESET" "$(basename $0)" "$cBRED" "$cBMAG" "v$VERSION" "$cRESET" "$cBGRE" "v$REMOTE_VERSION_NUMDOT")" # v1.21
                         else
-                            ALLOWUPGRADE="N"
                             UPDATE_SCRIPT_ALERT="$(printf '%bu  = Push to Github PENDING for %b(Minor Hotfix) %b%s update >>>> %b%s %b%s\n\n' "${cBRED}" "$cBRED" "$cBGRE" "$cRESET" "$(basename $0)" "$cRESET" "$cBMAG" "v$VERSION")" # v11.21
                         fi
                     else
                         if [ "$localmd5" != "$remotemd5" ]; then
                             if [ $REMOTE_VERSION_NUM -ge $LOCAL_VERSION_NUM ];then      # v1.27
                                 if [ $REMOTE_VERSION_NUM -gt $LOCAL_VERSION_NUM ];then  # v1.27
-                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"   # v1.21
+                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Major) %b%s %b%s -> %b %s\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT" "$CHANGELOG")"   # v3.15 v1.21
                                 else
-                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Minor Hotfix) %b%s %b%s -> %b\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT")"
+                                    UPDATE_SCRIPT_ALERT="$(printf '%bu%b  = %bUpdate (Minor Hotfix) %b%s %b%s -> %b %s\n\n' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET" "$(basename $0)" "$cBMAG" "v$VERSION" "v$REMOTE_VERSION_NUMDOT" "$CHANGELOG")"   # v3.15
                                 fi
                             fi
                         fi
@@ -654,7 +654,7 @@ welcome_message() {
 
                     else
                         if [ "$EASYMENU" == "N" ] ;then
-                            MENU_I="$(printf '%bi %b = Begin unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
+                            MENU_I="$(printf '%bi %b = %bBegin%b unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "${cBGRE}" "('$CONFIG_DIR')" "$cRESET")"
                         else
                             [ -z "$ADVANCED_TOOLS" ] && MENU_I="$(printf '%b1 %b = Begin unbound Installation Process %b%s%b\n%b2 %b = Begin unbound Advanced Installation Process %b%s%b\n%b3 %b = Advanced Tools\n\n ' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET" "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET"  "${cBYEL}" "${cRESET}" )"
                         fi
@@ -731,30 +731,30 @@ welcome_message() {
                     else
                         # Generate v3.00 Easy (dynamically context aware) menu
                         if [ -f /opt/etc/init.d/S61unbound ] || [ -f ${CONFIG_DIR}unbound.conf ];then       # v3.00
-                            MENU_I="$(printf '%b1 %b = Update unbound files and configuration' "${cBYEL}" "${cRESET}")"
+                            MENU_I="$(printf '%b1 %b = %bUpdate%b unbound files and configuration' "${cBYEL}" "${cRESET}" "${cBGRE}" "${cRESET}")"
                         else
-                            MENU_I="$(printf '%b1 %b = Begin unbound Installation Process' "${cBYEL}" "${cRESET}")"
+                            MENU_I="$(printf '%b1 %b = %bBegin%b unbound Installation Process' "${cBYEL}" "${cRESET}" "${cBGRE}" "${cRESET}")"
                         fi
                         if [ -n "$(pidof unbound)" ];then
                             MENU_S="$(printf '%b3 %b = %bStop%b unbound' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}" )"
                             MENU_ST="$(printf '%b4 %b = Show unbound statistics' "${cBYEL}" "${cRESET}")"
 
                             if [ ! -f /tmp/menuTree.js ] || [ -z "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
-                                MENU_T="$(printf '%b6 %b = Install Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}")"
+                                MENU_T="$(printf '%b6 %b = %bInstall%b Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"   # v3.15
                             else
-                                MENU_T="$(printf '%b6 %b = Uninstall Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}")"
+                                MENU_T="$(printf '%b6 %b = %bUninstall%b Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"   # v3.15
                             fi
 
                             if ! grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then                  # v3.02 Hotfix
-                                MENUW_RPZ="$(printf '%b7 %b = Enable DNS Firewall' "${cBYEL}" "${cRESET}")"   # v3.02 Hotfix
+                                MENUW_RPZ="$(printf '%b7 %b = %bEnable%b    DNS Firewall' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"   # v3.15 v3.02 Hotfix
                             else
-                                MENUW_RPZ="$(printf '%b7 %b = Disable DNS Firewall [?]' "${cBYEL}" "${cRESET}")"  # v3.02 Hotfix
+                                MENUW_RPZ="$(printf '%b7 %b = %bDisable  %b DNS Firewall [?]' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"  # v3.15 v3.02 Hotfix
                             fi
 
                             if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then                    # v3.11 HotFix
-                               MENUW_YOUTUBE="$(printf '%b8 %b = Uninstall YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
+                               MENUW_YOUTUBE="$(printf '%b8 %b = %bUninstall%b YouTube Ad blocker' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"   # v3.15
                             else
-                               MENUW_YOUTUBE="$(printf '%b8 %b = Install YouTube Ad blocker' "${cBYEL}" "${cRESET}")"
+                               MENUW_YOUTUBE="$(printf '%b8 %b = %bInstall%b YouTube Ad blocker' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"  # v3.15
                             fi
                         else
                             if [ -f /opt/etc/init.d/S61unbound ];then
@@ -768,10 +768,10 @@ welcome_message() {
                             MENUW_YOUTUBE="$(printf '%b8 %b = n/a Install YouTube Ad blocker' "${cBYEL}" "${cRESET}$cGRA")"   # v3.14
                         fi
                         if [ -f ${CONFIG_DIR}unbound.conf ] && [ -n "$(grep -E "^[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
-                            MENU_AD="$(printf '%b5 %b = Uninstall Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}")"
+                            MENU_AD="$(printf '%b5 %b = %bUninstall%b Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"   # v3.15
                         else
                             if [ -d /opt/var/lib/unbound/adblock ];then
-                                MENU_AD="$(printf '%b5 %b = Install Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}")"
+                                MENU_AD="$(printf '%b5 %b = %bInstall%b Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"   # v3.15
                             else
                                 MENU_AD="$(printf '%b5 %b = n/a Install Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}$cGRA")"
                             fi
@@ -781,16 +781,12 @@ welcome_message() {
                         MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
 
                         echo -en $cRESET
-                        printf "%s\t\t\n"            "$MENU_I"
-                        printf "%s\t\t\n"            "$MENU_Z"
-                        printf "%s\t\t\n"            "$MENU_S"
-                        printf "%s\t\t\n"            "$MENU_ST"
-                        printf "%s\t\t\n"            "$MENU_AD"
-                        printf "%s\t\t\n"            "$MENU_T"
-                        printf "%s\t\t\n"            "$MENUW_RPZ"         # v3.02 Hotfix
-                        printf "%s\t\t\n"            "$MENUW_YOUTUBE"     # v3.11
-                        printf "\n%s\t\t\n"          "$MENU__"
-                        printf "%s\t\t\n"            "$MENU_VX"
+                        printf "%s\t\t\t\t\t\t%s\n"                 "$MENU_I" "$MENU_AD"           # v3.15
+                        printf "%s\t\t\t\t\t\t\t%s\n"               "$MENU_Z" "$MENU_T"
+                        printf "%s\t\t\t\t\t\t\t\t\t%s\n"           "$MENU_S" "$MENUW_RPZ"         # v3.02 Hotfix
+                        printf "%s\t\t\t\t\t\t\t\t%s\n"            "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
+                        printf "\n%s\t\t\t\t\t\n"             "$MENU__"
+                        printf "%s\t\t\n"                     "$MENU_VX"
 
                     fi
                     printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
@@ -1436,11 +1432,12 @@ EOF
                         local RC=1
                     fi
                 ;;
-                about|"?")                                                  # v1.17
-                    echo -e $cBGRE"\n\tVersion="$VERSION
+                about|"?")                     # v1.17
+                    echo -e $cBGRE"\n\tVersion="${VERSION}$cBCYA"\t\t\t\t\t"$CHANGELOG   # v3.15
                     echo -e $cBMAG"\tLocal\t\t\\t\t\t\tmd5="$localmd5       # v2.00
                     echo -e $cBMAG"\tGithub\t\t\t\t\t\tmd5="$remotemd5      # v2.00
                     echo -e $cBMAG"\t/jffs/addons/unbound/unbound_manager.md5\tmd5="$(cat /jffs/addons/unbound/unbound_manager.md5)
+
 
                     Check_GUI_NVRAM
 
@@ -1470,7 +1467,8 @@ EOF
                     #$UNBOUNCTRLCMD get_option thread
 
                     echo -e $cBCYA"\n\tAbout ${cRESET}unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ , ${cBCYA}Manual$cBYEL https://nlnetlabs.nl/documentation/unbound/unbound.conf/${cRESET}"
-                    echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
+                    #echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
+
                 ;;
                 adblock*)                                           # v3.10 v2.18   [ youtube | track | update | uninstall ]
                     local ARG=
@@ -1508,8 +1506,12 @@ EOF
                                 if [ "$ARG" != "newip" ];then                                     # v3.13
                                     AUTO_REPLY12="?"
                                     echo
-                                    [ "$ARG" != "update" ] && Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG" ||  YouTube_Adblock "update"    # v3.11
-                                    local RC=$?
+                                    if [ "$ARG" != "update" ];then
+                                        Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG"
+                                        local RC=$?
+                                    else
+                                       YouTube_Adblock "update"    # v3.11
+                                    fi
                                 else
                                     ${CONFIG_DIR}/adblock/gen_ytadblock.sh "force_newip"           # v3.13
                                 fi
@@ -1692,7 +1694,7 @@ EOF
                     echo -e  $cBCYA"\t\t\t\tClick ${cBYEL}https://cmdns.dev.dns-oarc.net/ ${cRESET}to view Check My DNS."   # v2.09 Credit @rgnldo
                     echo -e  $cBCYA"Click ${cBYEL}https://root-servers.org/ ${cRESET}to view Live Root Server status"
                 ;;
-                dig*)                                                       # v2.09 'dig {domain} ['time']'
+                dig*|di*)                                                       # v2.09 'dig {domain} ['time']'
 
                     # dig txt qnamemintest.internet.nl                          # @rgnldo
                     # dig qnamemintest.internet.nl @127.0.0.1 -p 53535          # @rgnldo
@@ -3264,13 +3266,24 @@ remove_existing_installation() {
             echo -e $cBCYA"Deleting  '/opt/etc/stubby'"
             rm -R /opt/etc/stubby 2>/dev/null
         fi
-
+.
         Check_dnsmasq_postconf "del"
-        echo -en $cBCYA"Restarting dnsmasq....."$cBGRE      # v1.14
 
+        # If bypass dnsmasq assume /jffs/addons/unbound.postconf won't be executed to remove 'port=0'etc. from /etc/dnsmasq.conf
+        if [ -n "$(grep "port=0" /jffs/configs/dnsmasq.conf.add)" ];then   # v3.15
+            sed -i '/unbound_manager/d' /jffs/configs/dnsmasq.conf.add      # v3.14
+            # Reinstate Diversion just-in-case
+            if [ -n "$(which diversion)" ];then                            # v3.15
+               if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=disabled" ];then
+                  echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Starting 'Diversion'....."$cRESET   # v3.15
+                  /opt/bin/diversion enable                                 # v3.15
+               fi
+            fi
+        fi
+
+        echo -en $cBCYA"Restarting dnsmasq....."$cBGRE      # v1.14
         # If bypass dnsmasq assume /jffs/addons/unbound.postconf won't be executed to remove 'port=0' from /etc/dnsmasq.conf
         sed -i '/unbound_manager/d' /jffs/configs/dnsmasq.conf.add   # v3.14
-
         service restart_dnsmasq             # v1.14 relocated - Just in case reboot is skipped!
 
         Script_alias "delete"                   # v2.01
@@ -4067,7 +4080,7 @@ Option_Disable_dnsmasq() {                              # v3.10
         if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
             local TXT="\tIf you currently use or rely on dnsmasq features such as ${cBCYA}Diversion/x3mRouting${cRESET} etc., then re-consider."
             if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
-               local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (You can switch to Ad Block)" # v3.11
+               local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (It will be auto-DISABLED if Ad Block is ACTIVE)" # v3.15 v3.11
             fi
             echo -e ${cRESET}$cBWHT${TXT}${TXTX}
             echo -e $cRESET"\n\tDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
@@ -4103,8 +4116,8 @@ _quote() {
 
             local DOMAIN=$(nvram get lan_domain)
             if [ -n "$DOMAIN" ];then                                                # v3.10 Hotfix @dave14305/@milan
-                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq local hosts to 'unbound'....."$cRESET
-                echo -e "# Replicate dnsmasq's local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
+                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting '/etc/hosts.dnsmasq' local hosts to 'unbound'....."$cRESET
+                echo -e "# Replicate 'hosts.dnsmasq' local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
 
                 # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
                 for PAIR in $(nvram get dhcp_staticlist | tr '<' ' ')
@@ -4121,9 +4134,51 @@ _quote() {
                             echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in '/etc/hosts.dnsmasq' or 'nvram get dhcp_hostnames'"   # v3.11
                         fi
                     done
+                if [ -f /etc/hosts ];then                                        # v3.15
+                    echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts' local hosts to 'unbound'....."$cRESET
+                    echo -e "# Replicate '/etc/hosts' local hosts\n" >> $FN       # v3.15
+                    while IFS= read -r LINE || [ -n "$LINE" ]                   # v3.15
+                        do
+                            # Ignore comment/empty lines...
+                            if [ -z "$LINE" ] || [ -n "$(echo "$LINE" | grep -E "^\#")" ];then
+                                #Say "***DEBUG Ignoring Comment/Blank LINE=>$LINE<"     # ***TESTING***
+                                continue
+                            fi
+                            local IP_ADDR=$(echo "$LINE" | awk '{print $1}')
+                            local NAMES="$(printf "%s" "$LINE" | cut -d' ' -f2-)"
+                            for NAME in $NAMES
+                                do
+                                    echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
+                                    echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
+                                done
+                        done < /etc/hosts
+                fi
 
-                    echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
-                    Check_config_add_and_postconf                       # v3.10
+                # Migrate 'address=/' and 'server=/' directives                 # v3.15
+                # e.g.
+                #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com A 127.0.0.1"
+                #       address=/use-application-dns.net/       local-zone: "use-application-dns.net" always_nxdomain
+                #
+                #       server=/uk.pool.ntp.org/1.1.1.1         forward-zone:
+                #                                                   name: "uk.pool.ntp.org"
+                #                                                   forward-addr: 1.1.1.1
+                #                                                   forward-first: yes
+                #
+                # Yeah I read/process the file twice!!
+                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
+                echo -e "\n\n# Replicate 'address=/  directives\n" >> $FN
+                if [ -n "$(grep "^address=/" /etc/dnsmasq.conf)" ];then
+                   awk 'BEGIN {FS="/"}  /^address=/  { if ( NF == 3 && $3 != "" ) {print "local-zone: \""$2" A "$3"\" static"} else {print "local-zone: \""$2"\" always_nxdomain"} }' /etc/dnsmasq.conf  >> $FN # v3.15
+                   # Eliminate duplicate Firefox DoH 'local-zone: "use-application-dns.net" always_nxdomain' if already implemented
+                   if [ -n "$(grep -E "^#[\s]*include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ];then   # v3.15 @ttgapers
+                      sed -i '/use-application-dns.net/d' $FN                                                     # v3.15
+                   fi
+                fi
+                echo -e "\n\n# Replicate 'server=/  directives\n" >> $FN
+                [ -n "$(grep "^server=/" /etc/dnsmasq.conf)" ] && awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
+
+                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
+                Check_config_add_and_postconf                       # v3.10
             else
                echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
             fi
