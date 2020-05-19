@@ -4170,7 +4170,7 @@ _quote() {
                 if [ -n "$(grep "^address=/" /etc/dnsmasq.conf)" ];then
                    awk 'BEGIN {FS="/"}  /^address=/  { if ( NF == 3 && $3 != "" ) {print "local-zone: \""$2" A "$3"\" static"} else {print "local-zone: \""$2"\" always_nxdomain"} }' /etc/dnsmasq.conf  >> $FN # v3.15
                    # Eliminate duplicate Firefox DoH 'local-zone: "use-application-dns.net" always_nxdomain' if already implemented
-                   if [ -n "$(grep -E "^#[\s]*include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ];then   # v3.15 @ttgapers
+                   if [ -n "$(grep -E "^include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ];then   # v.315 Hotfix @tomsk v3.15 @ttgapers
                       sed -i '/use-application-dns.net/d' $FN                                                     # v3.15
                    fi
                 fi
