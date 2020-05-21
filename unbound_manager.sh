@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.15x1
+#============================================================================================ © 2019-2020 Martineau v3.16b
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.15x"
+VERSION="3.16b"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -462,6 +462,15 @@ Show_status() {
                 echo -e $cBRED"\n***ERROR unbound ${cRESET}configuration contains ${cBYEL}DUPLICATES$cRESET - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file\n"$cBGRE   # v3.00
                 echo -e $cBYEL"\t$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf" "returndup")\n"   # v3.00
            fi
+        fi
+        # If bind 'outgoing-interface' ENABLED, might be prudent to check that the interface is UP? otherwise SERVFAIL for ALL requests.
+        if [ -n "$(grep "^outgoing-interface" ${CONFIG_DIR}unbound.conf)" ];then   # v3.16
+            # Use obscure but benign URLthat most will never reference.....
+            if [ -z "$(nslookup amdahl.com | grep -woE '([0-9]{1,3}\.){3}[0-9]{1,3}' | awk 'NR>2')" ];then
+                echo -e $cBRED"\a\n***ERROR unbound ${cRESET}configuration contains 'outgoing-interface' and nslookup fails? use $cBMAG'bind disable'$cESET to \n"$cRESET
+            fi
+            # .....Remove it from the cache to prevent a false-positive for next time.
+            $UNBOUNCTRLCMD flush amdahl.com 1>/dev/null   # v3.16
         fi
     fi
 }
@@ -4082,8 +4091,9 @@ Option_Disable_dnsmasq() {                              # v3.10
 
         if [ "$USER_OPTION_PROMPTS" == "?" ] || [ "$ANS" == "?" ];then
             local TXT="\tIf you currently use or rely on dnsmasq features such as ${cBCYA}Diversion/x3mRouting${cRESET} etc., then re-consider."
+            [ "$(nvram get ipv6_service)" != "disabled" ] && TXT=${TXT}$cRESET"\n\n\t\tWarning "$cBRED"IPv6 not fully supported."   # v3.16
             if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
-               local TXTX="\n\n\t\t"$cBRED"Warning Diversion is ACTIVE (It will be auto-DISABLED if Ad Block is ACTIVE)" # v3.15 v3.11
+               local TXTX="\n\n\t\t"$cRESET"Warning"$cBRED" Diversion is ACTIVE (It will be auto-DISABLED if Ad Block is ACTIVE)" # v3.15 v3.11
             fi
             echo -e ${cRESET}$cBWHT${TXT}${TXTX}
             echo -e $cRESET"\n\tDo you still want to ${cBRED}DISABLE dnsmasq${cRESET}?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
@@ -4148,10 +4158,10 @@ _quote() {
                                 continue
                             fi
                             local IP_ADDR=$(echo "$LINE" | awk '{print $1}')
-                            local NAMES="$(printf "%s" "$LINE" | tr '\t' ' ' | cut -d' ' -f2-)"   # v3.15 Hotfix
+                            local NAMES="$(printf "%s" "$LINE" | tr '\t' ' ' | cut -d' ' -f2-)"   # v3.16
                             for NAME in $NAMES
                                 do
-                                    echo -e "local-data: \""$NAME". IN A "$IP_ADDR"\"" >> $FN   # v3.15 Hotfix @Slawek P
+                                    echo -e "local-data: \""$NAME". IN A "$IP_ADDR"\"" >> $FN   # v3.16 @Slawek P
                                     echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
                                 done
                         done < /etc/hosts
@@ -4167,12 +4177,44 @@ _quote() {
                 #                                                   forward-addr: 1.1.1.1
                 #                                                   forward-first: yes
                 #
-                # Yeah I read/process the file twice!!
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
-                echo -e "\n\n# Replicate 'address=/  directives\n" >> $FN
-                [ -n "$(grep "^address=/" /etc/dnsmasq.conf)" ] && awk 'BEGIN {FS="/"}  /^address=/  { if ( NF == 3 && $3 != "" ) {print "local-zone: \""$2" A "$3"\" static"} else {print "local-zone: \""$2"\" always_nxdomain"} }' /etc/dnsmasq.conf  >> $FN # v3.15
-                echo -e "\n\n# Replicate 'server=/  directives\n" >> $FN
-                [ -n "$(grep "^server=/" /etc/dnsmasq.conf)" ] && awk 'BEGIN {FS="/"} /^server=/  {print "forward-zone:\n\tname: \""$2"\"\n\tforward-addr:",$3"\n\tforward-first: yes"}' /etc/dnsmasq.conf >> $FN   # v3.15
+                echo -e "\n\n# Replicate 'address=' and 'server='  directives\n" >> $FN
+                if [ -n "$(grep -E "^server=|^address=" /etc/dnsmasq.conf)" ];then   # v3.16
+                    for LINE in $(awk 'BEGIN {FS="/"} /^address=/ || /^server=/ {print $0}' /etc/dnsmasq.conf | sort)
+                        do
+                            local IP_ADDR=
+                            local DOMAINS=
+                            local LINE="$(echo "$LINE" | tr '=/' ' ')"
+                            
+                            if [ "${LINE:0:7}" == "address" ];then
+                                local LINE="$(echo "$LINE" | sed 's/^address //' )"
+                                if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
+                                    local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
+                                    local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
+                                else
+                                    local DOMAINS=$(echo "$LINE" | awk '{print $NF}')
+                                fi
+                                for NAME in $DOMAINS
+                                    do
+                                        [ "$IP_ADDR" == "#" ] && continue
+                                        [ -z "$IP_ADDR" ] && echo -e "local-zone: \""$NAME"\" always_nxdomain" >> $FN || echo -e ""local-zone: \""$NAME" A "$(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
+                                    done
+                            else
+                                local LINE="$(echo "$LINE" | sed 's/^server //' )"
+                                if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
+                                    local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
+                                    local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
+                                else
+                                    local DOMAINS=$(echo "$LINE" | awk '{print $NF}')
+                                fi
+                                for NAME in $DOMAINS
+                                    do
+                                        echo -e "forward-zone:\n\tname: \""$NAME"\"\n\tforward-addr: "$(echo "$IP_ADDR" | sed 's/#.*$//')"\n\tforward-first: yes" >> $FN          # v3.16 @Slawek P
+                                    done
+                            fi
+                            
+                        done 
+                fi 
 
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
                 Check_config_add_and_postconf                       # v3.10
