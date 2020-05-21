@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.16b
+#============================================================================================ © 2019-2020 Martineau v3.16
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.16b"
+VERSION="3.16"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -4169,8 +4169,8 @@ _quote() {
 
                 # Migrate 'address=/' and 'server=/' directives                 # v3.15
                 # e.g.
-                #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com A 127.0.0.1"
-                #       address=/use-application-dns.net/       local-zone: "use-application-dns.net" always_nxdomain
+                #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com. A 127.0.0.1"
+                #       address=/use-application-dns.net/       local-zone: "use-application-dns.net." always_nxdomain
                 #
                 #       server=/uk.pool.ntp.org/1.1.1.1         forward-zone:
                 #                                                   name: "uk.pool.ntp.org"
@@ -4197,7 +4197,7 @@ _quote() {
                                 for NAME in $DOMAINS
                                     do
                                         [ "$IP_ADDR" == "#" ] && continue
-                                        [ -z "$IP_ADDR" ] && echo -e "local-zone: \""$NAME"\" always_nxdomain" >> $FN || echo -e ""local-zone: \""$NAME" A "$(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
+                                        [ -z "$IP_ADDR" ] && echo -e "local-zone: \""$NAME".\" always_nxdomain" >> $FN || echo -e ""local-zone: \""$NAME". A "$(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
                                     done
                             else
                                 local LINE="$(echo "$LINE" | sed 's/^server //' )"
