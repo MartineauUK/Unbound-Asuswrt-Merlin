@@ -793,12 +793,12 @@ welcome_message() {
                         MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
 
                         echo -en $cRESET
-                        printf "%s\t\t\t\t\t%s\n"                 "$MENU_I" "$MENU_AD"           # v3.15
-                        printf "%s\t\t\t\t\t%s\n"               "$MENU_Z" "$MENU_T"
-                        printf "%s\t\t\t\t\t\t\t%s\n"           "$MENU_S" "$MENUW_RPZ"         # v3.02 Hotfix
-                        printf "%s\t\t\t\t\t%s\n"            "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
-                        printf "\n%s\t\t\t\t\t%s\n"             "$MENU__"
-                        printf "%s\t\t%s\n"                     "$MENU_VX"
+                        printf "%s\t\t\t\t\t\t%s\n"                 "$MENU_I" "$MENU_AD"           # v3.15
+                        printf "%s\t\t\t\t\t\t\t%s\n"               "$MENU_Z" "$MENU_T"
+                        printf "%s\t\t\t\t\t\t\t\t\t%s\n"           "$MENU_S" "$MENUW_RPZ"         # v3.02 Hotfix
+                        printf "%s\t\t\t\t\t\t\t\t%s\n"             "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
+                        printf "\n%s\t\t\t\t\t%s\n"                 "$MENU__"
+                        printf "%s\t\t%s\n"                         "$MENU_VX"
 
                     fi
                     printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
@@ -4185,7 +4185,7 @@ _quote() {
                             local IP_ADDR=
                             local DOMAINS=
                             local LINE="$(echo "$LINE" | tr '=/' ' ')"
-                            
+
                             if [ "${LINE:0:7}" == "address" ];then
                                 local LINE="$(echo "$LINE" | sed 's/^address //' )"
                                 if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
@@ -4212,9 +4212,9 @@ _quote() {
                                         echo -e "forward-zone:\n\tname: \""$NAME"\"\n\tforward-addr: "$(echo "$IP_ADDR" | sed 's/#.*$//')"\n\tforward-first: yes" >> $FN          # v3.16 @Slawek P
                                     done
                             fi
-                            
-                        done 
-                fi 
+
+                        done
+                fi
 
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
                 Check_config_add_and_postconf                       # v3.10
