@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.15b3
+#============================================================================================ © 2019-2020 Martineau v3.15x1
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 18-May-2020
+# Last Updated Date: 21-May-2020
 #
 # Description:
 #
@@ -76,7 +76,7 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.15b"
+VERSION="3.15x"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -382,7 +382,7 @@ Show_Advanced_Menu() {
     printf "\n%s\t\t%s\n"           "$MENUW_DIG"     "$MENUW_LOOKUP" # v2.11
     printf "%s\t\t\t\t%s\n"         "$MENUW_DNSINFO" "$MENUW_DNSSEC"                 # v2.12 v1.28
     printf "%s\\n\n"                "$MENUW_LINKS"              # v1.28
-    printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
+    #printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
     printf '\n%b[Enter] %bLeave %bAdvanced Tools Menu\n' "${cBGRE}" "$cBCYA" "${cRESET}" # v1.21
 }
 Unbound_Installed() {
@@ -486,7 +486,7 @@ welcome_message() {
         # No need to recreate the STATIC menu items on each invocation
         if [ -z "$MENU_Z" ];then                                # v2.12
             if [ "$EASYMENU" != "Y" ];then
-                MENU_Z="$(printf '%bz %b = Remove unbound/unbound_manager\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
+                MENU_Z="$(printf '%bz %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
                 MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
                 MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
                 MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
@@ -510,7 +510,7 @@ welcome_message() {
                 MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
                 MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
             else
-                MENU_Z="$(printf '%b2 %b = Remove unbound/unbound_manager\n' "${cBYEL}" "${cRESET}")"         # v2.06 Hotfix for amtm
+                MENU_Z="$(printf '%b2 %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
             fi
         fi
 
@@ -576,7 +576,7 @@ welcome_message() {
                     printf '|   3  = Advanced Tools                                                |\n'
                 fi
                 printf '|                                                                      |\n'
-                printf '|     See SNBForums thread %b%s%b for helpful     |\n' "$cBGRE" "https://tinyurl.com/s89z3mm" "$cRESET"
+                printf '|     See SNBForums thread %b%s%b for legacy      |\n' "$cBGRE" "https://tinyurl.com/s89z3mm" "$cRESET"
                 printf '|         user tips on unbound usage/configuration.                    |\n'
                 printf '+======================================================================+\n'
 
@@ -657,7 +657,7 @@ welcome_message() {
 
                     else
                         if [ "$EASYMENU" == "N" ] ;then
-                            MENU_I="$(printf '%bi %b = Begin unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET")"
+                            MENU_I="$(printf '%bi %b = %bBegin%b unbound Installation Process %b%s%b\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${cRESET}" "${cBGRE}" "('$CONFIG_DIR')" "$cRESET")"
                         else
                             [ -z "$ADVANCED_TOOLS" ] && MENU_I="$(printf '%b1 %b = Begin unbound Installation Process %b%s%b\n%b2 %b = Begin unbound Advanced Installation Process %b%s%b\n%b3 %b = Advanced Tools\n\n ' "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET" "${cBYEL}" "${cRESET}" "$cBGRE" "('$CONFIG_DIR')" "$cRESET"  "${cBYEL}" "${cRESET}" )"
                         fi
@@ -734,9 +734,9 @@ welcome_message() {
                     else
                         # Generate v3.00 Easy (dynamically context aware) menu
                         if [ -f /opt/etc/init.d/S61unbound ] || [ -f ${CONFIG_DIR}unbound.conf ];then       # v3.00
-                            MENU_I="$(printf '%b1 %b = Update unbound files and configuration' "${cBYEL}" "${cRESET}")"
+                            MENU_I="$(printf '%b1 %b = %bUpdate%b unbound files and configuration' "${cBYEL}" "${cRESET}" "${cBGRE}" "${cRESET}")"
                         else
-                            MENU_I="$(printf '%b1 %b = Begin unbound Installation Process' "${cBYEL}" "${cRESET}")"
+                            MENU_I="$(printf '%b1 %b = %bBegin%b unbound Installation Process' "${cBYEL}" "${cRESET}" "${cBGRE}" "${cRESET}")"
                         fi
                         if [ -n "$(pidof unbound)" ];then
                             MENU_S="$(printf '%b3 %b = %bStop%b unbound' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}" )"
@@ -784,10 +784,10 @@ welcome_message() {
                         MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
 
                         echo -en $cRESET
-                        printf "%s\t\t\t\t%s\n"                 "$MENU_I" "$MENU_AD"           # v3.15
+                        printf "%s\t\t\t\t\t%s\n"                 "$MENU_I" "$MENU_AD"           # v3.15
                         printf "%s\t\t\t\t\t%s\n"               "$MENU_Z" "$MENU_T"
                         printf "%s\t\t\t\t\t\t\t%s\n"           "$MENU_S" "$MENUW_RPZ"         # v3.02 Hotfix
-                        printf "%s\t\t\t\t\t\\t%s\n"            "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
+                        printf "%s\t\t\t\t\t%s\n"            "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
                         printf "\n%s\t\t\t\t\t%s\n"             "$MENU__"
                         printf "%s\t\t%s\n"                     "$MENU_VX"
 
@@ -4148,10 +4148,10 @@ _quote() {
                                 continue
                             fi
                             local IP_ADDR=$(echo "$LINE" | awk '{print $1}')
-                            local NAMES="$(printf "%s" "$LINE" | cut -d' ' -f2-)"
+                            local NAMES="$(printf "%s" "$LINE" | tr '\t' ' ' | cut -d' ' -f2-)"   # v3.15 Hotfix
                             for NAME in $NAMES
                                 do
-                                    echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
+                                    echo -e "local-data: \""$NAME". IN A "$IP_ADDR"\"" >> $FN   # v3.15 Hotfix @Slawek P
                                     echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
                                 done
                         done < /etc/hosts
