@@ -4179,7 +4179,7 @@ _quote() {
                 #
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
                 echo -e "\n\n# Replicate 'address=' and 'server='  directives\n" >> $FN
-                if [ -n "$(grep -E "^server=|^address=" /etc/dnsmasq.conf)" ];then   # v3.16
+                if [ -n "$(grep -E "^server=|^local=|^address=" /etc/dnsmasq.conf)" ];then   # v3.16
                     for LINE in $(awk 'BEGIN {FS="/"} /^address=/ || /^server=/ {print $0}' /etc/dnsmasq.conf | sort)
                         do
                             local IP_ADDR=
@@ -4200,7 +4200,7 @@ _quote() {
                                         [ -z "$IP_ADDR" ] && echo -e "local-zone: \""$NAME".\" always_nxdomain" >> $FN || echo -e ""local-zone: \""$NAME". A "$(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
                                     done
                             else
-                                local LINE="$(echo "$LINE" | sed 's/^server //' )"
+                                local LINE="$(echo "$LINE" | sed 's/^server // ; s/^local //' )"
                                 if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
                                     local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
                                     local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
