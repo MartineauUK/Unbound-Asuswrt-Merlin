@@ -4564,6 +4564,17 @@ if [  -n "$NEW_CONFIG" ];then
 fi
 
 case "$1" in
+    update*)
+        ARG=;ARG2=
+        if [ -n "$(echo "$@" | grep -F "update=")" ];then               # v3.16 {'update'}[='uf'[ 'dev']
+           ARGS=$(echo "$@" | sed -n "s/^.*update=//p")
+           ARG=$(echo "$ARGS" | awk '{print $1}')
+           ARG2=$(echo "$ARGS" | awk '{print $NF}')
+        fi
+        update_installer "$ARG" "$ARG2"                                  # v3.16
+        echo -e $cRESET
+        exit_message
+        ;;
     recovery)              # v1.22
         NEW_CONFIG="/opt/share/unbound/configs/reset.conf"
         if [ -f  $NEW_CONFIG ];then
@@ -4666,7 +4677,6 @@ case "$1" in
                 ;;
         esac
 esac
-
 
 clear
 
