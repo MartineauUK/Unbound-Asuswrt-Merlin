@@ -245,6 +245,9 @@ Size_Human() {
 
     return 0
 }
+Is_IPv4 () {
+        grep -oE '^([0-9]{1,3}\.){3}[0-9]{1,3}$'                    # IPv4 format
+}
 LastLine_LF() {
 
 # Used by SmartInsertLine()
@@ -598,7 +601,7 @@ welcome_message() {
                 menu1="z"                                   # v1.21
             else
                 if [ "$1" != "nochk" ];then                 # v2.13
-                    Show_status                             # v2.18
+                    Show_status                         # v2.18
                 fi
 
                 if [ $CHECK_GITHUB -eq 1 ];then             # v1.20
@@ -607,14 +610,16 @@ welcome_message() {
 
                     localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-                    [ "$1" != "nochk" ] && remotemd5="$(curl -fsL --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v1.11
-
-                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -fsLN --retry 3 --connect-timeout 5 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')"  || REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
-
-                    [ -z "$REMOTE_VERSION_NUMDOT" ] && REMOTE_VERSION_NUMDOT="?.?? $cRED - Unable to verify Github version"         # v1.15
+                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 1 --connect-timeout 1 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
+                    if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
+                       echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
+                       REMOTE_VERSION_NUMDOT=
+                    else
+                       [ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 2 --connect-timeout 1 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v1.11
+                       REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
+                    fi
 
                     LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')             # v1.04
-                    REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
 
                     local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/master/unbound_manager.sh$cRESET)"
                     [ "${VERSION#????}" == "b" ] && local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/dev/unbound_manager.sh$cRESET)"
@@ -4180,11 +4185,12 @@ _quote() {
                 echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
                 echo -e "\n\n# Replicate 'address=' and 'server='  directives\n" >> $FN
                 if [ -n "$(grep -E "^server=|^local=|^address=" /etc/dnsmasq.conf)" ];then   # v3.16
-                    for LINE in $(awk 'BEGIN {FS="/"} /^address=/ || /^server=/ {print $0}' /etc/dnsmasq.conf | sort)
+                    for LINE in $(awk '/^address=/ || /^server=/ {print $0}' /etc/dnsmasq.conf | sort | uniq)
                         do
                             local IP_ADDR=
                             local DOMAINS=
                             local LINE="$(echo "$LINE" | tr '=/' ' ')"
+                            local RTYPE="A"             # IPv4
 
                             if [ "${LINE:0:7}" == "address" ];then
                                 local LINE="$(echo "$LINE" | sed 's/^address //' )"
@@ -4196,23 +4202,26 @@ _quote() {
                                 fi
                                 for NAME in $DOMAINS
                                     do
-                                        [ "$IP_ADDR" == "#" ] && continue
-                                        [ -z "$IP_ADDR" ] && echo -e "local-zone: \""$NAME".\" always_nxdomain" >> $FN || echo -e ""local-zone: \""$NAME". A "$(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
+                                        [ "$NAME" == "#" ] && continue   # 'address=/#/xxx.xxx.xxx.xxx' --> 'local-zone ". xxx.xxx.xxx.xxx A" static' ???
+                                        if [ -z "$IP_ADDR" ];then
+                                           echo -e "local-zone: \""$NAME".\" always_nxdomain" >> $FN
+                                        else
+                                           [ -z "$(echo "$IP_ADDR" | Is_IPv4)" ] && RTYPE="AAAA"        # IPv6
+                                           echo -e "local-zone: \""$NAME". "$RTYPE" $(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
+                                        fi
                                     done
                             else
                                 local LINE="$(echo "$LINE" | sed 's/^server // ; s/^local //' )"
                                 if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
                                     local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
                                     local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
-                                else
-                                    local DOMAINS=$(echo "$LINE" | awk '{print $NF}')
+                                    for NAME in $DOMAINS
+                                        do
+                                            [ "$NAME" == "127.0.0.1#53535" ] && continue
+                                            echo -e "forward-zone:\n\tname: \""$NAME"\"\n\tforward-addr: "$(echo "$IP_ADDR" | sed 's/#.*$//')"\n\tforward-first: yes" >> $FN          # v3.16 @Slawek P
+                                        done
                                 fi
-                                for NAME in $DOMAINS
-                                    do
-                                        echo -e "forward-zone:\n\tname: \""$NAME"\"\n\tforward-addr: "$(echo "$IP_ADDR" | sed 's/#.*$//')"\n\tforward-first: yes" >> $FN          # v3.16 @Slawek P
-                                    done
                             fi
-
                         done
                 fi
 
