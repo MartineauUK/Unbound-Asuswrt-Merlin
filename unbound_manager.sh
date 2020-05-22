@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.16b3
+#============================================================================================ © 2019-2020 Martineau v3.16b4
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4273,7 +4273,7 @@ Convert_LocalHosts() {
             fi
 
             if [ -f /tmp/localhosts ];then
-                for LINE in  $(sort -t. -g -k4 /tmp/localhosts)
+                for LINE in  $(sort -t. -g -k4 /tmp/localhosts | uniq)
                     do
                         IP_ADDR="$(echo "$LINE" | awk -F";" '{print $1}')"
                         NAME="$(echo "$LINE" | awk -F";" '{print $2}')"
