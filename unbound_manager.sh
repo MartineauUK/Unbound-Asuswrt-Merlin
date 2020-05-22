@@ -4246,7 +4246,7 @@ Convert_LocalHosts() {
         local DOMAIN=$(nvram get lan_domain)
         if [ -n "$DOMAIN" ];then                                                # v3.10 Hotfix @dave14305/@milan
             echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting NVRAM 'dhcp_staticlist' local hosts to 'unbound'....."$cRESET
-            echo -e "# Replicate 'hosts.dnsmasq' local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
+            echo -e "# Replicate NVRAM 'dhcp_staticlist','/etc/hosts' and '/var/lib/misc/dnsmasq.leases' local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
 
             # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
             #   1. NVRAM dhcp_staticlist
