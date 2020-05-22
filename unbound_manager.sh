@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.16b2
+#============================================================================================ © 2019-2020 Martineau v3.16b3
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4132,104 +4132,64 @@ _quote() {
             [ -z "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "port=0                           # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
             [ -z "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=lan,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
 
-            local DOMAIN=$(nvram get lan_domain)
-            if [ -n "$DOMAIN" ];then                                                # v3.10 Hotfix @dave14305/@milan
-                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting '/etc/hosts.dnsmasq' local hosts to 'unbound'....."$cRESET
-                echo -e "# Replicate 'hosts.dnsmasq' local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
+            Convert_LocalHosts
 
-                # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
-                for PAIR in $(nvram get dhcp_staticlist | tr '<' ' ')
+            # Migrate 'address=/' and 'server=/' directives                 # v3.15
+            # e.g.
+            #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com. A 127.0.0.1"
+            #       address=/use-application-dns.net/       local-zone: "use-application-dns.net." always_nxdomain
+            #
+            #       server=/uk.pool.ntp.org/1.1.1.1         forward-zone:
+            #                                                   name: "uk.pool.ntp.org"
+            #                                                   forward-addr: 1.1.1.1
+            #                                                   forward-first: yes
+            #
+            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
+            echo -e "\n\n# Replicate 'address=' and 'server='  directives\n" >> $FN
+            if [ -n "$(grep -E "^server=|^local=|^address=" /etc/dnsmasq.conf)" ];then   # v3.16
+                for LINE in $(awk '/^address=/ || /^server=/ {print $0}' /etc/dnsmasq.conf | sort | uniq)
                     do
-                        local NAME=                                             # v3.11
-                        local MAC=$(echo "$PAIR" | cut -d'>' -f1)
-                        local IP_ADDR=$(echo "$PAIR" | cut -d'>' -f2)
-                        [ -f /etc/hosts.dnsmasq ] && local NAME="$(awk -v ip="${IP_ADDR}" '$1 == ip {print $2}' /etc/hosts.dnsmasq)"   # v3.11 Hotfix @glehel
-                        [ -z "$NAME" ] && local NAME=$(nvram get dhcp_hostnames | tr '<>' ' ' | grep -oE "$MAC.*" | cut -d' ' -f2)
-                        if [ -n "$NAME" ];then                                                                      # v3.11
-                            echo -e "local-data: \""$NAME"."$DOMAIN". IN A "$IP_ADDR"\"" >> $FN
-                            echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
-                        else
-                            echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in '/etc/hosts.dnsmasq' or 'nvram get dhcp_hostnames'"   # v3.11
-                        fi
-                    done
-                if [ -f /etc/hosts ];then                                        # v3.15
-                    echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts' local hosts to 'unbound'....."$cRESET
-                    echo -e "# Replicate '/etc/hosts' local hosts\n" >> $FN       # v3.15
-                    while IFS= read -r LINE || [ -n "$LINE" ]                   # v3.15
-                        do
-                            # Ignore comment/empty lines...
-                            if [ -z "$LINE" ] || [ -n "$(echo "$LINE" | grep -E "^\#")" ];then
-                                #Say "***DEBUG Ignoring Comment/Blank LINE=>$LINE<"     # ***TESTING***
-                                continue
+                        local IP_ADDR=
+                        local DOMAINS=
+                        local LINE="$(echo "$LINE" | tr '=/' ' ')"
+                        local RTYPE="A"             # IPv4
+
+                        if [ "${LINE:0:7}" == "address" ];then
+                            local LINE="$(echo "$LINE" | sed 's/^address //' )"
+                            if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
+                                local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
+                                local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
+                            else
+                                local DOMAINS=$(echo "$LINE" | awk '{print $NF}')
                             fi
-                            local IP_ADDR=$(echo "$LINE" | awk '{print $1}')
-                            local NAMES="$(printf "%s" "$LINE" | tr '\t' ' ' | cut -d' ' -f2-)"   # v3.16
-                            for NAME in $NAMES
+                            for NAME in $DOMAINS
                                 do
-                                    echo -e "local-data: \""$NAME". IN A "$IP_ADDR"\"" >> $FN   # v3.16 @Slawek P
-                                    echo -e "local-data-ptr: \""$IP_ADDR" "$NAME"\"\n" >> $FN
+                                    [ "$NAME" == "#" ] && continue   # 'address=/#/xxx.xxx.xxx.xxx' --> 'local-zone ". xxx.xxx.xxx.xxx A" static' ???
+                                    if [ -z "$IP_ADDR" ];then
+                                       echo -e "local-zone: \""$NAME".\" always_nxdomain" >> $FN
+                                    else
+                                       [ -z "$(echo "$IP_ADDR" | Is_IPv4)" ] && RTYPE="AAAA"        # IPv6
+                                       echo -e "local-zone: \""$NAME". "$RTYPE" $(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
+                                    fi
                                 done
-                        done < /etc/hosts
-                fi
-
-                # Migrate 'address=/' and 'server=/' directives                 # v3.15
-                # e.g.
-                #       address=/siteX.com/127.0.0.1            local-zone: "siteX.com. A 127.0.0.1"
-                #       address=/use-application-dns.net/       local-zone: "use-application-dns.net." always_nxdomain
-                #
-                #       server=/uk.pool.ntp.org/1.1.1.1         forward-zone:
-                #                                                   name: "uk.pool.ntp.org"
-                #                                                   forward-addr: 1.1.1.1
-                #                                                   forward-first: yes
-                #
-                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
-                echo -e "\n\n# Replicate 'address=' and 'server='  directives\n" >> $FN
-                if [ -n "$(grep -E "^server=|^local=|^address=" /etc/dnsmasq.conf)" ];then   # v3.16
-                    for LINE in $(awk '/^address=/ || /^server=/ {print $0}' /etc/dnsmasq.conf | sort | uniq)
-                        do
-                            local IP_ADDR=
-                            local DOMAINS=
-                            local LINE="$(echo "$LINE" | tr '=/' ' ')"
-                            local RTYPE="A"             # IPv4
-
-                            if [ "${LINE:0:7}" == "address" ];then
-                                local LINE="$(echo "$LINE" | sed 's/^address //' )"
-                                if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
-                                    local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
-                                    local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
-                                else
-                                    local DOMAINS=$(echo "$LINE" | awk '{print $NF}')
-                                fi
+                        else
+                            local LINE="$(echo "$LINE" | sed 's/^server // ; s/^local //' )"
+                            if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
+                                local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
+                                local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
                                 for NAME in $DOMAINS
                                     do
-                                        [ "$NAME" == "#" ] && continue   # 'address=/#/xxx.xxx.xxx.xxx' --> 'local-zone ". xxx.xxx.xxx.xxx A" static' ???
-                                        if [ -z "$IP_ADDR" ];then
-                                           echo -e "local-zone: \""$NAME".\" always_nxdomain" >> $FN
-                                        else
-                                           [ -z "$(echo "$IP_ADDR" | Is_IPv4)" ] && RTYPE="AAAA"        # IPv6
-                                           echo -e "local-zone: \""$NAME". "$RTYPE" $(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
-                                        fi
+                                        [ "$NAME" == "127.0.0.1#53535" ] && continue
+                                        echo -e "forward-zone:\n\tname: \""$NAME"\"\n\tforward-addr: "$(echo "$IP_ADDR" | sed 's/#.*$//')"\n\tforward-first: yes" >> $FN          # v3.16 @Slawek P
                                     done
-                            else
-                                local LINE="$(echo "$LINE" | sed 's/^server // ; s/^local //' )"
-                                if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
-                                    local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
-                                    local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
-                                    for NAME in $DOMAINS
-                                        do
-                                            [ "$NAME" == "127.0.0.1#53535" ] && continue
-                                            echo -e "forward-zone:\n\tname: \""$NAME"\"\n\tforward-addr: "$(echo "$IP_ADDR" | sed 's/#.*$//')"\n\tforward-first: yes" >> $FN          # v3.16 @Slawek P
-                                        done
-                                fi
                             fi
-                        done
-                fi
-
-                echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
-                Check_config_add_and_postconf                       # v3.10
-            else
-               echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
+                        fi
+                    done
             fi
+
+            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
+            Check_config_add_and_postconf                       # v3.10
+
             echo -en $cBCYA"\n"$(date "+%H:%M:%S")" Restarting "$cRESET"dnsmasq"$cBGRE   # v3.10 Hotfix
             service restart_dnsmasq
          else
@@ -4278,6 +4238,52 @@ _quote() {
 
         echo -en $cRESET
 
+}
+Convert_LocalHosts() {
+
+        local FN="/opt/share/unbound/configs/unbound.conf.localhosts"
+
+        local DOMAIN=$(nvram get lan_domain)
+        if [ -n "$DOMAIN" ];then                                                # v3.10 Hotfix @dave14305/@milan
+            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting NVRAM 'dhcp_staticlist' local hosts to 'unbound'....."$cRESET
+            echo -e "# Replicate 'hosts.dnsmasq' local hosts\n\nprivate-domain: \""$DOMAIN"\"\n\nlocal-zone: \""$DOMAIN".\" static\n\n" > $FN
+
+            # If dnsmasq is no longer the DNS resolver for the LAN , we need to add the localhosts into unbound
+            #   1. NVRAM dhcp_staticlist
+            #   2. /etc/hosts
+            #   3. /var/lib/misc/dnsmasq.leases - refrsh cron or dhcp lease script?
+            for PAIR in $(nvram get dhcp_staticlist | tr '<' ' ')
+                do
+                    local NAME=                                             # v3.11
+                    local MAC=$(echo "$PAIR" | cut -d'>' -f1)
+                    local IP_ADDR=$(echo "$PAIR" | cut -d'>' -f2)
+                    [ -f /etc/hosts.dnsmasq ] && local NAME="$(awk -v ip="${IP_ADDR}" '$1 == ip {print $2}' /etc/hosts.dnsmasq)"   # v3.11 Hotfix @glehel
+                    [ -z "$NAME" ] && local NAME=$(nvram get dhcp_hostnames | tr '<>' ' ' | grep -oE "$MAC.*" | cut -d' ' -f2)
+                    if [ -n "$NAME" ];then                                                                      # v3.11
+                        echo -e $IP_ADDR";"$NAME >> /tmp/localhosts
+                    else
+                        echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in '/etc/hosts.dnsmasq' or 'nvram get dhcp_hostnames'"   # v3.11
+                    fi
+                done
+            if [ -f /etc/hosts ] || [ -f /var/lib/misc/dnsmasq.leases ];then      # v3.16 v3.15
+                echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts' and '/var/lib/misc/dnsmasq.leases' local hosts to 'unbound'....."$cRESET
+                echo -e "# Replicate '/etc/hosts' local hosts\n" >> $FN             # v3.15
+                [ -f /etc/hosts ] && cat /etc/hosts.dnsmasq | tr ' ' ';' >> /tmp/localhosts               # v3.16
+                [ -f /var/lib/misc/dnsmasq.leases ] && awk 'BEGIN { OFS = ";"; ORS = "\n"  } {print $3,$4}' /var/lib/misc/dnsmasq.leases >> /tmp/localhosts   # v3.16
+            fi
+
+            if [ -f /tmp/localhosts ];then
+                for LINE in  $(sort -t. -g -k4 /tmp/localhosts)
+                    do
+                        IP_ADDR="$(echo "$LINE" | awk -F";" '{print $1}')"
+                        NAME="$(echo "$LINE" | awk -F";" '{print $2}')"
+                        echo -e "local-data: \"${NAME}.$DOMAIN. IN A $IP_ADDR\"\nlocal-data-ptr: \""$IP_ADDR $NAME"\"\n" >> $FN
+                    done
+                rm /tmp/localhosts
+            fi
+        else
+           echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
+        fi
 }
 Diversion_to_unbound_list() {
 
@@ -4564,6 +4570,12 @@ if [  -n "$NEW_CONFIG" ];then
 fi
 
 case "$1" in
+    localhosts)                                                         # v3.16
+        Convert_LocalHosts                                              # v3.16
+        Restart_unbound
+        echo -e $cRESET
+        exit_message
+        ;;
     update*)
         ARG=;ARG2=
         if [ -n "$(echo "$@" | grep -F "update=")" ];then               # v3.16 {'update'}[='uf'[ 'dev']
