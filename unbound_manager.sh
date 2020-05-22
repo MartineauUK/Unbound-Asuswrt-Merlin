@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.16b4
+#============================================================================================ © 2019-2020 Martineau v3.16b5
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4267,17 +4267,21 @@ Convert_LocalHosts() {
                 done
             if [ -f /etc/hosts ] || [ -f /var/lib/misc/dnsmasq.leases ];then      # v3.16 v3.15
                 echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts' and '/var/lib/misc/dnsmasq.leases' local hosts to 'unbound'....."$cRESET
-                echo -e "# Replicate '/etc/hosts' local hosts\n" >> $FN             # v3.15
                 [ -f /etc/hosts ] && cat /etc/hosts.dnsmasq | tr ' ' ';' >> /tmp/localhosts               # v3.16
                 [ -f /var/lib/misc/dnsmasq.leases ] && awk 'BEGIN { OFS = ";"; ORS = "\n"  } {print $3,$4}' /var/lib/misc/dnsmasq.leases >> /tmp/localhosts   # v3.16
             fi
 
             if [ -f /tmp/localhosts ];then
-                for LINE in  $(sort -t. -g -k4 /tmp/localhosts | uniq)
+                for LINE in  $(sort -t. -g -k4 /tmp/localhosts | uniq)                # v3.16
                     do
                         IP_ADDR="$(echo "$LINE" | awk -F";" '{print $1}')"
                         NAME="$(echo "$LINE" | awk -F";" '{print $2}')"
-                        echo -e "local-data: \"${NAME}.$DOMAIN. IN A $IP_ADDR\"\nlocal-data-ptr: \""$IP_ADDR $NAME"\"\n" >> $FN
+                        if [ "$NAME" != "*" ] && [ -n "$NAME" ];then
+                           local VALID= 
+                        else
+                           local VALID="#"
+                        fi
+                        echo -e "${VALID}local-data: \"${NAME}.$DOMAIN. IN A $IP_ADDR\"\n${VALID}local-data-ptr: \""$IP_ADDR $NAME"\"\n" >> $FN
                     done
                 rm /tmp/localhosts
             fi
