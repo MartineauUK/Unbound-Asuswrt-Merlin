@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.16b6
+#============================================================================================ © 2019-2020 Martineau v3.16b7
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +57,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 21-May-2020
+# Last Updated Date: 23-May-2020
 #
 # Description:
 #
@@ -470,7 +470,8 @@ Show_status() {
         if [ -n "$(grep "^outgoing-interface" ${CONFIG_DIR}unbound.conf)" ];then   # v3.16
             # Use obscure but benign URLthat most will never reference.....
             if [ -z "$(nslookup amdahl.com | grep -woE '([0-9]{1,3}\.){3}[0-9]{1,3}' | awk 'NR>2')" ];then
-                echo -e $cBRED"\a\n***ERROR unbound ${cRESET}configuration contains 'outgoing-interface' and nslookup fails? use $cBMAG'bind disable'$cESET to \n"$cRESET
+                echo -e $cBRED"\a\n***ERROR unbound ${cRESET}configuration contains 'outgoing-interface' and nslookup fails? use $cBMAG'bind [disable]'$cRESET to reset\n"$cRESET
+                SayT "***ERROR unbound ${cRESET}configuration contains 'outgoing-interface' and nslookup fails? "
             fi
             # .....Remove it from the cache to prevent a false-positive for next time.
             $UNBOUNCTRLCMD flush amdahl.com 1>/dev/null   # v3.16
@@ -506,7 +507,7 @@ welcome_message() {
                 #MENU_FM="$(printf '%bfastmenu%b = Disable SLOW unbound-control LAN SSL cert validation\n' "${cBYEL}" "${cRESET}")"
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
-                MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable] (no arg reinstates dnsmasq)\n' "${cBYEL}" "${cRESET}")"  # v3.10
+                MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
                 MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
@@ -1417,32 +1418,54 @@ EOF
                     netstat -anp | grep LISTEN | grep -v unix | awk -v OFS='\t' '{gsub(":"," ",$4); print $0}' | sort -g -k4 -k5   # v3.11
                     [ -n "$(pidof unbound)" ] && echo -e $cBCYA"\n\tWarning ${cRESET}unbound$cBCYA is running so $cRESET'unbound -dv'$cBCYA may show sockets already in use by ${cRESET}unbound$cBYEL\n"   # v3.11
                     echo -e $cBRED
-                    unbound -dv
+                    unbound -dvvvv
                     echo -e $cRESET
                     break
                 ;;
-                dnsmasq*)                                                                 # v3.10 [disable]
+                dnsmasq*)                                                                 # v3.10 [disable | interfaces|nointerface]
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                     fi
 
                     if [ "$(Unbound_Installed)" == "Y" ];then
-                        if [ "$ARG" == "disable" ];then
-                            AUTO_REPLY11="?"
-                            echo
-                            Option_Disable_dnsmasq "$AUTO_REPLY11" "$ARG"   # unbound will be the DNS server for ALl LAN Clients
-                            local RC=$?
-                        else
-                            case "$ARG" in
-                                "") Disable_dnsmasq                                 # Reinstate dnsmasq as the DNS reolver for ALL LAN Clients.
-                                    local RC=0
+                       if [ -z "$ARG" ] || [ "$ARG" == "disable" ];then                 # v3.16
+                            if [ "$ARG" == "disable" ];then
+                                AUTO_REPLY11="?"
+                                echo
+                                Option_Disable_dnsmasq "$AUTO_REPLY11" "$ARG"   # unbound will be the DNS server for ALl LAN Clients
+                                local RC=$?
+                            else
+                                case "$ARG" in
+                                    "") Disable_dnsmasq                                 # Reinstate dnsmasq as the DNS reolver for ALL LAN Clients.
+                                        local RC=0
+                                        ;;
+                                    *)
+                                     echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'disable'$cBRED is valid"$cRESET
+                                     continue
                                     ;;
-                                *)
-                                 echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'disable'$cBRED is valid"$cRESET
-                                 continue
-                                ;;
-                            esac
+                                esac
+                            fi
+                        else
+                            if [ -f /opt/share/unbound/configs/unbound.conf.localhosts ];then     # v3.16
+                                case "$ARG" in
+                                    nointerfaces)
+                                        echo -e $cBCYA"\n\tRemoving dnsmasq 'interfaces=' from 'unbound.conf.localhosts'"$cRESET
+                                        sed -i -n '/Replicate.*interface=.*directives/q;p' /opt/share/unbound/configs/unbound.conf.localhosts
+                                        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /opt/share/unbound/configs/unbound.conf.localhosts
+                                        Restart_unbound
+                                        ;;
+                                    interfaces)
+                                        sed -i -n '/Replicate.*interface=.*directives/q;p' /opt/share/unbound/configs/unbound.conf.localhosts
+                                        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /opt/share/unbound/configs/unbound.conf.localhosts
+                                        echo
+                                        Convert_dnsmasq_Interfaces
+                                        Restart_unbound
+                                        ;;
+                                esac
+                            else
+                                echo -e $cBRED"\a\n\t'unbound.conf.localhosts' not found! - dnsmasq bypass NOT"$cRESET
+                            fi
                         fi
                     else
                         echo -e $cBRED"\a\n\tunbound NOT installed!"$cRESET
@@ -1664,7 +1687,6 @@ EOF
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                     fi
                     if [ "$ARG" == "yes" ] || [ "$ARG" == "no" ];then
-                        echo
                         [ ${ARG:0:3} == "yes" ] &&  Disable_Firefox_DoH || Disable_Firefox_DoH "no"   # v3.16
                     else
                        echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'yes' or 'no'$cBRED is valid"$cRESET
@@ -2601,21 +2623,21 @@ Check_config_add_and_postconf() {
            local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.addgui"   # Reinstate '.addgui
        fi
        [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
-       [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n" >>  ${CONFIG_DIR}unbound.conf
+       [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
     fi
 
     # If Custom 'server:' directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.add"' directive so values will override any previous ones # v2.18 Hotfix
     local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.add"              # v2.10
     if [ -f $CONFIG_ADD ];then
         [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
-        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
+        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
 
     # If Custom 'server:' local host directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.localhosts"'
     local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.localhosts"              # v2.10
     if [ -f $CONFIG_ADD ];then
         [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
-        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives\n" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
+        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
 
     local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
@@ -4138,7 +4160,7 @@ _quote() {
         local FN="/opt/share/unbound/configs/unbound.conf.localhosts"
 
         if [ "$ARG" == "disable" ];then
-            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Configuring "$cRESET"unbound"$cBCYA" to be the "$cRESET"primary DNS"$cBCYA" for ALL LAN Clients.....\n"$cRESET
+            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Configuring "$cRESET"unbound"$cBCYA" to be the "$cRESET"primary DNS"$cBCYA" for ALL LAN Clients....."$cRESET
             sed -i "/^port: 53535/ s/[^ ]*[^ ]/53/2" ${CONFIG_DIR}unbound.conf
             sed -i "/^interface: 127\.0\.0\.1@53535/ s/[^ ]*[^ ]/$UNBOUND_LISTENSED/2" ${CONFIG_DIR}unbound.conf
             Edit_config_options "interface: 127.0.0.1@53" "uncomment"
@@ -4151,7 +4173,7 @@ _quote() {
             [ -z "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=lan,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
 
             #
-            Convert_LocalHosts                                              # v3.16
+            Convert_dnsmasq_LocalHosts                                              # v3.16
 
             # Migrate 'address=/' and 'server=/' directives                 # v3.15
             # e.g.
@@ -4163,8 +4185,8 @@ _quote() {
             #                                                   forward-addr: 1.1.1.1
             #                                                   forward-first: yes
             #
-            echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
-            echo -e "\n\n# Replicate 'address=' and 'server='  directives\n" >> $FN
+            echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting dnsmasq 'address=/' and 'server=/' directives to 'unbound'....."$cRESET
+            echo -e "\n\n# Replicate dnsmasq 'address=' and 'server='  directives\n" >> $FN
             if [ -n "$(grep -E "^server=|^local=|^address=" /etc/dnsmasq.conf)" ];then   # v3.16
                 for LINE in $(awk '/^address=/ || /^server=/ {print $0}' /etc/dnsmasq.conf | sort | uniq)
                     do
@@ -4191,7 +4213,7 @@ _quote() {
                                     if [ -z "$IP_ADDR" ];then
                                        echo -e "local-zone: \""$NAME".\" always_nxdomain" >> $FN
                                     else
-                                       echo -e "local-zone: \""$NAME". "$RTYPE" $(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
+                                       echo -e "local-zone: \""$NAME". "$RTYPE $(echo "$IP_ADDR" | sed 's/#.*$//')"\" static" >> $FN
                                     fi
                                 done
                         else
@@ -4209,6 +4231,9 @@ _quote() {
                     done
             fi
 
+            # Must be processed last as 'dnsmasq {nointerfaces | interfaces} wipes every thing from first interface to EOF!
+            Convert_dnsmasq_Interfaces
+
             echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Checking 'include: unbound.conf.localhosts' ....."$cRESET
             Check_config_add_and_postconf                       # v3.10
 
@@ -4225,8 +4250,12 @@ _quote() {
 
             [ -n "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && sed -i '/port=0/d' /jffs/configs/dnsmasq.conf.add   # v3.10 Hotfix
             [ -n "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && sed -i "/dhcp-option=lan,6,$ROUTER/d" /jffs/configs/dnsmasq.conf.add   # v3.10 Hotfix
+
+            local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.localhosts\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
+            [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.16
+
             # Wipe the 'include: unbound.conf.localhosts'
-            #true > $FN
+            #true > $FN                                                     # v3.16
         fi
 
         Restart_unbound
@@ -4264,7 +4293,7 @@ _quote() {
         echo -en $cRESET
 
 }
-Convert_LocalHosts() {
+Convert_dnsmasq_LocalHosts() {
 
         local FN="/opt/share/unbound/configs/unbound.conf.localhosts"
 
@@ -4314,6 +4343,26 @@ Convert_LocalHosts() {
         else
            echo -e $cBRED"\a\tWarning: Cannot replicate dnsmasq's local hosts; Blank router domain name; see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_LAN_Content.asp LAN->LAN-IP $HARDWARE_MODEL's Domain Name\n" 2>&1
         fi
+}
+Convert_dnsmasq_Interfaces() {
+
+        local FN="/opt/share/unbound/configs/unbound.conf.localhosts"
+
+        # Add additional 'interfaces:'                                                              # v3.16
+        echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting dnsmasq 'interface=/' directives to 'unbound'....."$cRESET
+        echo -e "\n\n# Replicate dnsmasq 'interface=' directives\n\nserver:" >> $FN
+        for INTERFACE in $(awk -F"=" '/^interface/ {print $2}' /etc/dnsmasq.conf | grep -v -E "br0$|pptp*")
+            do
+                local IP_ADDR=$(grep "$INTERFACE,3," /etc/dnsmasq.conf | cut -d',' -f3)     # v3.16
+                # unbound only accepts ACTIVE interfaces?
+                if [ -n "$(ip -o -4 addr | grep -o "inet $IP_ADDR/")" ];then
+                   local VALID=
+                else
+                   local VALID="#"
+                fi
+                # 'access-control: xxx.xxx.xxx.0/nn allow' should already explicitly be in 'unbound.conf'
+                [ -n "$IP_ADDR" ] && echo -e $VALID"interface: "$IP_ADDR"\t\t# "$INTERFACE >> $FN   # v3.16
+            done
 }
 Diversion_to_unbound_list() {
 
@@ -4601,7 +4650,7 @@ fi
 
 case "$1" in
     localhosts)                                                         # v3.16
-        Convert_LocalHosts                                              # v3.16
+        Convert_dnsmasq_LocalHosts                                              # v3.16
         Restart_unbound
         echo -e $cRESET
         exit_message
