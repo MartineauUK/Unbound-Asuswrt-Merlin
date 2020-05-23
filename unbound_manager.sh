@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.16b5
+#============================================================================================ © 2019-2020 Martineau v3.16b6
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -1656,6 +1656,18 @@ EOF
                     else
                         echo -e $cBRED"\a\n\tunbound NOT installed! or 'outgoing-interface:' NOT defined in 'unbound.conf'?"$cRESET
                         local RC=1
+                    fi
+                ;;
+                DisableFirefoxDoH*)                                                 # v3.16 {yes | no}
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
+                    fi
+                    if [ "$ARG" == "yes" ] || [ "$ARG" == "no" ];then
+                        echo
+                        [ ${ARG:0:3} == "yes" ] &&  Disable_Firefox_DoH || Disable_Firefox_DoH "no"   # v3.16
+                    else
+                       echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'yes' or 'no'$cBRED is valid"$cRESET
                     fi
                 ;;
                 getrootdns)                                                 # v1.24
@@ -3455,7 +3467,8 @@ install_unbound() {
         #service restart_dnsmasq                                # v1.13
         #echo -en $cRESET
 
-        Option_Disable_Firefox_DoH          "$AUTO_REPLY5"      # v1.18
+        # The default in RMerlin dnsmasq is to disable FirefoxDoH, so replicate it if already ENABLED otherwise ask
+        [ -n "$(grep -E "^address.*use-application-dns.net" /etc/dnsmasq.conf)" ] && Option_Disable_Firefox_DoH "y" || Option_Disable_Firefox_DoH  "$AUTO_REPLY5"    # v3.16 v1.18
 
         # v3.00 running 'Easy' mode has explicit menu (toggle) options for both Ad Block and Stats TAB install/uninstall
         if [ "$EASYMENU" != "Y" ];then
@@ -4076,12 +4089,17 @@ Option_Disable_Firefox_DoH() {
 }
 Disable_Firefox_DoH() {
 
-    echo -e $cBCYA"Installing Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker...."$cRESET
-    download_file ${CONFIG_DIR} adblock/firefox_DOH jackyaz                                         # v2.02 v1.18
+    if [ -z "$1" ] || [ "$1" == "yes" ];then                                               # v3.16
+        echo -e $cBCYA"Installing Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker...."$cRESET
+        download_file ${CONFIG_DIR} adblock/firefox_DOH jackyaz                                         # v2.02 v1.18
 
-    if [ -n "$(grep -E "^#[\s]*include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ];then    # v1.18
-        echo -e $cBCYA"Adding Firefox DoH 'include: ${CONFIG_DIR}adblock/firefox_DOH'"$cRESET
-        sed -i "/adblock\/firefox_DOH/s/^#//" ${CONFIG_DIR}unbound.conf
+        if [ -n "$(grep -E "^#[\s]*include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ];then    # v1.18
+            echo -e $cBCYA"Adding Firefox DoH 'include: ${CONFIG_DIR}adblock/firefox_DOH'"$cRESET
+            sed -i "/adblock\/firefox_DOH/s/^#//" ${CONFIG_DIR}unbound.conf
+        fi
+    else
+        echo -e $cBCYA"Removing Firefox DNS-over-HTTPS (DoH) DISABLE/Blocker"$cRESET       # v3.16
+        sed -i "s/\(^include:.*adblock\/firefox_DOH.*$\)/#\1/" ${CONFIG_DIR}unbound.conf   # v3.16
     fi
 
 }
@@ -4132,7 +4150,8 @@ _quote() {
             [ -z "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "port=0                           # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
             [ -z "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=lan,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
 
-            Convert_LocalHosts
+            #
+            Convert_LocalHosts                                              # v3.16
 
             # Migrate 'address=/' and 'server=/' directives                 # v3.15
             # e.g.
@@ -4152,12 +4171,12 @@ _quote() {
                         local IP_ADDR=
                         local DOMAINS=
                         local LINE="$(echo "$LINE" | tr '=/' ' ')"
-                        local RTYPE="A"             # IPv4
 
                         if [ "${LINE:0:7}" == "address" ];then
                             local LINE="$(echo "$LINE" | sed 's/^address //' )"
                             if [ $(echo "$LINE" | awk '{print NF}') -ne 1 ];then
                                 local IP_ADDR=$(echo "$LINE" | awk '{print $NF}')
+                                [ -n "$(echo "$IP_ADDR" | Is_IPv4)" ] && local RTYPE="A" || local RTYPE="AAAA"
                                 local DOMAINS=$(echo "$LINE" | awk 'NF{--NF};1')
                             else
                                 local DOMAINS=$(echo "$LINE" | awk '{print $NF}')
@@ -4165,10 +4184,13 @@ _quote() {
                             for NAME in $DOMAINS
                                 do
                                     [ "$NAME" == "#" ] && continue   # 'address=/#/xxx.xxx.xxx.xxx' --> 'local-zone ". xxx.xxx.xxx.xxx A" static' ???
+                                    # Prevent duplicate Firefox DoH 'local-zone: "use-application-dns.net" always_nxdomain' if already implemented
+                                    if [ "$NAME" == "use-application-dns.net" ] && [ -n "$(grep -E "^include:.*adblock/firefox_DOH" ${CONFIG_DIR}unbound.conf)" ];then   # v.315 Hotfix @tomsk v3.15 @ttgapers
+                                       continue
+                                    fi
                                     if [ -z "$IP_ADDR" ];then
                                        echo -e "local-zone: \""$NAME".\" always_nxdomain" >> $FN
                                     else
-                                       [ -z "$(echo "$IP_ADDR" | Is_IPv4)" ] && RTYPE="AAAA"        # IPv6
                                        echo -e "local-zone: \""$NAME". "$RTYPE" $(echo "$IP_ADDR" | sed 's/#.*$//')"\" static"" >> $FN
                                     fi
                                 done
@@ -4214,11 +4236,14 @@ _quote() {
             # @tomsk , if bypass dnsmasq and Diversion is running then replace with Ad Block   # v3.10
             if [ "$ARG" == "disable" ];then
                if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
-                  Option_Ad_Tracker_Blocker "?"
-                  local RC=$?
 
-                  # If Ad Block installed then
-                  if [ $RC -eq 0 ];then
+                  # If Ad Block not installed then install Ad Block
+                  if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" == "?" ];then   # v3.16
+                     Option_Ad_Tracker_Blocker "?"
+                  fi
+
+                  # If Ad Block installed then disable Diversion
+                  if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
                      # Prompt to manually terminate Diversion or kill it dead?          # v3.10
                      echo -e $cBCYA"\n"$(date "+%H:%M:%S")" Terminating 'Diversion'....."$cRESET
                      /opt/bin/diversion disable
@@ -4265,23 +4290,24 @@ Convert_LocalHosts() {
                         echo -e $cBRED"\a\tWarning: $MAC ($IP_ADDR) not found in '/etc/hosts.dnsmasq' or 'nvram get dhcp_hostnames'"   # v3.11
                     fi
                 done
+
             if [ -f /etc/hosts ] || [ -f /var/lib/misc/dnsmasq.leases ];then      # v3.16 v3.15
-                echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts' and '/var/lib/misc/dnsmasq.leases' local hosts to 'unbound'....."$cRESET
                 [ -f /etc/hosts ] && cat /etc/hosts.dnsmasq | tr ' ' ';' >> /tmp/localhosts               # v3.16
                 [ -f /var/lib/misc/dnsmasq.leases ] && awk 'BEGIN { OFS = ";"; ORS = "\n"  } {print $3,$4}' /var/lib/misc/dnsmasq.leases >> /tmp/localhosts   # v3.16
             fi
-
             if [ -f /tmp/localhosts ];then
+                echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts'/'/var/lib/misc/dnsmasq.leases' local hosts to 'unbound'....."$cRESET
                 for LINE in  $(sort -t. -g -k4 /tmp/localhosts | uniq)                # v3.16
                     do
                         IP_ADDR="$(echo "$LINE" | awk -F";" '{print $1}')"
+                        [ -n "$(echo "$IP_ADDR" | Is_IPv4)" ] && local RTYPE="A" || local RTYPE="AAAA"
                         NAME="$(echo "$LINE" | awk -F";" '{print $2}')"
                         if [ "$NAME" != "*" ] && [ -n "$NAME" ];then
-                           local VALID= 
+                           local VALID=
                         else
                            local VALID="#"
                         fi
-                        echo -e "${VALID}local-data: \"${NAME}.$DOMAIN. IN A $IP_ADDR\"\n${VALID}local-data-ptr: \""$IP_ADDR $NAME"\"\n" >> $FN
+                        echo -e $VALID"local-data: \""$NAME"."$DOMAIN". IN "$RTYPE $IP_ADDR"\"\n"$VALID"local-data-ptr: \""$IP_ADDR $NAME"\"\n" >> $FN
                     done
                 rm /tmp/localhosts
             fi
