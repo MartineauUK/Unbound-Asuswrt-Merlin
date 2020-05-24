@@ -373,10 +373,10 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
     #[ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v3.00 its the default v2.15
     [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"       "$MENUW_ADBLOCK"      # v3.03
-    printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_YOUTUBE"   # v3.11
+    printf "%s\t\t\t%s\n"                          "$MENUW_FFDOH"     "$MENUW_YOUTUBE"   #  v3.16 3.11
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
     printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_RPZ"    # v3.00
-    printf "%s\t\t%s\n"                          "$MENUW_BIND"     "$MENUW_VPN"    # v3.07
+    printf "%s\t\t%s\n"                            "$MENUW_BIND"      "$MENUW_VPN"    # v3.07
 
     printf "\n%s\t\t\t%s\n"         "$MENUW_SCRIBE"    "$MENU_AD"      # v3.09 Hotfix v2.00 v1.25
     printf "%s\t\t%s\n"   "$MENUW_DNSMASQ"         "$MENU_EL"      # v3.10 v2.15
@@ -506,6 +506,7 @@ welcome_message() {
                 MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 #MENU_FM="$(printf '%bfastmenu%b = Disable SLOW unbound-control LAN SSL cert validation\n' "${cBYEL}" "${cRESET}")"
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                MENUW_FFDOH="$(printf '%bDisableFirefoxDoH%b = Disable Firefox DoH [yes | no]\n' "${cBYEL}" "${cRESET}")"
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
@@ -4650,7 +4651,7 @@ fi
 
 case "$1" in
     localhosts)                                                         # v3.16
-        Convert_dnsmasq_LocalHosts                                              # v3.16
+        Convert_dnsmasq_LocalHosts                                      # v3.16
         Restart_unbound
         echo -e $cRESET
         exit_message
