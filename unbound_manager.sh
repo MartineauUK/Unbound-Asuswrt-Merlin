@@ -1688,6 +1688,7 @@ EOF
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                     fi
                     if [ "$ARG" == "yes" ] || [ "$ARG" == "no" ];then
+                        echo
                         [ ${ARG:0:3} == "yes" ] &&  Disable_Firefox_DoH || Disable_Firefox_DoH "no"   # v3.16
                     else
                        echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'yes' or 'no'$cBRED is valid"$cRESET
@@ -2732,6 +2733,8 @@ Restart_unbound() {
               echo "$CHK_Config_Syntax"
            fi
 
+           # Pre-UP checks...... 'outgoing-interface' and 'interface:' will cause unbound to fail if they cannot bind 
+           
         fi
 
         # Don't save the cache if unbound is UP and 'rs nocache' requested.
@@ -3490,8 +3493,8 @@ install_unbound() {
         #service restart_dnsmasq                                # v1.13
         #echo -en $cRESET
 
-        # The default in RMerlin dnsmasq is to disable FirefoxDoH, so replicate it if already ENABLED otherwise ask
-        [ -n "$(grep -E "^address.*use-application-dns.net" /etc/dnsmasq.conf)" ] && Option_Disable_Firefox_DoH "y" || Option_Disable_Firefox_DoH  "$AUTO_REPLY5"    # v3.16 v1.18
+        # The default in RMerlin dnsmasq is to disable FirefoxDoH, so replicate it if already ENABLED
+        [ -n "$(grep -E "^address.*use-application-dns.net" /etc/dnsmasq.conf)" ] && Disable_Firefox_DoH "yes"    # v3.16 Hotfix v1.18
 
         # v3.00 running 'Easy' mode has explicit menu (toggle) options for both Ad Block and Stats TAB install/uninstall
         if [ "$EASYMENU" != "Y" ];then
@@ -4107,7 +4110,6 @@ Option_Disable_Firefox_DoH() {
             read -r "ANS"
         fi
         [ "$ANS" == "y"  ] && Disable_Firefox_DoH           # v1.18
-
 
 }
 Disable_Firefox_DoH() {
