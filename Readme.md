@@ -68,9 +68,9 @@ e  = Exit Script
 A:Option ==> ?
 
 	Version=3.16
-	Local						md5=73046704c587dd59284ffff1dea54343
-	Github						md5=73046704c587dd59284ffff1dea54343
-	/jffs/addons/unbound/unbound_manager.md5	md5=73046704c587dd59284ffff1dea54343
+	Local						md5=0db4216e1933569a68f2cd26c8079e09
+	Github						md5=0db4216e1933569a68f2cd26c8079e09
+	/jffs/addons/unbound/unbound_manager.md5	md5=0db4216e1933569a68f2cd26c8079e09
 ```
 
 ##### New in **v1.20** is the ability to specify which *User Selectable options* are to be installed without having to _manually_ reply to each individual feature prompt
