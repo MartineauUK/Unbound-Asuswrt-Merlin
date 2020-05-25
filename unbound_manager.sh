@@ -612,12 +612,12 @@ welcome_message() {
 
                     localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 1 --connect-timeout 1 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
+                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
                     if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
                        echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
                        REMOTE_VERSION_NUMDOT=
                     else
-                       [ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 2 --connect-timeout 1 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v1.11
+                       [ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v3.16 Hotfix v1.11
                        REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
                     fi
 
@@ -2733,8 +2733,8 @@ Restart_unbound() {
               echo "$CHK_Config_Syntax"
            fi
 
-           # Pre-UP checks...... 'outgoing-interface' and 'interface:' will cause unbound to fail if they cannot bind 
-           
+           # Pre-UP checks...... 'outgoing-interface' and 'interface:' will cause unbound to fail if they cannot bind
+
         fi
 
         # Don't save the cache if unbound is UP and 'rs nocache' requested.
