@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17b
+#============================================================================================ © 2019-2020 Martineau v3.17b2
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -1921,14 +1921,14 @@ EOF
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                     fi
-                    FN="/opt/share/unbound/configs/unbound.conf.addViews"
+                    FN="/opt/share/unbound/configs/unbound.conf.views"
 
                     if [ "$(Unbound_Installed)" == "Y" ];then
                         if [ -n "$ARG" ];then
                             Manage_unbound_Views "$ARG" "$ARG2" "$ARG3"
                             local RC=$?
                         else
-                            echo -e $cBRED"\a\n\t[ {viewname | '?'} | {viewname '?'} | {viewname url} | {viewname ip_address ['del']} ]"$cRESET
+                            echo -e $cRESET"\a\n\t Options syntax [ {viewname | '?'} | {viewname '?'} | {viewname url} | {viewname ip_address ['del']} ]"$cRESET
                             local RC=1
                         fi
                     else
@@ -2671,11 +2671,19 @@ Check_config_add_and_postconf() {
         [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
 
+    # If Custom 'server:' views: directives are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.views"'
+    local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.views"
+    if [ -f $CONFIG_ADD ];then
+        [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
+        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
+    fi
+
     local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
     if [ -f $POSTCONF_SCRIPT ];then
         [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Executing $cBGRE'$POSTCONF_SCRIPT'"$cBGRA
         sh $POSTCONF_SCRIPT "${CONFIG_DIR}unbound.conf"
     fi
+
 }
 Customise_config() {
 
@@ -4404,32 +4412,37 @@ Manage_unbound_Views() {                                                   # 3.1
         local ARG2=$2
         local ACTIONDEL=$3
 
+        local FN="/opt/share/unbound/configs/unbound.conf.views"
         local STATUS=0
 
-        if [ "$1" != "?" ] && [ "$2" != "?" ];then
-            if [ "$ARG2" == "flush" ];then
-               sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
-            fi
+        if [ "$1" != "disable" ];then
+            if [ "$1" != "?" ] && [ "$2" != "?" ];then
+                if [ "$ARG2" == "flush" ];then
+                   sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
 
-            if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
-                local IP_ADDR=$ARG2
-                if [ "$ACTIONDEL" == "del" ];then
-                    sed -i "/^access-control-view:.*$IP_ADDR" $FN
-                else
-                    if [ -z "$(grep "$IP_ADDR" $FN)" ];then
-                        $(Smart_LineInsert "$FN" "$(echo -e "access-control-view: $IP_ADDR \"$VIEWNAME\"")" )
-                    else
-                        echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already contains '$IP_ADDR'!"$cRESET 2>&1
-                        STATUS=1
-                    fi
                 fi
-            else
-                local URL=$2
 
-                local MATCH=
-                [ -f $FN ] && MATCH="$(grep "$VIEWNAME" $FN)"
-                if [ ! -f $FN ] || [ -z "$MATCH" ];then
-                    cat >> $FN << EOF
+                if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
+                    local IP_ADDR=$ARG2
+                    if [ "$ACTIONDEL" == "del" ];then
+                        sed -i "/^access-control-view:.*$IP_ADDR" $FN
+                    else
+                        if [ -z "$(grep "$IP_ADDR" $FN)" ];then
+                            $(Smart_LineInsert "$FN" "$(echo -e "access-control-view: $IP_ADDR \"$VIEWNAME\"")" )
+                        else
+                            echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already contains '$IP_ADDR'!"$cRESET 2>&1
+                            STATUS=1
+                        fi
+                    fi
+                else
+                    local URL=$2
+
+                    local MATCH=
+                    [ -f $FN ] && MATCH="$(grep "$VIEWNAME" $FN)"
+                    if [ ! -f $FN ] || [ -z "$MATCH" ];then
+                       [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$FN\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
+                       [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
+                        cat >> $FN << EOF
 # View: $VIEWNAME Clients
 ##@Insert##
 view:
@@ -4438,15 +4451,19 @@ view:
     local-zone: "${URL}." refuse
 # EndView: $VIEWNAME
 EOF
-                else
-                    echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already exists!"$cRESET 2>&1
-                    STATUS=1
+                    else
+                        echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already exists!"$cRESET 2>&1
+                        STATUS=1
+                    fi
                 fi
+            else
+                awk -v msgcolor="$cBCYA" '/name:/ {print "\t"NR" "$0}' $FN
+                STATUS=1
             fi
         else
-            awk -v msgcolor="$cBCYA" '/name:/ {print "\t"NR" "$0}' $FN
-            STATUS=1
-
+            sed -i "/^include:.*unbound\.conf\.views/d" ${CONFIG_DIR}unbound.conf
+            [ -f $FN ] && rm $FN
+            echo -e $cBCYA"\n\tunbound 'views:' DISABLED"$cRESET 2>&1
         fi
 
         return $STATUS
