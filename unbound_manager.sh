@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.17"
-#============================================================================================ © 2019-2020 Martineau v3.17b3
+VERSION="3.17b"
+#============================================================================================ © 2019-2020 Martineau v3.17b4
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4419,7 +4419,6 @@ Manage_unbound_Views() {                                                   # 3.1
             if [ "$1" != "?" ] && [ "$2" != "?" ];then
                 if [ "$ARG2" == "flush" ];then
                    sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
-
                 fi
 
                 if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
@@ -4457,7 +4456,13 @@ EOF
                     fi
                 fi
             else
-                awk -v msgcolor="$cBCYA" '/name:/ {print "\t"NR" "$0}' $FN
+                if [ -f $FN ] && [ -n "$(grep "name:" $FN)" ];then
+                    echo -e $cBCYA"\n\tCurrent 'views:'"$cBGRE
+                    awk -v msgcolor="$cBCYA" '/name:/ {print "\t"NR" "$0}' $FN
+                    echo -en $cRESET
+                else
+                    echo -e $cBCYA"\n\tNO Current 'views:'"$cRESET
+                fi
                 STATUS=1
             fi
         else
