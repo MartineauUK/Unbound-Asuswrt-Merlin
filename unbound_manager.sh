@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17b4
+#============================================================================================ © 2019-2020 Martineau v3.17b5
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4419,29 +4419,28 @@ Manage_unbound_Views() {                                                   # 3.1
             if [ "$1" != "?" ] && [ "$2" != "?" ];then
                 if [ "$ARG2" == "flush" ];then
                    sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
-                fi
-
-                if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
-                    local IP_ADDR=$ARG2
-                    if [ "$ACTIONDEL" == "del" ];then
-                        sed -i "/^access-control-view:.*$IP_ADDR/d" $FN
-                    else
-                        if [ -z "$(grep "$IP_ADDR" $FN)" ];then
-                            $(Smart_LineInsert "$FN" "$(echo -e "access-control-view: $IP_ADDR \"$VIEWNAME\"")" )
-                        else
-                            echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already contains '$IP_ADDR'!"$cRESET 2>&1
-                            STATUS=1
-                        fi
-                    fi
                 else
-                    local URL=$2
+                    if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
+                        local IP_ADDR=$ARG2
+                        if [ "$ACTIONDEL" == "del" ];then
+                            sed -i "/^access-control-view:.*$IP_ADDR/d" $FN
+                        else
+                            if [ -z "$(grep "$IP_ADDR" $FN)" ];then
+                                $(Smart_LineInsert "$FN" "$(echo -e "access-control-view: $IP_ADDR \"$VIEWNAME\"")" )
+                            else
+                                echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already contains '$IP_ADDR'!"$cRESET 2>&1
+                                STATUS=1
+                            fi
+                        fi
+                    else
+                        local URL=$2
 
-                    local MATCH=
-                    [ -f $FN ] && MATCH="$(grep "$VIEWNAME" $FN)"
-                    if [ ! -f $FN ] || [ -z "$MATCH" ];then
-                       [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$FN\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
-                       [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
-                        cat >> $FN << EOF
+                        local MATCH=
+                        [ -f $FN ] && MATCH="$(grep "$VIEWNAME" $FN)"
+                        if [ ! -f $FN ] || [ -z "$MATCH" ];then
+                           [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$FN\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
+                           [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
+                            cat >> $FN << EOF
 # View: $VIEWNAME Clients
 ##@Insert##
 view:
@@ -4450,9 +4449,10 @@ view:
     local-zone: "${URL}." refuse
 # EndView: $VIEWNAME
 EOF
-                    else
-                        echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already exists!"$cRESET 2>&1
-                        STATUS=1
+                        else
+                            echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already exists!"$cRESET 2>&1
+                            STATUS=1
+                        fi
                     fi
                 fi
             else
