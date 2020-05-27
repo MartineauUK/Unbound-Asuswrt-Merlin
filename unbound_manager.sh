@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17b8
+#============================================================================================ © 2019-2020 Martineau v3.17b9
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4465,7 +4465,6 @@ Manage_unbound_Views() {                                                   # 3.1
                                     echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' already contains '${IP_ADDR}'!\n"$cRESET 2>&1
                                     STATUS=1
                                 fi
-
                             fi
                         else
                             local URL=$2
@@ -4505,6 +4504,7 @@ EOF
                         echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' local-data entries\n"$cRESET
                         unbound-control view_list_local_data  $VIEWNAME
                         echo
+                        STATUS=1
                     fi
                 fi
             else
