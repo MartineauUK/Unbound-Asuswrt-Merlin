@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17b6
+#============================================================================================ © 2019-2020 Martineau v3.17b7
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -248,6 +248,20 @@ Size_Human() {
 Is_IPv4 () {
         grep -oE '^([0-9]{1,3}\.){3}[0-9]{1,3}$'                    # IPv4 format
 }
+Is_IPv4_CIDR() {
+        grep -oE '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'         # IPv4 CIDR range notation
+}
+Is_Private_IPv4() {
+    # 127.  0.0.0 – 127.255.255.255     127.0.0.0 /8
+    # 10.   0.0.0 –  10.255.255.255      10.0.0.0 /8
+    # 172. 16.0.0 – 172. 31.255.255    172.16.0.0 /12
+    # 192.168.0.0 – 192.168.255.255   192.168.0.0 /16
+    #grep -oE "(^192\.168\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])$)|(^172\.([1][6-9]|[2][0-9]|[3][0-1])\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])$)|(^10\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])\.([0-9]|[0-9][0-9]|[0-2][0-5][0-5])$)"
+    grep -oE "(^127\.)|(^(0)?10\.)|(^172\.(0)?1[6-9]\.)|(^172\.(0)?2[0-9]\.)|(^172\.(0)?3[0-1]\.)|(^169\.254\.)|(^192\.168\.)"
+}
+Is_Private_IPv6() {
+    grep -oE "(::1$)|([fF][cCdD])"
+}
 LastLine_LF() {
 
 # Used by SmartInsertLine()
@@ -381,7 +395,7 @@ Show_Advanced_Menu() {
     printf "\n%s\t\t\t%s\n"         "$MENUW_SCRIBE"    "$MENU_AD"      # v3.09 Hotfix v2.00 v1.25
     printf "%s\t\t%s\n"   "$MENUW_DNSMASQ"         "$MENU_EL"      # v3.10 v2.15
     printf "%s\t%s\n"       "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
-
+    printf "\t\t\t\t\t\t\t\t\t%s\n"                                "$MENUW_VIEWS"   # v3.17
     printf "\n%s\t\t%s\n"           "$MENUW_DIG"     "$MENUW_LOOKUP" # v2.11
     printf "%s\t\t\t\t%s\n"         "$MENUW_DNSINFO" "$MENUW_DNSSEC"                 # v2.12 v1.28
     printf "%s\\n\n"                "$MENUW_LINKS"              # v1.28
@@ -499,32 +513,33 @@ welcome_message() {
         # No need to recreate the STATIC menu items on each invocation
         if [ -z "$MENU_Z" ];then                                # v2.12
             if [ "$EASYMENU" != "Y" ];then
-                MENU_Z="$(printf '%bz %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
-                MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
-                MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
-                MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
-                MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                #MENU_FM="$(printf '%bfastmenu%b = Disable SLOW unbound-control LAN SSL cert validation\n' "${cBYEL}" "${cRESET}")"
-                MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_FFDOH="$(printf '%bDisableFirefoxDoH%b = Disable Firefox DoH [yes | no]\n' "${cBYEL}" "${cRESET}")"
-                MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
-                MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
-                MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
-                MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
-                MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
-                MENUW_BIND="$(printf '%bbind%b = BIND unbound to WAN [debug | disable | debug show]\n' "${cBYEL}" "${cRESET}")"  # v3.07
-                MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block [uninstall | update | track]\n' "${cBYEL}" "${cRESET}")"  # v3.12 v3.03
-                MENUW_YOUTUBE="$(printf '%byoutube%b = Install YouTube Ad Block [uninstall | update]\n' "${cBYEL}" "${cRESET}")"  # v3.11
-                MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
-                MENUW_DIG="$(printf '%bdig%b = {domain} [time] Show dig info e.g. dig asciiart.com\n' "${cBYEL}" "${cRESET}")"    # v2.09
-                MENUW_LOOKUP="$(printf '%blookup%b = {domain} Show the name servers used for domain e.g. lookup asciiart.eu \n' "${cBYEL}" "${cRESET}")"
-                MENUW_DUMPCACHE="$(printf '%bdumpcache%b = [bootrest] (or Manually use %brestorecache%b after REBOOT)\n' "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}" )"  # v2.12
-                MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
-                MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
+              MENU_Z="$(printf '%bz %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
+              MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
+              MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
+              MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
+              MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
+              #MENU_FM="$(printf '%bfastmenu%b = Disable SLOW unbound-control LAN SSL cert validation\n' "${cBYEL}" "${cRESET}")"
+              MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
+              MENUW_FFDOH="$(printf '%bDisableFirefoxDoH%b = Disable Firefox DoH [yes | no]\n' "${cBYEL}" "${cRESET}")"
+              MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
+              MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
+              MENUW_VIEWS="$(printf '%bviews%b = [ { uninstall | viewname { ? | remove } ] | {viewname url [ ip_address] } | {viewname ip_address [del]} ]\n' "${cBYEL}" "${cRESET}")"
+              MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"
+              MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
+              MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
+              MENUW_BIND="$(printf '%bbind%b = BIND unbound to WAN [debug | disable | debug show]\n' "${cBYEL}" "${cRESET}")"  # v3.07
+              MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block [uninstall | update | track]\n' "${cBYEL}" "${cRESET}")"  # v3.12 v3.03
+              MENUW_YOUTUBE="$(printf '%byoutube%b = Install YouTube Ad Block [uninstall | update]\n' "${cBYEL}" "${cRESET}")"  # v3.11
+              MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
+              MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
+              MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
+              MENUW_DIG="$(printf '%bdig%b = {domain} [time] Show dig info e.g. dig asciiart.com\n' "${cBYEL}" "${cRESET}")"    # v2.09
+              MENUW_LOOKUP="$(printf '%blookup%b = {domain} Show the name servers used for domain e.g. lookup asciiart.eu \n' "${cBYEL}" "${cRESET}")"
+              MENUW_DUMPCACHE="$(printf '%bdumpcache%b = [bootrest] (or Manually use %brestorecache%b after REBOOT)\n' "${cBYEL}" "${cRESET}" "${cBYEL}" "${cRESET}" )"  # v2.12
+              MENU_RL="$(printf "%brl%b = Reload Configuration (Doesn't halt unbound) e.g. 'rl test1[.conf]' (Recovery use 'rl reset/user')\n" "${cBYEL}" "${cRESET}")"
+              MENU_SD="$(printf "%bsd%b = Show dnsmasq Statistics/Cache Size\n" "${cBYEL}" "${cRESET}")"
             else
-                MENU_Z="$(printf '%b2 %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
+              MENU_Z="$(printf '%b2 %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
             fi
         fi
 
@@ -612,7 +627,7 @@ welcome_message() {
 
                     localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -r 0-500 -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
+                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
                     if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
                        echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
                        REMOTE_VERSION_NUMDOT=
@@ -1908,7 +1923,7 @@ EOF
 
                     [ $RC -eq 0 ] && { Restart_unbound;Check_GUI_NVRAM; }
                 ;;
-                views*)                              # v3.17  [ {viewname | '?'} | {viewname '?'} | {viewname url} | {viewname ip_address ['del']} ]
+                views*)                              # v3.17  [ {viewname { '?' | 'uninstall' } ] | {viewname url [ ip_address] } | {viewname ip_address ['del']} ]
                     local ARG3=                                              # v3.17
                     if [ "$(echo "$menu1" | wc -w)" -ge 4 ];then
                         local ARG3="$(printf "%s" "$menu1" | cut -d' ' -f4)"
@@ -1921,15 +1936,23 @@ EOF
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                     fi
+
                     FN="/opt/share/unbound/configs/unbound.conf.views"
 
                     if [ "$(Unbound_Installed)" == "Y" ];then
-                        if [ -n "$ARG" ];then
-                            Manage_unbound_Views "$ARG" "$ARG2" "$ARG3"
-                            local RC=$?
+                        if [ "$menu1" != "viewsv" ] && [ "$menu1" != "viewsx" ];then
+                            if [ -n "$ARG" ];then
+                                Manage_unbound_Views "$ARG" "$ARG2" "$ARG3"
+                                local RC=$?
+                            else
+                                echo -e $cBCYA"\a\n\t Options syntax:$cRESET [ { uninstall | viewname { '?' | 'uninstall' } ] | {viewname url [ ip_address] } | {viewname ip_address ['del']} ]"$cRESET
+                                local RC=1
+                            fi
                         else
-                            echo -e $cRESET"\a\n\t Options syntax [ {viewname | '?'} | {viewname '?'} | {viewname url} | {viewname ip_address ['del']} ]"$cRESET
-                            local RC=1
+                           [ "$menu1" == "viewsv" ] && local ACCESS="--view"
+                           [ "$menu1" == "viewsx" ] && local ACCESS="--unix"
+                           nano $ACCESS $FN
+                           RC=1
                         fi
                     else
                         echo -e $cBRED"\a\n\tunbound NOT installed!?"$cRESET
@@ -3894,6 +3917,10 @@ Check_GUI_NVRAM() {
                 [ -n "$IPYT" ] && local TXT="${cRESET}(Forcing to use YT IP ${cBMAG}$IPYT$cRESET, No. of YouTube Video Ad ${cBGRE}domains=${cBMAG}${IPYTDOMAINS}${cRESET})" || local TXT=${cRESET}$cRED_".....Please play YouTube video to acquire YouTube Ad Server IP Address"$cRESET
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] YouTube Ad Blocking $TXT" 2>&1
             fi
+
+            if [ -n "$(grep -F "unbound.conf.views" ${CONFIG_DIR}unbound.conf)" ];then            # v3.17
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound 'views:' ENABLED ("${cBMAG}$(grep -c "name:" /opt/share/unbound/configs/unbound.conf.views )"$cRESET views$cBGRE)" 2>&1
+            fi
         fi
 
         local TXT=
@@ -4406,7 +4433,7 @@ Convert_dnsmasq_Interfaces() {
 }
 Manage_unbound_Views() {                                                   # 3.17
 
-        # [ {viewname | '?'} | {viewname '?'} | {viewname url} | {viewname ip_address ['del']} ]
+        # [ {viewname { '?' | 'remove' } ] | {viewname url [ ip_address] } | {viewname ip_address ['del']} ]
 
         local VIEWNAME=$1
         local ARG2=$2
@@ -4415,34 +4442,40 @@ Manage_unbound_Views() {                                                   # 3.1
         local FN="/opt/share/unbound/configs/unbound.conf.views"
         local STATUS=0
 
-        if [ "$1" != "disable" ];then
-            if [ "$1" != "?" ] && [ "$2" != "?" ];then
-                if [ "$ARG2" == "flush" ];then
+        if [ "$1" != "uninstall" ] && [ "$1" != "disable" ] && [ "$1" != "remove" ];then
+            if [ "$1" != "?" ];then
+                if [ "$ARG2" == "remove" ] || [ "$ARG2" == "flush" ];then
                    sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
+                   echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' deleted\n"$cRESET 2>&1
                 else
-                    if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
-                        local IP_ADDR=$ARG2
-                        if [ "$ACTIONDEL" == "del" ];then
-                            sed -i "/^access-control-view:.*$IP_ADDR/d" $FN
-                        else
-                            if [ -z "$(grep "$IP_ADDR" $FN)" ];then
-                                # Can't use Smart_LineInsert
-                                sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: $IP_ADDR \"$VIEWNAME\"" $FN
-                                echo -e $cBCYA"\n\tView: '$VIEWNAME' added Client "${IP_ADDR}$cRESET 2>&1
+                    if [ "$ARG2" != "?" ];then
+                        if [ -n "$(echo "$ARG2" | Is_Private_IPv4)" ] || [ -n "$(echo "$ARG2" | Is_Private_IPv6)" ];then
+                            local IP_ADDR=$ARG2
+                            [ -z "$(echo "$IP_ADDR" | Is_IPv4_CIDR)" ] && local CIDR="/32" || local CIDR=
+                            if [ "$ACTIONDEL" == "del" ];then
+                                sed -i "/^access-control-view:.*$IP_ADDR/d" $FN
+                                echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' removed "${IP_ADDR}${CIDR}"\n"$cRESET 2>&1
                             else
-                                echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already contains '$IP_ADDR'!"$cRESET 2>&1
-                                STATUS=1
-                            fi
-                        fi
-                    else
-                        local URL=$2
 
-                        local MATCH=
-                        [ -f $FN ] && MATCH="$(grep "$VIEWNAME" $FN)"
-                        if [ ! -f $FN ] || [ -z "$MATCH" ];then
-                           [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$FN\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
-                           [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
-                            cat >> $FN << EOF
+                                if [ -z "$(grep "$IP_ADDR" $FN)" ];then
+                                    # Can't use Smart_LineInsert
+                                    sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
+                                    echo -e $cBCYA"\n\tView: '$VIEWNAME' added "${IP_ADDR}$CIDR"\n"$cRESET 2>&1
+                                else
+                                    echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' already contains '${IP_ADDR}'!\n"$cRESET 2>&1
+                                    STATUS=1
+                                fi
+
+                            fi
+                        else
+                            local URL=$2
+
+                            local MATCH=
+                            [ -f $FN ] && MATCH="$(grep "$VIEWNAME" $FN)"
+                            if [ ! -f $FN ] || [ -z "$MATCH" ];then
+                               [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$FN\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
+                               [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
+                                cat >> $FN << EOF
 # View: $VIEWNAME Clients
 view:
     name: "$VIEWNAME"
@@ -4450,36 +4483,43 @@ view:
     local-zone: "${URL}." refuse
 # EndView: $VIEWNAME
 EOF
-                            # We have created the 'view:' ....was an IP Address also supplied?
-                            local TXT=
-                            if [ -n "$(echo "$3" | Is_IPv4)" ];then
-                                IP_ADDR=$3
-                                local TXT="for client $IP_ADDR"
-                                # Can't use Smart_LineInsert
-                                sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: $IP_ADDR \"$VIEWNAME\"" $FN
+                                # We have created the 'view:' ....was an IP Address also supplied?
+                                local TXT=
+                                if [ -n "$(echo "$3" | Is_IPv4)" ];then
+                                    IP_ADDR=$3
+                                    [ -z "$(echo "$IP_ADDR" | Is_IPv4_CIDR)" ] && local CIDR="/32" || local CIDR=
+                                    local TXT="for ${IP_ADDR}$CIDR"
+                                    # Can't use Smart_LineInsert
+                                    sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
 
+                                fi
+                                echo -e $cBCYA"\n\tunbound View: '$VIEWNAME' created "${TXT}"\n"$cRESET 2>&1
+                            else
+                                echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' already exists!\n"$cRESET 2>&1
+                                STATUS=1
                             fi
-                            echo -e $cBCYA"\n\tView: '$VIEWNAME' created "${TXT}$cRESET 2>&1
-                        else
-                            echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already exists!"$cRESET 2>&1
-                            STATUS=1
                         fi
+                    else
+                        echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' local-zones and local-data entries\n"$cRESET
+                        unbound-control view_list_local_zones $VIEWNAME
+                        unbound-control view_list_local_data  $VIEWNAME
+                        echo
                     fi
                 fi
             else
                 if [ -f $FN ] && [ -n "$(grep "name:" $FN)" ];then
-                    echo -e $cBCYA"\n\tCurrent 'views:'"$cBGRE
-                    awk -v msgcolor="$cBCYA" '/name:/ {print "\t"NR" "$0}' $FN
+                    echo -e $cBCYA"\n\tCurrent unbound 'views:'\n"$cBGRE
+                    awk -v msgcolor="$cBCYA" '/name:/ {print "\t"$2}' $FN
                     echo -en $cRESET
                 else
-                    echo -e $cBCYA"\n\tNO Current 'views:'"$cRESET
+                    echo -e $cBCYA"\n\tNo Current unbound 'views:'"$cRESET
                 fi
                 STATUS=1
             fi
         else
-            sed -i "/^server:\ninclude:.*unbound\.conf\.views/d" ${CONFIG_DIR}unbound.conf
+            sed -i -e:b -e'$!{N;2,1bb' -e\} -e '/\n.*include.*views/!P;D' ${CONFIG_DIR}unbound.conf; sed -i '/^include.*views/d' ${CONFIG_DIR}unbound.conf
             [ -f $FN ] && rm $FN
-            echo -e $cBCYA"\n\tunbound 'views:' DISABLED"$cRESET 2>&1
+            echo -e $cBCYA"\n\tunbound 'views:' DISABLED\n"$cRESET 2>&1
         fi
 
         return $STATUS
