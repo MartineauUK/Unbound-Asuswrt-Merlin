@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17b2
+VERSION="3.17"
+#============================================================================================ © 2019-2020 Martineau v3.17b3
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.17b"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 27-May-2020
+# Last Updated Date: 24-May-2020
 #
 # Description:
 #
@@ -4425,7 +4425,7 @@ Manage_unbound_Views() {                                                   # 3.1
                 if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
                     local IP_ADDR=$ARG2
                     if [ "$ACTIONDEL" == "del" ];then
-                        sed -i "/^access-control-view:.*$IP_ADDR" $FN
+                        sed -i "/^access-control-view:.*$IP_ADDR/d" $FN
                     else
                         if [ -z "$(grep "$IP_ADDR" $FN)" ];then
                             $(Smart_LineInsert "$FN" "$(echo -e "access-control-view: $IP_ADDR \"$VIEWNAME\"")" )
@@ -4461,7 +4461,7 @@ EOF
                 STATUS=1
             fi
         else
-            sed -i "/^include:.*unbound\.conf\.views/d" ${CONFIG_DIR}unbound.conf
+            sed -i "/^server:\ninclude:.*unbound\.conf\.views/d" ${CONFIG_DIR}unbound.conf
             [ -f $FN ] && rm $FN
             echo -e $cBCYA"\n\tunbound 'views:' DISABLED"$cRESET 2>&1
         fi
