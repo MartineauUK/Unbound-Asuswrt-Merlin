@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17b5
+#============================================================================================ © 2019-2020 Martineau v3.17b6
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4426,7 +4426,9 @@ Manage_unbound_Views() {                                                   # 3.1
                             sed -i "/^access-control-view:.*$IP_ADDR/d" $FN
                         else
                             if [ -z "$(grep "$IP_ADDR" $FN)" ];then
-                                $(Smart_LineInsert "$FN" "$(echo -e "access-control-view: $IP_ADDR \"$VIEWNAME\"")" )
+                                # Can't use Smart_LineInsert
+                                sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: $IP_ADDR \"$VIEWNAME\"" $FN
+                                echo -e $cBCYA"\n\tView: '$VIEWNAME' added Client "${IP_ADDR}$cRESET 2>&1
                             else
                                 echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already contains '$IP_ADDR'!"$cRESET 2>&1
                                 STATUS=1
@@ -4442,13 +4444,22 @@ Manage_unbound_Views() {                                                   # 3.1
                            [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
                             cat >> $FN << EOF
 # View: $VIEWNAME Clients
-##@Insert##
 view:
     name: "$VIEWNAME"
     view-first: yes
     local-zone: "${URL}." refuse
 # EndView: $VIEWNAME
 EOF
+                            # We have created the 'view:' ....was an IP Address also supplied?
+                            local TXT=
+                            if [ -n "$(echo "$3" | Is_IPv4)" ];then
+                                IP_ADDR=$3
+                                local TXT="for client $IP_ADDR"
+                                # Can't use Smart_LineInsert
+                                sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: $IP_ADDR \"$VIEWNAME\"" $FN
+
+                            fi
+                            echo -e $cBCYA"\n\tView: '$VIEWNAME' created "${TXT}$cRESET 2>&1
                         else
                             echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already exists!"$cRESET 2>&1
                             STATUS=1
