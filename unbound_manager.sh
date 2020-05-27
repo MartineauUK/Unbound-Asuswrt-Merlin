@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17b7
+#============================================================================================ © 2019-2020 Martineau v3.17b8
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4493,15 +4493,16 @@ EOF
                                     sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
 
                                 fi
-                                echo -e $cBCYA"\n\tunbound View: '$VIEWNAME' created "${TXT}"\n"$cRESET 2>&1
+                                echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' created "${TXT}"\n"$cRESET 2>&1
                             else
                                 echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' already exists!\n"$cRESET 2>&1
                                 STATUS=1
                             fi
                         fi
                     else
-                        echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' local-zones and local-data entries\n"$cRESET
+                        echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' local-zones entries\n"$cRESET
                         unbound-control view_list_local_zones $VIEWNAME
+                        echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' local-data entries\n"$cRESET
                         unbound-control view_list_local_data  $VIEWNAME
                         echo
                     fi
