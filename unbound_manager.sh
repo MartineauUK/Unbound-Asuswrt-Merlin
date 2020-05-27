@@ -1,6 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-#============================================================================================ © 2019-2020 Martineau v3.16b7
+VERSION="3.17b"
+#============================================================================================ © 2019-2020 Martineau v3.17b
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -57,7 +58,7 @@
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 23-May-2020
+# Last Updated Date: 27-May-2020
 #
 # Description:
 #
@@ -76,7 +77,6 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH    # v1.15 Fix by SNB Forum Member @Cam
 logger -t "($(basename "$0"))" "$$ Starting Script Execution ($(if [ -n "$1" ]; then echo "$1"; else echo "menu"; fi))"
-VERSION="3.16b"
 GIT_REPO="unbound-Asuswrt-Merlin"
 GITHUB_JACKYAZ="https://raw.githubusercontent.com/jackyaz/$GIT_REPO/master"     # v2.02
 GITHUB_JUCHED="https://raw.githubusercontent.com/juched78/$GIT_REPO/master"     # v2.14
@@ -373,10 +373,10 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
     #[ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v3.00 its the default v2.15
     [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"       "$MENUW_ADBLOCK"      # v3.03
-    printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_YOUTUBE"   # v3.11
+    printf "%s\t\t\t%s\n"                          "$MENUW_FFDOH"     "$MENUW_YOUTUBE"   #  v3.16 3.11
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
     printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_RPZ"    # v3.00
-    printf "%s\t\t%s\n"                          "$MENUW_BIND"     "$MENUW_VPN"    # v3.07
+    printf "%s\t\t%s\n"                            "$MENUW_BIND"      "$MENUW_VPN"    # v3.07
 
     printf "\n%s\t\t\t%s\n"         "$MENUW_SCRIBE"    "$MENU_AD"      # v3.09 Hotfix v2.00 v1.25
     printf "%s\t\t%s\n"   "$MENUW_DNSMASQ"         "$MENU_EL"      # v3.10 v2.15
@@ -506,6 +506,7 @@ welcome_message() {
                 MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
                 #MENU_FM="$(printf '%bfastmenu%b = Disable SLOW unbound-control LAN SSL cert validation\n' "${cBYEL}" "${cRESET}")"
                 MENUW_SCRIBE="$(printf '%bscribe%b = Enable scribe (syslog-ng) unbound logging\n' "${cBYEL}" "${cRESET}")"  # v1.28
+                MENUW_FFDOH="$(printf '%bDisableFirefoxDoH%b = Disable Firefox DoH [yes | no]\n' "${cBYEL}" "${cRESET}")"
                 MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
                 MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
                 MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"  # v3.00
@@ -611,12 +612,12 @@ welcome_message() {
 
                     localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 1 --connect-timeout 1 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v1.11 v1.05
+                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -r 0-500 -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
                     if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
                        echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
                        REMOTE_VERSION_NUMDOT=
                     else
-                       [ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 2 --connect-timeout 1 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v1.11
+                       [ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v3.16 Hotfix v1.11
                        REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
                     fi
 
@@ -1687,6 +1688,7 @@ EOF
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
                     fi
                     if [ "$ARG" == "yes" ] || [ "$ARG" == "no" ];then
+                        echo
                         [ ${ARG:0:3} == "yes" ] &&  Disable_Firefox_DoH || Disable_Firefox_DoH "no"   # v3.16
                     else
                        echo -e $cBRED"\a\n\tUnrecognised argument - Only $cRESET'yes' or 'no'$cBRED is valid"$cRESET
@@ -1905,6 +1907,35 @@ EOF
                     fi
 
                     [ $RC -eq 0 ] && { Restart_unbound;Check_GUI_NVRAM; }
+                ;;
+                views*)                              # v3.17  [ {viewname | '?'} | {viewname '?'} | {viewname url} | {viewname ip_address ['del']} ]
+                    local ARG3=                                              # v3.17
+                    if [ "$(echo "$menu1" | wc -w)" -ge 4 ];then
+                        local ARG3="$(printf "%s" "$menu1" | cut -d' ' -f4)"
+                    fi
+                    local ARG2=                                              # v3.07
+                    if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then
+                        local ARG2="$(printf "%s" "$menu1" | cut -d' ' -f3)"
+                    fi
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
+                    fi
+                    FN="/opt/share/unbound/configs/unbound.conf.addViews"
+
+                    if [ "$(Unbound_Installed)" == "Y" ];then
+                        if [ -n "$ARG" ];then
+                            Manage_unbound_Views "$ARG" "$ARG2" "$ARG3"
+                            local RC=$?
+                        else
+                            echo -e $cBRED"\a\n\t[ {viewname | '?'} | {viewname '?'} | {viewname url} | {viewname ip_address ['del']} ]"$cRESET
+                            local RC=1
+                        fi
+                    else
+                        echo -e $cBRED"\a\n\tunbound NOT installed!?"$cRESET
+                        local RC=1
+                    fi
+                    [ $RC -eq 0 ] && Restart_unbound
                 ;;
                 tcpdump*)                                               # [ interface_name [ port_expr ] ]
                     if [ -n "$(which tcpdump)" ];then                   # v3.05
@@ -2731,6 +2762,8 @@ Restart_unbound() {
               echo "$CHK_Config_Syntax"
            fi
 
+           # Pre-UP checks...... 'outgoing-interface' and 'interface:' will cause unbound to fail if they cannot bind
+
         fi
 
         # Don't save the cache if unbound is UP and 'rs nocache' requested.
@@ -3489,8 +3522,8 @@ install_unbound() {
         #service restart_dnsmasq                                # v1.13
         #echo -en $cRESET
 
-        # The default in RMerlin dnsmasq is to disable FirefoxDoH, so replicate it if already ENABLED otherwise ask
-        [ -n "$(grep -E "^address.*use-application-dns.net" /etc/dnsmasq.conf)" ] && Option_Disable_Firefox_DoH "y" || Option_Disable_Firefox_DoH  "$AUTO_REPLY5"    # v3.16 v1.18
+        # The default in RMerlin dnsmasq is to disable FirefoxDoH, so replicate it if already ENABLED
+        [ -n "$(grep -E "^address.*use-application-dns.net" /etc/dnsmasq.conf)" ] && Disable_Firefox_DoH "yes"    # v3.16 Hotfix v1.18
 
         # v3.00 running 'Easy' mode has explicit menu (toggle) options for both Ad Block and Stats TAB install/uninstall
         if [ "$EASYMENU" != "Y" ];then
@@ -4107,7 +4140,6 @@ Option_Disable_Firefox_DoH() {
         fi
         [ "$ANS" == "y"  ] && Disable_Firefox_DoH           # v1.18
 
-
 }
 Disable_Firefox_DoH() {
 
@@ -4363,6 +4395,61 @@ Convert_dnsmasq_Interfaces() {
                 # 'access-control: xxx.xxx.xxx.0/nn allow' should already explicitly be in 'unbound.conf'
                 [ -n "$IP_ADDR" ] && echo -e $VALID"interface: "$IP_ADDR"\t\t# "$INTERFACE >> $FN   # v3.16
             done
+}
+Manage_unbound_Views() {                                                   # 3.17
+
+        # [ {viewname | '?'} | {viewname '?'} | {viewname url} | {viewname ip_address ['del']} ]
+
+        local VIEWNAME=$1
+        local ARG2=$2
+        local ACTIONDEL=$3
+
+        local STATUS=0
+
+        if [ "$1" != "?" ] && [ "$2" != "?" ];then
+            if [ "$ARG2" == "flush" ];then
+               sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
+            fi
+
+            if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
+                local IP_ADDR=$ARG2
+                if [ "$ACTIONDEL" == "del" ];then
+                    sed -i "/^access-control-view:.*$IP_ADDR" $FN
+                else
+                    if [ -z "$(grep "$IP_ADDR" $FN)" ];then
+                        $(Smart_LineInsert "$FN" "$(echo -e "access-control-view: $IP_ADDR \"$VIEWNAME\"")" )
+                    else
+                        echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already contains '$IP_ADDR'!"$cRESET 2>&1
+                        STATUS=1
+                    fi
+                fi
+            else
+                local URL=$2
+
+                local MATCH=
+                [ -f $FN ] && MATCH="$(grep "$VIEWNAME" $FN)"
+                if [ ! -f $FN ] || [ -z "$MATCH" ];then
+                    cat >> $FN << EOF
+# View: $VIEWNAME Clients
+##@Insert##
+view:
+    name: "$VIEWNAME"
+    view-first: yes
+    local-zone: "${URL}." refuse
+# EndView: $VIEWNAME
+EOF
+                else
+                    echo -e $cBRED"\a\n\t***ERROR view: '$VIEWNAME' already exists!"$cRESET 2>&1
+                    STATUS=1
+                fi
+            fi
+        else
+            awk -v msgcolor="$cBCYA" '/name:/ {print "\t"NR" "$0}' $FN
+            STATUS=1
+
+        fi
+
+        return $STATUS
 }
 Diversion_to_unbound_list() {
 
@@ -4650,7 +4737,7 @@ fi
 
 case "$1" in
     localhosts)                                                         # v3.16
-        Convert_dnsmasq_LocalHosts                                              # v3.16
+        Convert_dnsmasq_LocalHosts                                      # v3.16
         Restart_unbound
         echo -e $cRESET
         exit_message
