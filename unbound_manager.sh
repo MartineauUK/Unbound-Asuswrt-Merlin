@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17bA
+#============================================================================================ © 2019-2020 Martineau v3.17bB
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -4445,84 +4445,94 @@ Manage_unbound_Views() {                                                   # 3.1
         local STATUS=0
 
         if [ "$1" != "uninstall" ] && [ "$1" != "disable" ] && [ "$1" != "remove" ];then
-            if [ "$1" != "?" ];then
-                if [ "$ARG2" == "remove" ] || [ "$ARG2" == "flush" ];then
-                   sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
-                   echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' deleted\n"$cRESET 2>&1
-                else
-                    if [ "$ARG2" != "?" ];then
-                        if [ -n "$(echo "$ARG2" | Is_Private_IPv4)" ] || [ -n "$(echo "$ARG2" | Is_Private_IPv6)" ];then
-                            local IP_ADDR=$ARG2
-                            [ -z "$(echo "$IP_ADDR" | Is_IPv4_CIDR)" ] && local CIDR="/32" || local CIDR=
-                            if [ "$ACTIONDEL" == "del" ];then
-                                sed -i "/^access-control-view:.*$IP_ADDR/d" $FN
-                                echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' removed "${IP_ADDR}${CIDR}"\n"$cRESET 2>&1
-                            else
-
-                                if [ -z "$(grep "$IP_ADDR" $FN)" ];then
-                                    # Can't use Smart_LineInsert
-                                    sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
-                                    echo -e $cBCYA"\n\tView: '$VIEWNAME' added "${IP_ADDR}$CIDR"\n"$cRESET 2>&1
+            if [ "$VIEWNAME" == "?" ] || [ -n "$ARG2" ];then
+                if [ "$1" != "?" ];then
+                    if [ "$ARG2" == "remove" ] || [ "$ARG2" == "flush" ] || [ "$ARG2" == "erase" ] || [ "$ARG2" == "delete" ];then
+                       sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
+                       sed -i "/^access-control-view:.*$VIEWNAME/d" $FN
+                       echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' deleted\n"$cRESET 2>&1
+                    else
+                        if [ "$ARG2" != "?" ];then
+                            if [ -n "$(echo "$ARG2" | Is_Private_IPv4)" ] || [ -n "$(echo "$ARG2" | Is_Private_IPv6)" ];then
+                                local IP_ADDR=$ARG2
+                                [ -z "$(echo "$IP_ADDR" | Is_IPv4_CIDR)" ] && local CIDR="/32" || local CIDR=
+                                if [ "$ACTIONDEL" == "del" ];then
+                                    sed -i "/^access-control-view:.*$IP_ADDR/d" $FN
+                                    echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' removed "${IP_ADDR}${CIDR}"\n"$cRESET 2>&1
                                 else
-                                    echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' already contains '${IP_ADDR}'!\n"$cRESET 2>&1
-                                    STATUS=1
-                                fi
-                            fi
-                        else
-                            local URL=$2
 
-                            local MATCH=
-                            [ -f $FN ] && MATCH="$(grep "$VIEWNAME" $FN)"
-                            if [ ! -f $FN ] || [ -z "$MATCH" ];then
-                               [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$FN\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
-                               [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
-                                cat >> $FN << EOF
-# View: $VIEWNAME Clients
+                                    if [ -z "$(grep "$IP_ADDR" $FN)" ];then
+                                        # Can't use Smart_LineInsert
+                                        sed -i "/# View: Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
+                                        echo -e $cBCYA"\n\tView: '$VIEWNAME' added "${IP_ADDR}$CIDR"\n"$cRESET 2>&1
+                                    else
+                                        echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' already contains '${IP_ADDR}'!\n"$cRESET 2>&1
+                                        STATUS=1
+                                    fi
+                                fi
+                            else
+                                local URL=$2
+
+                                local MATCH=
+                                if [ -f $FN ];then
+                                    MATCH="$(grep "$VIEWNAME" $FN)"
+                                else
+                                    echo -e "# View: Clients\n# EndView Clients\n\n" > $FN
+                                fi
+                                if [ -z "$MATCH" ];then
+                                   [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$FN\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
+                                   [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
+                                    cat >> $FN << EOF
+# View: $VIEWNAME
 view:
     name: "$VIEWNAME"
     view-first: yes
     local-zone: "${URL}." refuse
 # EndView: $VIEWNAME
 EOF
-                                # We have created the 'view:' ....was an IP Address also supplied?
-                                local TXT=
-                                if [ -n "$(echo "$3" | Is_IPv4)" ];then
-                                    IP_ADDR=$3
-                                    [ -z "$(echo "$IP_ADDR" | Is_IPv4_CIDR)" ] && local CIDR="/32" || local CIDR=
-                                    local TXT="for ${IP_ADDR}$CIDR"
-                                    # Can't use Smart_LineInsert
-                                    sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
+                                    # We have created the 'view:' ....was an IP Address also supplied?
+                                    local TXT=
+                                    if [ -n "$(echo "$3" | Is_IPv4)" ];then
+                                        IP_ADDR=$3
+                                        [ -z "$(echo "$IP_ADDR" | Is_IPv4_CIDR)" ] && local CIDR="/32" || local CIDR=
+                                        local TXT="for ${IP_ADDR}$CIDR"
+                                        # Can't use Smart_LineInsert
+                                        sed -i "/# View: Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
+                                    fi
+                                    echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' created "${TXT}"\n"$cRESET 2>&1
+                                else
+                                    echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' already exists!\n"$cRESET 2>&1
+                                    STATUS=1
                                 fi
-                                echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' created "${TXT}"\n"$cRESET 2>&1
-                            else
-                                echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' already exists!\n"$cRESET 2>&1
-                                STATUS=1
                             fi
-                        fi
-                    else
-                        if [ -z "$(grep "$VIEWNAME"  $FN)" ] ;then
-                            echo -en $cBRED"\a\n\t***ERROR no view with name: "$VIEWNAME
                         else
-                            echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' Client entries\n"$cRESET
-                            #awk -v pattern="${VIEWNAME}" '$0~pattern{t=1}; t==1{print "\t"$0; if (/name:/){c++}}; c==1{exit}' $FN
-                            awk -v pattern="${VIEWNAME}" '$0~"access-control-view" && $0~pattern {print "\t"$0}' $FN
-                            echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' local-zone entries\n"$cRESET
-                            unbound-control view_list_local_zones $VIEWNAME
-                            echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' local-data entries\n"$cRESET
-                            unbound-control view_list_local_data  $VIEWNAME
-                            echo
+                            if [ -z "$(grep "$VIEWNAME"  $FN)" ] ;then
+                                echo -en $cBRED"\a\n\t***ERROR no view with name: "$VIEWNAME
+                            else
+                                echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' Client entries\n"$cRESET
+                                #awk -v pattern="${VIEWNAME}" '$0~pattern{t=1}; t==1{print "\t"$0; if (/name:/){c++}}; c==1{exit}' $FN
+                                awk -v pattern="${VIEWNAME}" '$0~"access-control-view" && $0~pattern {print "\t"$0}' $FN
+                                echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' local-zones entries\n"$cRESET
+                                unbound-control view_list_local_zones $VIEWNAME
+                                echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' local-data entries\n"$cRESET
+                                unbound-control view_list_local_data  $VIEWNAME
+                                echo
+                            fi
+                            STATUS=1
                         fi
-                        STATUS=1
                     fi
+                else
+                    if [ -f $FN ] && [ -n "$(grep "name:" $FN)" ];then
+                        echo -e $cBCYA"\n\tCurrent unbound 'views:'\n"$cBGRE
+                        awk -v msgcolor="$cBCYA" '/name:/ {print "\t"$2}' $FN
+                        echo -en $cRESET
+                    else
+                        echo -e $cBCYA"\n\tNo Current unbound 'views:'"$cRESET
+                    fi
+                    STATUS=1
                 fi
             else
-                if [ -f $FN ] && [ -n "$(grep "name:" $FN)" ];then
-                    echo -e $cBCYA"\n\tCurrent unbound 'views:'\n"$cBGRE
-                    awk -v msgcolor="$cBCYA" '/name:/ {print "\t"$2}' $FN
-                    echo -en $cRESET
-                else
-                    echo -e $cBCYA"\n\tNo Current unbound 'views:'"$cRESET
-                fi
+                echo -e $cBRED"\a\n\t***ERROR unbound view: '$VIEWNAME' creation requires the domain name argument! e.g. 'views $VIEWNAME $VIEWNAME.com'\n"$cRESET 2>&1
                 STATUS=1
             fi
         else
