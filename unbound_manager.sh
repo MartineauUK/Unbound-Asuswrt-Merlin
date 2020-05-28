@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.17b"
-#============================================================================================ © 2019-2020 Martineau v3.17b9
+#============================================================================================ © 2019-2020 Martineau v3.17bA
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -1114,7 +1114,7 @@ _GetKEY() {
                 rl|rl*)
                     # 'reset' and 'user' are Recovery aliases
                     #       i.e. 'reset' is Github's config, and 'user' is the customised install version
-                    if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then         # v3.17
 
                         NEW_CONFIG=$(echo "$menu1" | awk '{print $2}')
                         if [ "$NEW_CONFIG" != "?" ];then                # v1.22
@@ -1144,7 +1144,8 @@ _GetKEY() {
                             ls -lAhC /opt/share/unbound/configs/                # v1.22
                             echo -en $cRESET
                         fi
-
+                    else
+                        local PERFORMRELOAD="Y"                                 # v3.17
                     fi
 
                     if [ "$PERFORMRELOAD" == "Y" ];then                         # v1.19
@@ -1153,8 +1154,9 @@ _GetKEY() {
                         if [ -n "$(pidof unbound)" ];then                      # v3.00
                             echo -en $cBCYA"\nReloading 'unbound.conf'$TXT status="$cRESET
                             Manage_cache_stats "save"                           # v2.12
-                            $UNBOUNCTRLCMD reload                              # v1.08
-                            Manage_cache_stats "restore"                        # v2.12
+                            $UNBOUNCTRLCMD reload 
+                            local STATUS=$($UNBOUNCTRLCMD status)
+                            [ -z "$(echo "$STATUS" | grep "error")" ] && Manage_cache_stats "restore" || Restart_unbound   # v3.17 v2.12
                         else
                             local FN="/opt/share/unbound/configs/unbound.conf.add"  # v3.00
                             if [ -n "$(echo "$NEW_CONFIG" | grep "reset")" ] && [ -f $FN ];then
@@ -4490,7 +4492,6 @@ EOF
                                     local TXT="for ${IP_ADDR}$CIDR"
                                     # Can't use Smart_LineInsert
                                     sed -i "/# View: $VIEWNAME Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
-
                                 fi
                                 echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' created "${TXT}"\n"$cRESET 2>&1
                             else
@@ -4499,11 +4500,18 @@ EOF
                             fi
                         fi
                     else
-                        echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' local-zones entries\n"$cRESET
-                        unbound-control view_list_local_zones $VIEWNAME
-                        echo -e $cBCYA"\n\tunbound view: '$VIEWNAME' local-data entries\n"$cRESET
-                        unbound-control view_list_local_data  $VIEWNAME
-                        echo
+                        if [ -z "$(grep "$VIEWNAME"  $FN)" ] ;then
+                            echo -en $cBRED"\a\n\t***ERROR no view with name: "$VIEWNAME
+                        else
+                            echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' Client entries\n"$cRESET
+                            #awk -v pattern="${VIEWNAME}" '$0~pattern{t=1}; t==1{print "\t"$0; if (/name:/){c++}}; c==1{exit}' $FN
+                            awk -v pattern="${VIEWNAME}" '$0~"access-control-view" && $0~pattern {print "\t"$0}' $FN
+                            echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' local-zone entries\n"$cRESET
+                            unbound-control view_list_local_zones $VIEWNAME
+                            echo -e $cBCYA"\n\tunbound view: '${cRESET}${VIEWNAME}$cBCYA' local-data entries\n"$cRESET
+                            unbound-control view_list_local_data  $VIEWNAME
+                            echo
+                        fi
                         STATUS=1
                     fi
                 fi
