@@ -523,7 +523,7 @@ welcome_message() {
               MENUW_FFDOH="$(printf '%bDisableFirefoxDoH%b = Disable Firefox DoH [yes | no]\n' "${cBYEL}" "${cRESET}")"
               MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
               MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
-              MENUW_VIEWS="$(printf '%bviews%b = [ { uninstall | viewname { ? | remove } ] | {viewname url [ ip_address] } | {viewname ip_address [del]} ]\n' "${cBYEL}" "${cRESET}")"
+              MENUW_VIEWS="$(printf '%bviews%b = [[? | uninstall] | [ {view_name [? | remove]} ] | { view_name domain_name... | IP...] } | { view_name IP [del]]\n' "${cBYEL}" "${cRESET}")"
               MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"
               MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
               MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
@@ -1947,7 +1947,7 @@ EOF
                                 Manage_unbound_Views "$ARG" "$ARG2" "$ARG3"          # v3.17
                                 local RC=$?
                             else
-                                echo -e $cBCYA"\a\n\t Options syntax:$cRESET [ ['?' | ''uninstal'] | [ {view_name ['?' | 'remove']} ] | { view_name domain_name [domain_name... | IP_address...] } | { view_name IP_address ['del'] ]"$cRESET
+                                echo -e $cBCYA"\a\n\t Options syntax:$cRESET [ ['?' | ''uninstall'] | [ {view_name ['?' | 'remove']} ] | { view_name domain_name [domain_name... | IP_address...] } | { view_name IP_address ['del'] ]"$cRESET
                                 local RC=1
                             fi
                         else
