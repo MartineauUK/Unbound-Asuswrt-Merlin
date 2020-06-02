@@ -4463,19 +4463,29 @@ _quote() {
 
         local STATUS=0               # 0-Restart unbound;1- Don't Restart unbound
         local CREATED=0
+        local ADD_DOMAIN_CNT=0;local ADD_IP_CNT=0
 
         local FN="/opt/share/unbound/configs/unbound.conf.views"
+
+        local VALID_VIEW_TYPES="deny refuse static transparent redirect nodefault typetransparent inform inform_deny inform_redirect always_transparent always_refuse always_nxdomain noview"   # v3.17 Hotfix
+
+        VIEW_TYPE="refuse"                  # v3.17 Hotfix
 
         if [ "$1" != "uninstall" ] && [ "$1" != "disable" ] && [ "$1" != "remove" ];then
             if [ "$VIEWNAME" == "?" ] || [ -n "$ARG2" ];then
                 if [ "$1" != "?" ];then
                     if [ "$ARG2" == "remove" ] || [ "$ARG2" == "flush" ] || [ "$ARG2" == "erase" ] || [ "$ARG2" == "delete" ];then
                         if [ -n "$(grep "name:.*$VIEWNAME" $FN)" ];then
-                           local VIEW_ACTIONS="refuse"
-                           for VIEW_ACTION in $VIEW_ACTIONS
+                           # Identify the actual 'types' used
+                           local VALID_VIEW_TYPES=$(awk -v pattern="local-zone.*${VIEWNAME}\"" '$0 ~ pattern {print $3}' /opt/share/unbound/configs/unbound.conf.views | sort | uniq | tr '\n' ' ')
+                           if [ -n "$VALID_VIEW_TYPES" ];then
+                                local SECS=$(($(echo "$VALID_VIEW_TYPES" | wc -w)*4))
+                                echo -e $cBCYA"\n\tRemoving unbound view: name: ${cRESET}\"${VIEWNAME}\" $cBCYA'types='"$VALID_VIEW_TYPES"'; Please wait for up to "${cRESET}${SECS}$cBCYA" secs....."
+                           fi
+                           for VIEW_TYPE in $VALID_VIEW_TYPES
                                 do
-                                    unbound-control -q view_local_zone_remove $VIEWNAME $VIEW_ACTION
-                                    unbound-control -q view_local_data_remove $VIEWNAME $VIEW_ACTION
+                                    unbound-control -q view_local_zone_remove $VIEWNAME $VIEW_TYPE
+                                    unbound-control -q view_local_data_remove $VIEWNAME $VIEW_TYPE
                                 done
                            sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
                            sed -i "/^access-control-view:.*$VIEWNAME/d" $FN
@@ -4514,77 +4524,83 @@ _quote() {
                                     local STATUS=1
                                 fi
                             else
-                                if [ "$ACTIONDEL" != "del" ];then
-                                    local ARG_LIST="$(echo "$menu1" | cut -d' ' -f3- )"
+                                if [ -z "$(echo "$VALID_VIEW_TYPES" | grep -w "$VIEWNAME")" ];then       # v3.17 Hotfix
+                                    if [ "$ACTIONDEL" != "del" ];then
+                                        local ARG_LIST="$(echo "$menu1" | cut -d' ' -f3- )"
 
-                                    local MATCH=
-                                    MATCH="$(grep "$VIEWNAME\"" $FN)"
-                                    if [ -z "$MATCH" ];then
-                                        cat >> $FN << EOF
+                                        local MATCH=
+                                        MATCH="$(grep "$VIEWNAME\"" $FN)"
+                                        if [ -z "$MATCH" ];then
+                                            cat >> $FN << EOF
 # View: $VIEWNAME
 view:
     name: "$VIEWNAME"
     view-first: yes
 EOF
-                                        local CREATED=1
-                                        echo -e $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA created "${TXT}"\n"$cRESET 2>&1
-                                    fi
+                                            local CREATED=1
+                                            echo -e $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA created "${TXT}"\n"$cRESET 2>&1
+                                        fi
 
-                                    # We have created the 'view:' ....now add its domains and client IP addresses
-                                    echo
-                                    local ADD_DOMAIN_CNT=0;local ADD_IP_CNT=0      # v3.17 Hotfix
-                                    for ITEM in $ARG_LIST
-                                        do
-                                            [ "$ITEM" == "del" ] && continue
-                                            if [ -n "$(echo "$ITEM" | sed 's~/.*$~~' | Is_IPv4)" ];then
-                                                local IP_ADDR=$ITEM
-                                                    if [ -n "$(echo "$IP_ADDR" | sed 's~/.*$~~' | Is_Private_IPv4)" ] || [ -n "$(echo "$IP_ADDR" | Is_Private_IPv6)" ];then
-                                                        IP_ADDR=$ITEM
-                                                        [ -z "$(echo "$IP_ADDR" | Is_IPv4_CIDR)" ] && local CIDR="/32" || local CIDR=
-                                                        if [ -z "$(grep "access-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN)" ];then
-                                                            # Can't use Smart_LineInsert
-                                                            sed -i "/# View: Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
-                                                            echo -e $cBCYA"\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added $cRESET\"${IP_ADDR}${CIDR}\""$cRESET 2>&1
-                                                            local ADD_IP_CNT=$((ADD_IP_CNT+1))                      # v3.17 Hotfix
+                                        # We have created the 'view:' ....now add its domains and client IP addresses
+                                        echo
+                                        local ADD_DOMAIN_CNT=0;local ADD_IP_CNT=0      # v3.17 Hotfix
+                                        for ITEM in $ARG_LIST
+                                            do
+                                                [ "$ITEM" == "del" ] && continue
+                                                [ -n "$(echo "$VALID_VIEW_TYPES" | grep -w "$ITEM")" ] && { local VIEW_TYPE=$ITEM; continue ; }   # v3.17 Hotfix
+                                                if [ -n "$(echo "$ITEM" | sed 's~/.*$~~' | Is_IPv4)" ];then
+                                                    local IP_ADDR=$ITEM
+                                                        if [ -n "$(echo "$IP_ADDR" | sed 's~/.*$~~' | Is_Private_IPv4)" ] || [ -n "$(echo "$IP_ADDR" | Is_Private_IPv6)" ];then
+                                                            IP_ADDR=$ITEM
+                                                            [ -z "$(echo "$IP_ADDR" | Is_IPv4_CIDR)" ] && local CIDR="/32" || local CIDR=
+                                                            if [ -z "$(grep "access-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN)" ];then
+                                                                # Can't use Smart_LineInsert
+                                                                sed -i "/# View: Clients/aaccess-control-view: ${IP_ADDR}$CIDR \"$VIEWNAME\"" $FN
+                                                                echo -e $cBCYA"\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added $cRESET\"${IP_ADDR}${CIDR}\""$cRESET 2>&1
+                                                                local ADD_IP_CNT=$((ADD_IP_CNT+1))                      # v3.17 Hotfix
+                                                            else
+                                                                echo -e $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED IP Address '${cRESET}${IP_ADDR}$cBRED' already exists!\n"$cRESET 2>&1
+                                                            fi
                                                         else
-                                                            echo -e $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED IP Address '${cRESET}${IP_ADDR}$cBRED' already exists!\n"$cRESET 2>&1
+                                                            echo -e $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED IP Address '${cRESET}${3}$cBRED' not a Private IPv4/IPv6 Address?!\n"$cRESET 2>&1
+                                                            local STATUS=1
                                                         fi
+                                                else
+                                                    local DOMAIN=$ITEM
+                                                    [ -n "$(echo "$VALID_VIEW_TYPES" | grep -w "$ITEM")" ] && { local VIEW_TYPE=$ITEM;local TXT='type='$VIEW_TYPE; continue ; }   # v3.17 Hotfix
+                                                    if [ -z "$(grep -E "local-zone: \"$DOMAIN.\" $VIEW_TYPE.*\"$VIEWNAME\""  $FN)" ];then
+                                                        if [ $CREATED -eq 1 ];then
+                                                            echo -e "    local-zone: \"$DOMAIN.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" >> $FN
+                                                        else
+                                                           sed -i "/^# EndView:.*$VIEWNAME/i\    local-zone: \"$DOMAIN\.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" $FN
+                                                        fi
+                                                        unbound-control -q view_local_zone $VIEWNAME $DOMAIN $VIEW_TYPE       # v3.17 Hotfix
+                                                        echo -e $cBCYA"\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added domain $cRESET\"${DOMAIN}\" 'type=${VIEW_TYPE}'"$cRESET 2>&1
+                                                        local ADD_DOMAIN_CNT=$((ADD_DOMAIN_CNT+1))                      # v3.17 Hotfix
                                                     else
-                                                        echo -e $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED IP Address '${cRESET}${3}$cBRED' not a Private IPv4/IPv6 Address?!\n"$cRESET 2>&1
+                                                        echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED domain ${cRESET}\"${DOMAIN}\"$cBRED duplicate found!\n"$cRESET 2>&1
                                                         local STATUS=1
                                                     fi
-                                            else
-                                                local DOMAIN=$ITEM
-                                                if [ -z "$(grep -E "local-zone: \"$DOMAIN.\" refuse.*\"$VIEWNAME\""  $FN)" ];then
-                                                    if [ $CREATED -eq 1 ];then
-                                                        echo -e "    local-zone: \"$DOMAIN.\" refuse\t\t# \"$VIEWNAME\"" >> $FN
-                                                    else
-                                                       unbound-control -q view_local_zone $VIEWNAME $DOMAIN refuse       # v3.17 Hotfix
-                                                       sed -i "/^# EndView:.*$VIEWNAME/i\    local-zone: \"$DOMAIN\.\" refuse\t\t# \"$VIEWNAME\"" $FN
-                                                       echo -e $cBCYA"\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added domain $cRESET\"${DOMAIN}\""$cRESET 2>&1
-                                                       local ADD_DOMAIN_CNT=$((ADD_DOMAIN_CNT+1))                      # v3.17 Hotfix
-                                                    fi
-                                                else
-                                                    echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED domain ${cRESET}\"${DOMAIN}\"$cBRED duplicate found!\n"$cRESET 2>&1
-                                                    local STATUS=1
                                                 fi
-                                            fi
-                                        done
-                                    if [ $CREATED -eq 1 ];then
-                                        echo -e "# EndView: $VIEWNAME" >> $FN
-                                        echo
-                                        [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
+                                            done
+                                        if [ $CREATED -eq 1 ];then
+                                            echo -e "# EndView: $VIEWNAME" >> $FN
+                                            echo
+                                            [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
+                                        fi
+                                    else
+                                        local DOMAIN=$ARG2
+                                        if [ -n "$(grep -E "local-zone:.*\"${DOMAIN}.\".*$VIEW_TYPE.*\"${VIEWNAME}\"" $FN)" ];then
+                                            unbound-control -q view_local_zone_remove $VIEWNAME $DOMAIN
+                                            sed -i "/local-zone:.*\"${DOMAIN}.\".*${VIEWNAME}\"/d" $FN
+                                            echo -en $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA domain ${cRESET}\"${ARG2}\"$cBRED deleted\n"$cRESET 2>&1
+                                        else
+                                            echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED domain ${cRESET}\"${DOMAIN}\"$cBRED not found!\n"$cRESET 2>&1
+                                        fi
+                                        local STATUS=1        # Domain deletes don't require physical Restart_unbound ?
                                     fi
                                 else
-                                    local DOMAIN=$ARG2
-                                    if [ -n "$(grep -E "local-zone:.*\"${DOMAIN}.\".*refuse.*\"${VIEWNAME}\"" $FN)" ];then
-                                        unbound-control -q view_local_zone_remove $VIEWNAME $DOMAIN
-                                        sed -i "/local-zone:.*\"${DOMAIN}.\".*${VIEWNAME}\"/d" $FN
-                                        echo -en $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA domain ${cRESET}\"${ARG2}\"$cBRED deleted\n"$cRESET 2>&1
-                                    else
-                                        echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED domain ${cRESET}\"${DOMAIN}\"$cBRED not found!\n"$cRESET 2>&1
-                                    fi
-                                    local STATUS=1        # Domain deletes don't require physical Restart_unbound ?
+                                    echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED \ncannot be '${VALID_VIEW_TYPES}'"   # v3.17 Hotfix
                                 fi
                             fi
                         else
