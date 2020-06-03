@@ -58,7 +58,7 @@ VERSION="3.17"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 31-May-2020
+# Last Updated Date: 03-June-2020
 #
 # Description:
 #
@@ -523,7 +523,7 @@ welcome_message() {
               MENUW_FFDOH="$(printf '%bDisableFirefoxDoH%b = Disable Firefox DoH [yes | no]\n' "${cBYEL}" "${cRESET}")"
               MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
               MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
-              MENUW_VIEWS="$(printf '%bviews%b = [[? | uninstall] | [ {view_name [? | remove]} ] | { view_name domain_name[...] | IP[...] [del]}]\n' "${cBYEL}" "${cRESET}")"
+              MENUW_VIEWS="$(printf '%bviews%b = [? | uninstall] | {view_name [? | remove]} | { view_name [[type] domain_name[...] | IP_address[...]] [del]} ]\n' "${cBYEL}" "${cRESET}")"
               MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"
               MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
               MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
@@ -1948,7 +1948,9 @@ EOF
                                 Manage_unbound_Views "$ARG" "$ARG2" "$ARG3"          # v3.17
                                 local RC=$?
                             else
-                                echo -e $cBCYA"\a\n\t Options syntax:$cRESET [ ['?' | ''uninstall'] | [ {view_name ['?' | 'remove']} ] | { view_name domain_name [domain_name[...] | IP_address[...] ['del']} ]"$cRESET
+                                echo -e $cBCYA"\a\n\t Options syntax:$cRESET [? | uninstall] | {view_name [? | remove]} | { view_name [[${cBYEL}type$cRESET] domain_name[...] | IP_address[...]] [del]} ]"$cRESET
+                                local VALID_VIEW_TYPES="deny ${aUNDER}refuse$cRESET redirect static transparent nodefault typetransparent inform inform_deny inform_redirect always_transparent always_refuse always_nxdomain noview"
+                                echo -e $cBCYA"\a\n\t Valid ${cBYEL}'type=' $cRESET"${VALID_VIEW_TYPES}$cRESET
                                 local RC=1
                             fi
                         else
@@ -4478,15 +4480,21 @@ _quote() {
                         if [ -n "$(grep "name:.*$VIEWNAME" $FN)" ];then
                            # Identify the actual 'types' used
                            local VALID_VIEW_TYPES=$(awk -v pattern="local-zone.*${VIEWNAME}\"" '$0 ~ pattern {print $3}' /opt/share/unbound/configs/unbound.conf.views | sort | uniq | tr '\n' ' ')
+                           # Differentiate between the two main elements
+                           local VIEW_ZONE_DOMAINS=$(awk -v pattern="local-zone.*${VIEWNAME}\"" '$0 ~ pattern {print $3}' /opt/share/unbound/configs/unbound.conf.views | tr '\n' ' ')
+                           local VIEW_DATA_RRS=$(awk -v pattern="local-data.*${VIEWNAME}\"" '$0 ~ pattern {print $0}' /opt/share/unbound/configs/unbound.conf.views | tr '\n' ' ')
+                           local VALID_DATA_DOMAINS=$(awk -v pattern="local-zone.*${VIEWNAME}\"" '$0 ~ pattern {print $2}' /opt/share/unbound/configs/unbound.conf.views | sort | uniq | tr '\n' ' ')
                            if [ -n "$VALID_VIEW_TYPES" ];then
-                                local SECS=$(($(echo "$VALID_VIEW_TYPES" | wc -w)*4))
-                                echo -e $cBCYA"\n\tRemoving unbound view: name: ${cRESET}\"${VIEWNAME}\" $cBCYA'types='"$VALID_VIEW_TYPES"'; Please wait for up to "${cRESET}${SECS}$cBCYA" secs....."
+                                echo -e $cBCYA"\n\tRemoving unbound view: name: ${cRESET}\"${VIEWNAME}\" $cBCYA'types='"$VALID_VIEW_TYPES
                            fi
-                           for VIEW_TYPE in $VALID_VIEW_TYPES
+                           for DOMAIN in $VIEW_ZONE_DOMAINS
                                 do
-                                    unbound-control -q view_local_zone_remove $VIEWNAME $VIEW_TYPE
-                                    unbound-control -q view_local_data_remove $VIEWNAME $VIEW_TYPE
+                                    unbound-control -q view_local_zone_remove $VIEWNAME $DOMAIN
                                 done
+                           for DOMAIN in $VIEW_DATA_DOMAINS
+                                do
+                                    unbound-control -q view_local_data_remove $VIEWNAME $DOMAIN
+                               done
                            sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
                            sed -i "/^access-control-view:.*$VIEWNAME/d" $FN
                            echo -e $cBCYA"\n\tunbound view: name: \"$VIEWNAME\" deleted\n"$cRESET 2>&1
@@ -4565,18 +4573,38 @@ EOF
                                                             echo -e $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED IP Address '${cRESET}${3}$cBRED' not a Private IPv4/IPv6 Address?!\n"$cRESET 2>&1
                                                             local STATUS=1
                                                         fi
-                                                else
+                                                else               # Insert
                                                     local DOMAIN=$ITEM
                                                     [ -n "$(echo "$VALID_VIEW_TYPES" | grep -w "$ITEM")" ] && { local VIEW_TYPE=$ITEM;local TXT='type='$VIEW_TYPE; continue ; }   # v3.17 Hotfix
                                                     if [ -z "$(grep -E "local-zone: \"$DOMAIN.\" $VIEW_TYPE.*\"$VIEWNAME\""  $FN)" ];then
-                                                        if [ $CREATED -eq 1 ];then
-                                                            echo -e "    local-zone: \"$DOMAIN.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" >> $FN
-                                                        else
-                                                           sed -i "/^# EndView:.*$VIEWNAME/i\    local-zone: \"$DOMAIN\.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" $FN
-                                                        fi
+                                                        echo -en $cBRED
                                                         unbound-control -q view_local_zone $VIEWNAME $DOMAIN $VIEW_TYPE       # v3.17 Hotfix
-                                                        echo -e $cBCYA"\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added domain $cRESET\"${DOMAIN}\" 'type=${VIEW_TYPE}'"$cRESET 2>&1
-                                                        local ADD_DOMAIN_CNT=$((ADD_DOMAIN_CNT+1))                      # v3.17 Hotfix
+                                                        if [ $? -eq 0 ];then
+                                                            echo -e $cBCYA"\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added domain $cRESET\"${DOMAIN}\" 'type=${VIEW_TYPE}'"$cRESET 2>&1
+                                                            local ADD_DOMAIN_CNT=$((ADD_DOMAIN_CNT+1))                      # v3.17 Hotfix
+                                                            # if type='redirect'; ask for the matching RR
+                                                            if [ "$VIEW_TYPE" == "redirect" ];then
+                                                                local RR=
+                                                                echo -en $cBCYA"\n\t\tEnter RR for $cRESET\"$DOMAIN\" redirect e.g. IN A 192.168.5.1 ==>: " $cRESET 2>&1
+                                                                read -r "RR"
+                                                                echo -en $cBRED
+                                                                unbound-control -q view_local_data "$VIEWNAME ${DOMAIN}. $RR"
+                                                                echo -e $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added domain $cRESET\"${DOMAIN}\" redirect RR '${RR}'"$cRESET 2>&1
+                                                            fi
+                                                            if [ $CREATED -eq 1 ];then
+                                                                echo -e "    local-zone: \"$DOMAIN.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" >> $FN
+                                                                [ -n "$RR" ] && echo -e "    local-data: \"${DOMAIN}. $RR\"\t\t# \"$VIEWNAME\"" >> $FN
+                                                            else
+                                                               sed -i "/^# EndView:.*$VIEWNAME/i\    local-zone: \"$DOMAIN\.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" $FN
+                                                               if [ -n "$RR" ];then
+                                                                    local RR_SED=$(_quote "$RR")
+                                                                    sed -i "/^# EndView:.*$VIEWNAME/i\    local-data: \"$DOMAIN\. $RR_SED\"\t\t# \"$VIEWNAME\"" $FN
+                                                               fi
+                                                            fi
+                                                        else
+                                                            echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED type ${cRESET}\"${VIEW_TYPE}\"$cBRED INVALID!\n"$cRESET 2>&1
+                                                            local STATUS=1
+                                                        fi
                                                     else
                                                         echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED domain ${cRESET}\"${DOMAIN}\"$cBRED duplicate found!\n"$cRESET 2>&1
                                                         local STATUS=1
@@ -4588,12 +4616,21 @@ EOF
                                             echo
                                             [ -z "$(grep "^include.*\"$FN\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$FN\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf
                                         fi
-                                    else
+                                    else                           # 'del'
                                         local DOMAIN=$ARG2
-                                        if [ -n "$(grep -E "local-zone:.*\"${DOMAIN}.\".*$VIEW_TYPE.*\"${VIEWNAME}\"" $FN)" ];then
+                                        if [ -n "$(grep -E "local-zone:.*\"${DOMAIN}.\".*\"${VIEWNAME}\"" $FN)" ];then
+                                            local VIEW_ZONE_TYPE=$(awk -v pattern="local-zone:.*${VIEWNAME}\"" '$0 ~ pattern {print $3}' /opt/share/unbound/configs/unbound.conf.views)
                                             unbound-control -q view_local_zone_remove $VIEWNAME $DOMAIN
                                             sed -i "/local-zone:.*\"${DOMAIN}.\".*${VIEWNAME}\"/d" $FN
-                                            echo -en $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA domain ${cRESET}\"${ARG2}\"$cBRED deleted\n"$cRESET 2>&1
+                                            echo -en $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA domain ${cRESET}\"${ARG2}\" type='$VIEW_ZONE_TYPE'$cBRED deleted\n"$cRESET 2>&1
+                                            # If 'redirect' then delete its associated local-data RR
+                                            if [ "$VIEW_ZONE_TYPE" == "redirect" ];then
+                                                local RR="$(awk -v pattern="local-data.*$DOMAIN.*${VIEWNAME}\"" '$0 ~ pattern { $1=""; print $0}' /opt/share/unbound/configs/unbound.conf.views | sed 's/ #.*$// ; s/\"//g ; s/^ //' )"
+                                                unbound-control -q view_local_data_remove $VIEWNAME $DOMAIN
+                                                sed -i "/local-data:.*\"${DOMAIN}\..*${VIEWNAME}\"/d" $FN
+                                                echo -en $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA domain ${cRESET}\"${RR}\"$cBRED deleted\n"$cRESET 2>&1
+                                            fi
+
                                         else
                                             echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED domain ${cRESET}\"${DOMAIN}\"$cBRED not found!\n"$cRESET 2>&1
                                         fi
@@ -4604,7 +4641,7 @@ EOF
                                 fi
                             fi
                         else
-                            if [ -z "$(grep "$VIEWNAME\""  $FN)" ] ;then
+                            if [ -z "$(grep "\"$VIEWNAME\""  $FN)" ] ;then
                                 echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED not found!\n"$cRESET 2>&1
                             else
                                 echo -e $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA Client entries\n"$cRESET 2>&1
@@ -4621,7 +4658,7 @@ EOF
                     fi
                 else
                     if [ -n "$(grep "name:" $FN)" ];then
-                        echo -e $cBCYA"\n\tCurrent unbound 'views:'\n"$cBGRE
+                        echo -e $cBCYA"\n\tCurrent unbound 'views:'\n"$cRESET
                         awk -v msgcolor="$cBCYA" '/name:/ {print "\t"$2}' $FN
                         echo -en $cRESET
                     else
