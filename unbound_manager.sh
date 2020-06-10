@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.17"
-#============================================================================================ © 2019-2020 Martineau v3.17
+VERSION="3.18"
+#============================================================================================ © 2019-2020 Martineau v3.18
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.17"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 03-June-2020
+# Last Updated Date: 10-Jun-2020
 #
 # Description:
 #
@@ -123,7 +123,7 @@ ANSIColours () {
     cWRED="\e[41m";cWGRE="\e[42m";cWYEL="\e[43m";cWBLU="\e[44m";cWMAG="\e[45m";cWCYA="\e[46m";cWGRA="\e[47m"
     cYBLU="\e[93;48;5;21m"
     cRED_="\e[41m";cGRE_="\e[42m"
-    xHOME="\e[H";xERASE="\e[2J";xERASEDOWN="\e[J";xERASEUP="\e[1J";xCSRPOS="\e[s";xPOSCSR="\e[u";xERASEEOL="\e[K"
+    xHOME="\e[H";xERASE="\e[2J";xERASEDOWN="\e[J";xERASEUP="\e[1J";xCSRPOS="\e[s";xPOSCSR="\e[u";xERASEEOL="\e[K";xQUERYCSRPOS="\e[6n"
     xGoto="\e[Line;Columnf"
 }
 Get_Router_Model() {
@@ -819,8 +819,8 @@ welcome_message() {
                         printf "%s\t\t\t\t\t\t\t%s\n"               "$MENU_Z" "$MENU_T"
                         printf "%s\t\t\t\t\t\t\t\t\t%s\n"           "$MENU_S" "$MENUW_RPZ"         # v3.02 Hotfix
                         printf "%s\t\t\t\t\t\t\t\t%s\n"             "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
-                        printf "\n%s\t\t\t\t\t%s\n"                 "$MENU__"
-                        printf "%s\t\t%s\n"                         "$MENU_VX"
+                        printf "\n%s\t\t\t\t\t\n"                   "$MENU__"
+                        printf "%s\t\t\n"                           "$MENU_VX"
 
                     fi
                     printf '\n%be %b = Exit Script [?]\n' "${cBYEL}" "${cRESET}"
@@ -834,18 +834,115 @@ welcome_message() {
                    TXT="E:"
                    #printf '\n%b%s%bPress desired Option key (no ENTER key reqd.) %bOption ==>%b ' "$cBCYA" "$TXT" "${cBYEL}" "${cRESET}" "${cBYEL}"
                 fi
+                local PROMPT=${TXT}$DEBUGMODE"Option ==> "
+                local PROMPT_SIZE=${#PROMPT}
                 printf '\n%b%s%bOption ==>%b ' "$cBCYA" "${TXT}$DEBUGMODE" "${cBYEL}" "${cRESET}"
-
+                echo -en $xCSRPOS
+# shellcheck disable=SC2120,SC2154
 _GetKEY() {
         # Doesn't require user also hitting ENTER
-        IFS= read -r -s -n1  "${@:-menu1}"               # v3.00
+        IFS= read -rsn1  "${@:-char}"               # v3.00
+
+        echo $char 2>&1
 }
-                #if [ "$EASYMENU" == "Y" ];then          # v3.00 Easy menu ONLY contains single character options (err... uf - eek!!)
-                    #_GetKEY
-                    #echo "$menu1"                        # v3.00 let the user see the keypress assuming its visible i.e. not ESC or cursor key
-                #else
-                    read -r "menu1"
-                #fi
+                local ESC=$(printf "\x1b")                              # v3.18
+                local ENTER=$(printf "\x0a")                              # v3.18
+                local BACKSPACE=$(printf "\x7f")                              # v3.18
+                local DEL=$(printf "\x7e")                              # v3.18
+                local THIS=
+                local JUNK=
+
+                local KEY_CNT=0
+                local RBUF=
+                local X=0
+                local RECALLINDEX=0
+                local MAX_RECALLINDEX=5
+
+                local OLDIFS=$IFS;IFS=
+
+                if [ -n "$menu1" ];then                             # v3.18 Only save last command if it's non-blank
+                    local CMD5="$CMD4"
+                    local CMD4="$CMD3"
+                    local CMD3="$CMD2"
+                    local CMD2="$CMD1"
+                    local CMD1="$menu1"
+                fi
+
+                while true;do                                       # v3.18
+
+                    CHAR=$(_GetKEY)
+                    if [ "$CHAR" == "$ESC" ]; then                  # v3.18
+                        read -rsn2 JUNK # Read 2 more CTRL chars
+                        case "$JUNK" in                              # v3.18 A-UP;B-DOWN;C-RIGHT;D-LEFT
+                            "[A")                                     # v3.18 CSR_UP
+                               local RECALLINDEX=$((RECALLINDEX+1))
+                               [ $RECALLINDEX -eq 6 ] && RECALLINDEX=1
+
+                               eval local XTHIS="\$CMD$RECALLINDEX"     # v3.18 Retrieve last cmd from 'buffer stack'
+                               if [ -z "$XTHIS" ];then
+                                    if [ $RECALLINDEX -gt 1 ];then
+                                        local RECALLINDEX=1
+                                        local THIS="$CMD1"
+                                    fi
+                               else
+                                    local THIS=$XTHIS
+                               fi
+                               if [ -n "$THIS" ];then
+                                    echo -en ${xPOSCSR}${xERASEEOL}$THIS
+                                    local KEY_CNT=${#THIS}
+                                else
+                                    local RECALLINDEX=0
+                                fi
+                                ;;
+                            "[D")                                    # 3.18 CSR_LEFT
+                                if [ ${#THIS} -gt 0 ];then
+                                    echo -en "\e[D"
+                                    local X=$((${#THIS}-1))
+                                    [ -z "$RBUF" ] && local RBUF=${THIS:$X} || local RBUF=${THIS:$X}${RBUF}
+                                    local THIS=${THIS:0:$X}
+                                fi
+                                ;;
+                            "[C")                                    # 3.18 CSR_RIGHT
+                                if [ ${#RBUF} -gt 0 ];then
+                                    echo -en "\e[C"
+                                    local THIS=${THIS}${RBUF:0:1}
+                                    local RBUF=$(echo "$RBUF" | sed 's/^.//')
+                                fi;;
+                            *)
+                                :
+                                ;;
+                        esac
+                        continue
+                    fi
+
+                    if [ "$CHAR" == "$BACKSPACE" ];then
+                       if [ $((KEY_CNT+PROMPT_SIZE)) -gt $PROMPT_SIZE ];then
+                           echo -en ${CHAR}$xERASEEOL
+                           THIS=$(echo "$THIS" | sed 's/.$//')
+                           local KEY_CNT=$((KEY_CNT-1))
+                           [ -n "$RBUF" ] && echo -en ${xCSRPOS}${xERASEEOL}${RBUF}$xPOSCSR
+                       fi
+                       continue
+                    fi
+
+                    if [ -n "$RBUF" ] && [ "$CHAR" == "$DEL" ];then
+                        local RBUF="$(echo "$RBUF" | sed 's/^.//')"
+                        local KEY_CNT=$((KEY_CNT-1))
+                        echo -en ${xCSRPOS}${xERASEEOL}${RBUF}$xPOSCSR
+                        continue
+                    fi
+
+                    [ "$CHAR" == "$ENTER" ] && { echo -en ${CHAR}; break ; }
+
+                    echo -en ${CHAR}${xCSRPOS}${xERASEEOL}${RBUF}$xPOSCSR
+                    THIS=${THIS}${CHAR}
+                    local KEY_CNT=$((KEY_CNT+1))
+                done
+
+                IFS=$OLDIFS                 # v3.18
+
+                local menu1="${THIS}$RBUF"  # v3.18
+                local KEY_CNT=0             # v3.18
 
             fi
             local TXT=
@@ -879,7 +976,7 @@ _GetKEY() {
                     "") ;;
                     easy|adv*) ;;
                     e*) ;;
-                    *) printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
+                    *) printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cRESET" "$menu1" "$cBRED"
                        continue
                        ;;
                 esac
@@ -1607,7 +1704,7 @@ EOF
                                     touch ${CONFIG_DIR}Read.me
                                 fi
                             else
-                                printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
+                                printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cRESET" "$menu1" "$cBRED"
                             fi
                         ;;
                     esac
@@ -1948,9 +2045,7 @@ EOF
                                 Manage_unbound_Views "$ARG" "$ARG2" "$ARG3"          # v3.17
                                 local RC=$?
                             else
-                                echo -e $cBCYA"\a\n\t Options syntax:$cRESET [? | uninstall] | {view_name [? | remove]} | { view_name [[${cBYEL}type$cRESET] domain_name[...] | IP_address[...]] [del]} ]"$cRESET
-                                local VALID_VIEW_TYPES="deny ${aUNDER}refuse$cRESET redirect static transparent nodefault typetransparent inform inform_deny inform_redirect always_transparent always_refuse always_nxdomain noview"
-                                echo -e $cBCYA"\a\n\t Valid ${cBYEL}'type=' $cRESET"${VALID_VIEW_TYPES}$cRESET
+                                echo -e $cBCYA"\a\n\t Options syntax:$cRESET [? | uninstall] | {view_name [? | remove]} | { view_name [[type] domain_name[...] | IP_address[...]] [del]} ]"$cRESET
                                 local RC=1
                             fi
                         else
@@ -2009,7 +2104,7 @@ EOF
                     fi
                 ;;
                 *)
-                    printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cBGRE" "$menu1" "$cRESET"
+                    printf '\n\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cRESET" "$menu1" "$cBRED"
                 ;;
             esac
 set +x
@@ -2806,7 +2901,7 @@ Restart_unbound() {
     if [ "$2" == "nochk" ] || [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
 
         if [ "$2" != "nochk" ];then                                                     # v2.13
-           echo -e ${cBCYA}$(date "+%H:%M:%S")" Checking 'unbound.conf' for syntax errors....."
+           echo -e ${cBCYA}$(date "+%H:%M:%S")" Checking 'unbound.conf' for valid Syntax....."
            local CHK_Config_Syntax="$(unbound-checkconf ${CONFIG_DIR}unbound.conf 2>/dev/null)"           # v2.03
            if [ -n "$(echo "$CHK_Config_Syntax" | grep -o "no errors in")" ];then         # v2.03
               echo -en $cBGRE
@@ -3694,7 +3789,7 @@ Valid_unbound_config_Syntax() {
     # If file doesn't exist then spoof 'Y' reply
     [ ! -f "$CHECKTHIS" ] && { echo "Y"; return 0; }
 
-    #echo -e $cBCYA"\nChecking $cBMAG'$CHECKTHIS'$cBCYA for valid syntax....."$cBGRE 2>&1
+    #echo -e $cBCYA"\nChecking $cBMAG'$CHECKTHIS'$cBCYA for valid Syntax....."$cBGRE 2>&1
 
     # v3.00 Certain directives can explicitly be specified more than once e.g. 'server:', 'access-control:' etc.
     #       but detect duplicates (although last one wins?) that could be ambiguous
@@ -4439,7 +4534,7 @@ Convert_dnsmasq_Interfaces() {
 
         # Add additional 'interfaces:'                                                              # v3.16
         echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting dnsmasq 'interface=/' directives to 'unbound'....."$cRESET
-        echo -e "\n\n# Replicate dnsmasq 'interface=' directives\n\nserver:" >> $FN
+        echo -e "\n\n# Replicate dnsmasq 'interface=' directives\n\nserver:\nip-freebind: yes\t\t# Allow interfaces DOWN during say reboot.\n" >> $FN       # v3.17 Hotfix @tomsk
         for INTERFACE in $(awk -F"=" '/^interface/ {print $2}' /etc/dnsmasq.conf | grep -v -E "br0$|pptp*")
             do
                 local IP_ADDR=$(grep "$INTERFACE,3," /etc/dnsmasq.conf | cut -d',' -f3)     # v3.16
@@ -4482,8 +4577,7 @@ _quote() {
                            local VALID_VIEW_TYPES=$(awk -v pattern="local-zone.*${VIEWNAME}\"" '$0 ~ pattern {print $3}' /opt/share/unbound/configs/unbound.conf.views | sort | uniq | tr '\n' ' ')
                            # Differentiate between the two main elements
                            local VIEW_ZONE_DOMAINS=$(awk -v pattern="local-zone.*${VIEWNAME}\"" '$0 ~ pattern {print $3}' /opt/share/unbound/configs/unbound.conf.views | tr '\n' ' ')
-                           local VIEW_DATA_RRS=$(awk -v pattern="local-data.*${VIEWNAME}\"" '$0 ~ pattern {print $0}' /opt/share/unbound/configs/unbound.conf.views | tr '\n' ' ')
-                           local VALID_DATA_DOMAINS=$(awk -v pattern="local-zone.*${VIEWNAME}\"" '$0 ~ pattern {print $2}' /opt/share/unbound/configs/unbound.conf.views | sort | uniq | tr '\n' ' ')
+                           local VIEW_DATA_RRS=$(awk -v pattern="local-data.*${VIEWNAME}\"" '$0 ~ pattern {print $3}' /opt/share/unbound/configs/unbound.conf.views | tr '\n' ' ')
                            if [ -n "$VALID_VIEW_TYPES" ];then
                                 echo -e $cBCYA"\n\tRemoving unbound view: name: ${cRESET}\"${VIEWNAME}\" $cBCYA'types='"$VALID_VIEW_TYPES
                            fi
@@ -4491,10 +4585,10 @@ _quote() {
                                 do
                                     unbound-control -q view_local_zone_remove $VIEWNAME $DOMAIN
                                 done
-                           for DOMAIN in $VIEW_DATA_DOMAINS
+                           for RR in $VIEW_DATA_RRS
                                 do
-                                    unbound-control -q view_local_data_remove $VIEWNAME $DOMAIN
-                               done
+                                    unbound-control -q view_local_data_remove $VIEWNAME $RR
+                                done
                            sed -i "/^# View.*$VIEWNAME/,/^# EndView.*$VIEWNAME/d" $FN
                            sed -i "/^access-control-view:.*$VIEWNAME/d" $FN
                            echo -e $cBCYA"\n\tunbound view: name: \"$VIEWNAME\" deleted\n"$cRESET 2>&1
@@ -4577,29 +4671,24 @@ EOF
                                                     local DOMAIN=$ITEM
                                                     [ -n "$(echo "$VALID_VIEW_TYPES" | grep -w "$ITEM")" ] && { local VIEW_TYPE=$ITEM;local TXT='type='$VIEW_TYPE; continue ; }   # v3.17 Hotfix
                                                     if [ -z "$(grep -E "local-zone: \"$DOMAIN.\" $VIEW_TYPE.*\"$VIEWNAME\""  $FN)" ];then
+                                                        if [ $CREATED -eq 1 ];then
+                                                            echo -e "    local-zone: \"$DOMAIN.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" >> $FN
+                                                        else
+                                                           sed -i "/^# EndView:.*$VIEWNAME/i\    local-zone: \"$DOMAIN\.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" $FN
+                                                        fi
                                                         echo -en $cBRED
                                                         unbound-control -q view_local_zone $VIEWNAME $DOMAIN $VIEW_TYPE       # v3.17 Hotfix
                                                         if [ $? -eq 0 ];then
                                                             echo -e $cBCYA"\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added domain $cRESET\"${DOMAIN}\" 'type=${VIEW_TYPE}'"$cRESET 2>&1
                                                             local ADD_DOMAIN_CNT=$((ADD_DOMAIN_CNT+1))                      # v3.17 Hotfix
-                                                            # if type='redirect'; ask for the matching RR
+                                                            # if type='redirect'; check if matching local-data exists
                                                             if [ "$VIEW_TYPE" == "redirect" ];then
                                                                 local RR=
-                                                                echo -en $cBCYA"\n\t\tEnter RR for $cRESET\"$DOMAIN\" redirect e.g. IN A 192.168.5.1 ==>: " $cRESET 2>&1
+                                                                echo -en $cBCYA"\n\t\tEnter RR for $cRESET\"$DOMAIN\" redirect ==>: " $cRESET 2>&1
                                                                 read -r "RR"
                                                                 echo -en $cBRED
-                                                                unbound-control -q view_local_data "$VIEWNAME ${DOMAIN}. $RR"
-                                                                echo -e $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added domain $cRESET\"${DOMAIN}\" redirect RR '${RR}'"$cRESET 2>&1
-                                                            fi
-                                                            if [ $CREATED -eq 1 ];then
-                                                                echo -e "    local-zone: \"$DOMAIN.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" >> $FN
-                                                                [ -n "$RR" ] && echo -e "    local-data: \"${DOMAIN}. $RR\"\t\t# \"$VIEWNAME\"" >> $FN
-                                                            else
-                                                               sed -i "/^# EndView:.*$VIEWNAME/i\    local-zone: \"$DOMAIN\.\" $VIEW_TYPE\t\t# \"$VIEWNAME\"" $FN
-                                                               if [ -n "$RR" ];then
-                                                                    local RR_SED=$(_quote "$RR")
-                                                                    sed -i "/^# EndView:.*$VIEWNAME/i\    local-data: \"$DOMAIN\. $RR_SED\"\t\t# \"$VIEWNAME\"" $FN
-                                                               fi
+                                                                unbound-control -q view_local_data $VIEWNAME $DOMAIN"." $RR
+                                                                [ $? -eq 0 ] && echo -e $cBCYA"\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA added domain $cRESET\"${DOMAIN}\" '${RR}'"$cRESET 2>&1
                                                             fi
                                                         else
                                                             echo -en $cBRED"\a\n\t***ERROR unbound view: name: ${cRESET}\"${VIEWNAME}\"$cBRED type ${cRESET}\"${VIEW_TYPE}\"$cBRED INVALID!\n"$cRESET 2>&1
@@ -4619,7 +4708,7 @@ EOF
                                     else                           # 'del'
                                         local DOMAIN=$ARG2
                                         if [ -n "$(grep -E "local-zone:.*\"${DOMAIN}.\".*\"${VIEWNAME}\"" $FN)" ];then
-                                            local VIEW_ZONE_TYPE=$(awk -v pattern="local-zone:.*${VIEWNAME}\"" '$0 ~ pattern {print $3}' /opt/share/unbound/configs/unbound.conf.views)
+                                            local VIEW_ZONE_TYPE=$(awk -v pattern="local-zone:.*${VIEWNAME}\"" '$0 ~ pattern {print $2}' /opt/share/unbound/configs/unbound.conf.views | grep -o "redirect")
                                             unbound-control -q view_local_zone_remove $VIEWNAME $DOMAIN
                                             sed -i "/local-zone:.*\"${DOMAIN}.\".*${VIEWNAME}\"/d" $FN
                                             echo -en $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA domain ${cRESET}\"${ARG2}\" type='$VIEW_ZONE_TYPE'$cBRED deleted\n"$cRESET 2>&1
@@ -4627,7 +4716,6 @@ EOF
                                             if [ "$VIEW_ZONE_TYPE" == "redirect" ];then
                                                 local RR="$(awk -v pattern="local-data.*$DOMAIN.*${VIEWNAME}\"" '$0 ~ pattern { $1=""; print $0}' /opt/share/unbound/configs/unbound.conf.views | sed 's/ #.*$// ; s/\"//g ; s/^ //' )"
                                                 unbound-control -q view_local_data_remove $VIEWNAME $DOMAIN
-                                                sed -i "/local-data:.*\"${DOMAIN}\..*${VIEWNAME}\"/d" $FN
                                                 echo -en $cBCYA"\n\tunbound view: name: ${cRESET}\"${VIEWNAME}\"$cBCYA domain ${cRESET}\"${RR}\"$cBRED deleted\n"$cRESET 2>&1
                                             fi
 
@@ -4658,7 +4746,7 @@ EOF
                     fi
                 else
                     if [ -n "$(grep "name:" $FN)" ];then
-                        echo -e $cBCYA"\n\tCurrent unbound 'views:'\n"$cRESET
+                        echo -e $cBCYA"\n\tCurrent unbound 'views:'\n"$cBGRE
                         awk -v msgcolor="$cBCYA" '/name:/ {print "\t"$2}' $FN
                         echo -en $cRESET
                     else
@@ -4695,7 +4783,7 @@ EOF
             #    (Add/Delete IPs need a Restart!)
             if [ $CREATED -eq 0 ] && [ $ADD_IP_CNT -eq 0 ] && [ $ADD_DOMAIN_CNT -gt 0 ];then
                 # Probably should check unbound.config here????
-                echo -e "\n"${cBCYA}$(date "+%H:%M:%S")" Checking 'unbound.conf' for syntax errors....."
+                echo -e "\n"${cBCYA}$(date "+%H:%M:%S")" Checking 'unbound.conf' for valid Syntax....."
                 local CHK_Config_Syntax="$(unbound-checkconf ${CONFIG_DIR}unbound.conf 2>/dev/null)"
                 if [ -n "$(echo "$CHK_Config_Syntax" | grep -o "no errors in")" ];then         # v2.03
                     echo -en $cBGRE
