@@ -500,7 +500,7 @@ Calculate_Percent() {                                                           
         local HITS=$2
 
         if [ -n "$TOTAL" ] && [ $TOTAL -gt 0 ];then
-            local PCT=$((HITS*100/TOTAL))
+            local PCT=`expr "$HITS" \* "100" / "$TOTAL"`                    # v3.18 HotFix
         else
             local PCT=0
         fi
