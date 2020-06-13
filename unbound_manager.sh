@@ -58,7 +58,7 @@ VERSION="3.18"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 11-Jun-2020
+# Last Updated Date: 13-Jun-2020
 #
 # Description:
 #
@@ -856,9 +856,9 @@ welcome_message() {
 
                                         MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s%b)\n' "${cBYEL}" "${cRESET}" "${EXTENDEDSTATS}" "${GUI_TAB}" "${EXTENDEDSTATS_OPTION}")"   # v2.16
 
-                                        MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blacklist; ec=Config; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"   # v2.15
+                                        MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blocklist; ec=Config; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"   # v2.15
                                         if [ -f ${CONFIG_DIR}adblock/gen_adblock.sh ] && [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then   # v2.17
-                                            MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blacklist; eca=Config-AllowSites; ecb=Config-BlockSites; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"    # v2.17
+                                            MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blocklist; eca=Config-AllowSites; ecb=Config-BlockSites; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"    # v2.17
                                         fi
                                         [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" == "?" ] && MENU_EL=     # v2.15
                                     fi
@@ -868,7 +868,7 @@ welcome_message() {
                     fi
 
                     if [ "$EASYMENU" == "N" ] && [ -n "$(which diversion)" ] ;then
-                        MENU_AD="$(printf '%bad%b = Analyse Diversion White/Black lists ([ file_name ['type=adblock'] ])\n' "${cBYEL}" "${cRESET}")"
+                        MENU_AD="$(printf '%bad%b = Analyse Diversion White/Block lists ([ file_name ['type=adblock'] ])\n' "${cBYEL}" "${cRESET}")"
                     fi
 
                     # v1.08 Use 'context aware' horizontal menu!!!! Radical eh?
@@ -1193,7 +1193,7 @@ welcome_message() {
                         case $menu1 in
                             ew) local FN="/opt/share/unbound/configs/allowhost"     # v2.15 Whitelist
                             ;;
-                            eb) local FN="/opt/share/unbound/configs/blockhost"     # v2.15 Blacklist
+                            eb) local FN="/opt/share/unbound/configs/blockhost"     # v2.15 Blocklist
                             ;;
                             ec*) local FN="/opt/share/unbound/configs/sites"        # v2.17 v2.15 Config
                                 if [ -f ${CONFIG_DIR}adblock/gen_adblock.sh ] && [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then
