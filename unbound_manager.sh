@@ -856,9 +856,9 @@ welcome_message() {
 
                                         MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s%b)\n' "${cBYEL}" "${cRESET}" "${EXTENDEDSTATS}" "${GUI_TAB}" "${EXTENDEDSTATS_OPTION}")"   # v2.16
 
-                                        MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blocklist; ec=Config; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"   # v2.15
+                                        MENU_EL="$(printf '%bea%b = Edit Ad Block Allowlist (eb=Blocklist; ec=Config; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"   # v2.15
                                         if [ -f ${CONFIG_DIR}adblock/gen_adblock.sh ] && [ -n "$(grep blocksites ${CONFIG_DIR}adblock/gen_adblock.sh)" ];then   # v2.17
-                                            MENU_EL="$(printf '%bew%b = Edit Ad Block Whitelist (eb=Blocklist; eca=Config-AllowSites; ecb=Config-BlockSites; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"    # v2.17
+                                            MENU_EL="$(printf '%bea%b = Edit Ad Block Allowlist (eb=Blocklist; eca=Config-AllowSites; ecb=Config-BlockSites; el {Ad Block file})\n' "${cBYEL}" "${cRESET}")"    # v2.17
                                         fi
                                         [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" == "?" ] && MENU_EL=     # v2.15
                                     fi
@@ -1185,13 +1185,13 @@ welcome_message() {
                     fi
                     #break
                 ;;
-                ew|eb|ec|eca|ecb|el|el*)
+                ea|eb|ec|eca|ecb|el|el*)
                     # v 2.17 v2.15 Add ability to modify @juched's Ad Block configuration
                     #if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
                         local ACCESS="--unix"                             # Edit in Unix format
 
                         case $menu1 in
-                            ew) local FN="/opt/share/unbound/configs/allowhost"     # v2.15 Whitelist
+                            ea) local FN="/opt/share/unbound/configs/allowhost"     # v2.15 Allowlist
                             ;;
                             eb) local FN="/opt/share/unbound/configs/blockhost"     # v2.15 Blocklist
                             ;;
@@ -3989,7 +3989,7 @@ Check_GUI_NVRAM() {
             if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
                 if [ -z "$STATUSONLY" ];then                        # v2.18
                     [ -n "$(grep -m 1 "always_nxdomain" /opt/var/lib/unbound/adblock/adservers)" ] && PIXELSERVTXT= || PIXELSERVTXT="(via pixelserv-tls) " # v3.00
-                    local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Whitelist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v3.00 v2.14 v2.04
+                    local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Allowlist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v3.00 v2.14 v2.04
                     # Check if Diversion is also running
                     if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
                         local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v3.11 v2.18 Hotfix v1.24
@@ -4957,7 +4957,7 @@ _quote() {
                     fi
                 fi
             else
-                # Whitelist of URLs
+                # Allowlist of URLs
                 # awk/cut  - Remove the EOL comments,
                 awk -F# '{print $1}' $FN | grep . | sort > $DIVERSION
                 # diff -uZ --suppress-common-lines /opt/var/lib/unbound/adblock/permlist  /opt/share/diversion/list/whitelist  | sed '/^\+/ s/^\+//' | sort
