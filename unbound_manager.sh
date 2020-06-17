@@ -5,7 +5,7 @@ VERSION="3.18"
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
-#                              ['vpn='{vpn_id [ delay=nnn ] | 'disable' } ] [bind | nobind]
+#                              ['vpn='{vpn_id [ delay=nnn ] | 'disable' } ] [bind | nobind] ['noreadline']
 #
 #           unbound_manager
 #                              Context Menu: Install with 'user option prompts (see advanced section below)
@@ -58,7 +58,7 @@ VERSION="3.18"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 13-Jun-2020
+# Last Updated Date: 17-Jun-2020
 #
 # Description:
 #
@@ -97,8 +97,9 @@ CURRENT_AUTO_OPTIONS=                              # List of CURRENT Auto Reply 
 DIV_DIR="/opt/share/diversion/list/"               # diversion directory v1.25
 KEEPACTIVECONFIG="N"                               # During install/update download 'unbound.conf' from GitHub; "Y" - skip download
 USE_GITHUB_DEV="N"                                 # During install/update download from GitHub 'master'; "Y" - download from 'dev' branch 2.06
+READLINE="ReadLine"                                # Emulate 'readline' for 'read' v3.18
 CMDLINE=                                           # Command line INPUT v3.18
-CMD1=;CMD2=;CMD3=;CMD4=;CMD5=                     # Command recall push stack v3.18
+CMD1=;CMD2=;CMD3=;CMD4=;CMD5=                      # Command recall push stack v3.18
 DEBUGMODE=
 
 # Uncomment the line below for debugging
@@ -524,7 +525,10 @@ _GetKEY() {
 
         local ESC=$(printf "\x1b")                              # v3.18
         local ENTER=$(printf "\x0a")                            # v3.18
-        local BACKSPACE=$(printf "\x7f")                        # v3.18
+        local BACKSPACE_VT220=$(printf "\x7e")                  # v3.18 Xshell6 Del VT220 aka Esc[3~
+        local BACKSPACE_ASCII=$(printf "\x7f")                  # v3.18 Xshell6 CTRL+? ASCII 127
+        local BACKSPACE=$(printf "\x08")                        # v3.18 Xshell6 CTRL+H
+
         local DEL=$(printf "\x7e")                              # v3.18
 
         local JUNK=
@@ -597,7 +601,7 @@ _GetKEY() {
                 continue
             fi
 
-            if [ "$CHAR" == "$BACKSPACE" ];then
+            if [ "$CHAR" == "$BACKSPACE" ] || [ "$CHAR" == "$BACKSPACE_ASCII" ]  || [ "$CHAR" == "$BACKSPACE_VT220" ];then   # v3.18 Hotfix
                if [ $((KEY_CNT+PROMPT_SIZE)) -gt $PROMPT_SIZE ];then
                    echo -en ${CHAR}$xERASEEOL
                    LBUF=$(echo "$LBUF" | sed 's/.$//')
@@ -964,7 +968,7 @@ welcome_message() {
                 printf '\n%b%s%bOption ==>%b ' "$cBCYA" "${TXT}$DEBUGMODE" "${cBYEL}" "${cRESET}"
                 echo -en $xCSRPOS
 
-                Read_INPUT
+                [ "$READLINE" == "ReadLine" ] && Read_INPUT || read -r "CMDLINE"
 
                 menu1="$CMDLINE"
 
@@ -5056,6 +5060,8 @@ fi
 [ ! -L "/opt/bin/unbound_manager" ] && Script_alias "create"                # v2.06 Hotfix for amtm v1.08
 
 [ -n "$(echo "$@" | grep -oiw "advanced")" ] && EASYMENU="N" || EASYMENU="Y"                    # v2.07
+
+[ -n "$(echo "$@" | grep -oiw "noreadline")" ] && READLINE="NoReadLine" || READLINE="ReadLine"  # v3.18 Hotfix
 
 if [ -f ${CONFIG_DIR}Read.me ];then
     # Does the firmware support addons?                                         # v2.10
