@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.18"
-#============================================================================================ © 2019-2020 Martineau v3.18
+VERSION="3.19"
+#============================================================================================ © 2019-2020 Martineau v3.19
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.18"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 17-Jun-2020
+# Last Updated Date: 30-Jun-2020
 #
 # Description:
 #
@@ -1950,21 +1950,44 @@ EOF
                             if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then            # v2.17 dumpcache bootrest
                                local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                             fi
+                            local FN="/opt/share/unbound/configs/cache.txt"
                             # Manually save cache ...to be used over say a REBOOT
                             # NOTE: It will be deleted as soon as it is loaded
-                            unbound_Control "save"              # v2.12 force the 'save' message to console
-                            # Should the cache be automatically restored @BOOT
-                            if [ "$ARG" == "bootrest" ];then                        # v2.17
-                                if [ -z "$(grep -o load_cache /jffs/scripts/post-mount)" ];then       # v2.17
-                                    [ -n "$(grep -o unbound_stats /jffs/scripts/post-mount)" ] && POS="$(awk ' /unbound_stats/ {print NR}' "/jffs/scripts/post-mount")";POS=$((POS - 1))
-                                    if [ $POS -gt 0 ];then
-                                        sed -i "${POS}aFN=\"/opt/share/unbound/configs/cache.txt\"; [ -s \$FN ] && { unbound-control load_cache < \$FN; rm \$FN; logger -st \"(\$(basename \$0))\" \"unbound cache RESTORED from '\$FN'\"; } # unbound_manager" /jffs/scripts/post-mount
+
+                            case "$ARG" in                      # v3.19
+                            delete)                             # v3.19
+                                    if [ -f $FN ];then
+                                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")
+                                        rm $FN
+                                        echo -e $cRESET"\n\tunbound cache file $cBGRE'$FN'$cRESET ($TIMESTAMP) DELETED"$cRESET  2>&1
                                     else
-                                        echo -e "FN=\"/opt/share/unbound/configs/cache.txt\"; [ -s \$FN ] && { unbound-control load_cache < \$FN; rm \$FN; logger -st \"($(basename $0))\" \"unbound cache RESTORED from '\$FN'\"; } # unbound_manager" >> /jffs/scripts/post-mount
+                                        echo -e $cRESET"\n\tunbound cache file $cBGRE'$FN'$cRESET does not exist"$cRESET  2>&1
                                     fi
-                                fi
-                                echo -e $cBCYA"\tNOTE: unbound cache will be ${cRESET}automatically RESTORED on REBOOT$cBCYA (see /jffs/scripts/post-mount)"$cRESET       # v2.17
-                            fi
+                                    ;;
+                            "?")                                # v3.19
+                                    local CACHE_MEM_MSG=$(unbound-control stats_noreset | grep "msg.cache" | cut -d'=' -f2)
+                                    local CACHE_MEM_RRSET=$(unbound-control stats_noreset | grep "rrset.cache" | cut -d'=' -f2)
+                                    $UNBOUNCTRLCMD dump_cache > $FN
+                                    local DUMPCACHE_MEM_MSG=$(grep -c "^msg" $FN)
+                                    local DUMPCACHE_MEM_RRSET=$(grep -c "^;rrset" $FN)
+                                    rm $FN
+                                    echo -e ${cBCYA}"\n\tCheck ${cRESET}unbound cache$cBCYA simulated 'dumpcache' msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET 2>&1
+                                    ;;
+                            *)
+                                    echo -e
+                                    unbound_Control "save"              # v2.12 force the 'save' message to console
+                                    # Should the cache be automatically restored @BOOT
+                                    if [ -z "$(grep -o load_cache /jffs/scripts/post-mount)" ];then       # v2.17
+                                        [ -n "$(grep -o unbound_stats /jffs/scripts/post-mount)" ] && POS="$(awk ' /unbound_stats/ {print NR}' "/jffs/scripts/post-mount")";POS=$((POS - 1))
+                                        if [ $POS -gt 0 ];then
+                                            sed -i "${POS}aFN=\"/opt/share/unbound/configs/cache.txt\"; [ -s \$FN ] && { unbound-control load_cache < \$FN; rm \$FN; logger -st \"(\$(basename \$0))\" \"unbound cache RESTORED from '\$FN'\"; } # unbound_manager" /jffs/scripts/post-mount
+                                        else
+                                            echo -e "FN=\"/opt/share/unbound/configs/cache.txt\"; [ -s \$FN ] && { unbound-control load_cache < \$FN; rm \$FN; logger -st \"($(basename $0))\" \"unbound cache RESTORED from '\$FN'\"; } # unbound_manager" >> /jffs/scripts/post-mount
+                                        fi
+                                    fi
+                                    echo -e $cBCYA"\tNOTE: unbound cache will be ${cRESET}automatically RESTORED on REBOOT$cBCYA (see /jffs/scripts/post-mount)"$cRESET       # v2.17
+                                    ;;
+                            esac
 
                         ;;
                         restorecache)
@@ -2955,6 +2978,7 @@ Restart_unbound() {
         #Check_config_add_and_postconf                       # v3.09 v2.15
 
         echo -e ${cBCYA}$(date "+%H:%M:%S")" Requesting unbound (${cRESET}S61unbound$cBCYA) restart....."$cBGRE
+        SayT "Requesting unbound (/opt/etc/init.d/S61unbound$) restart....."            # v3.19
         /opt/etc/init.d/S61unbound restart
 
         local TAG="Date Loaded by unbound_manager "$(date)")"           # v3.06
@@ -3198,17 +3222,25 @@ unbound_Control() {
 
             case "$1" in
                 dump|save)
-                    echo -e ${cBCYA}$(date "+%H:%M:%S")" Saving ${cRESET}unbound cache$cBCYA to $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET 2>&1   # v3.08
                     $UNBOUNCTRLCMD dump_cache > $FN
                     local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
-                    SayT "unbound cache SAVED to '/opt/share/unbound/configs/cache.txt' - BEWARE, file will be DELETED on first RELOAD" $TIMESTAMP
+                    local CACHE_MEM_MSG=$(unbound-control stats_noreset | grep "msg.cache" | cut -d'=' -f2)
+                    local CACHE_MEM_RRSET=$(unbound-control stats_noreset | grep "rrset.cache" | cut -d'=' -f2)
+                    local DUMPCACHE_MEM_MSG=$(grep -c "^msg" $FN)
+                    local DUMPCACHE_MEM_RRSET=$(grep -c "^;rrset" $FN)
+                    echo -e ${cBCYA}$(date "+%H:%M:%S")" Saving ${cRESET}unbound cache$cBCYA to $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET 2>&1   # v3.08
+                    SayT "unbound cache SAVED to '"$FN"' - BEWARE, file will be DELETED on first RELOAD" $TIMESTAMP "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET
                 ;;
                 load|rest)
-                    if [ -s /opt/share/unbound/configs/cache.txt ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
+                    if [ -s $FN ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
                         local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
-                        echo -e ${cBCYA}$(date "+%H:%M:%S")" Restoring ${cRESET}unbound cache$cBCYA from $cBGRE'/opt/share/unbound/configs/cache.txt'"$cRESET "("$TIMESTAMP")"    # v3.08 v2.12
+                        local CACHE_MEM_MSG=$(unbound-control stats_noreset | grep "msg.cache" | cut -d'=' -f2)
+                        local CACHE_MEM_RRSET=$(unbound-control stats_noreset | grep "rrset.cache" | cut -d'=' -f2)
+                        local DUMPCACHE_MEM_MSG=$(grep -c "^msg" $FN)
+                        local DUMPCACHE_MEM_RRSET=$(grep -c "^;rrset" $FN)
+                        echo -e ${cBCYA}$(date "+%H:%M:%S")" Restoring ${cRESET}unbound cache$cBCYA from $cBGRE'"$FN"'"$cRESET "("$TIMESTAMP")" "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET    # v3.08 v2.12
                         $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
-                        SayT "unbound cache RESTORED from '/opt/share/unbound/configs/cache.txt' ("$TIMESTAMP")"
+                        SayT "unbound cache RESTORED from '"$FN"' ("$TIMESTAMP")" "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET
                         rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
                     fi
                 ;;
@@ -3567,6 +3599,13 @@ remove_existing_installation() {
             echo -e $cBCYA"Removing scribe logs"$cBGRE
             rm /opt/etc/syslog-ng.d/unbound /opt/var/log/unbound.log 2>/dev/null    # v2.11
             /opt/bin/scribe reload 2>/dev/null 1>/dev/null
+        fi
+
+        echo -e "Press$cBRED Y$cRESET to$cBRED delete ALL DATA files $cRESET('/opt/share/unbound/configs') or press$cBGRE [Enter] to keep custom DATA files."
+        read -r "CONFIRM_DATA_DELETE"
+        if [ "$CONFIRM_DATA_DELETE" == "Y" ];then
+           echo -e $cBCYA"Removing ALL custom DATA"$cBGRE
+           rm -rf /opt/share/unbound 2>/dev/null    # v3.19
         fi
 
         # Reboot router to complete uninstall of unbound
