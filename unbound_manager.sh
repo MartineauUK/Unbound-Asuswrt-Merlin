@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.20"
-#============================================================================================ © 2019-2020 Martineau v3.20
+VERSION="3.20b"
+#============================================================================================ © 2019-2020 Martineau v3.20b
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.20"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 26-Sep-2020
+# Last Updated Date: 28-Sep-2020
 #
 # Description:
 #
@@ -1653,26 +1653,35 @@ EOF
                     #echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
 
                 ;;
-                adblock*)                                           # v3.10 v2.18   [ youtube | track | update | uninstall ]
+                adblock*)                                           # v3.20 v3.10 v2.18   [ youtube | track | update | uninstall | country[3] ]
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                     fi
-
-                    if [ "$(Unbound_Installed)" == "Y" ];then
-                        if [ "$ARG" != "uninstall" ];then
-                            AUTO_REPLY3="y"
-                            echo
-                            [ "$ARG" != "update" ] && Option_Ad_Tracker_Blocker "$AUTO_REPLY3" "$ARG" ||  Ad_Tracker_blocking "update"    # v3.10 v2.18 Hotfix
-                            local RC=$?
-                        else
-                            Ad_Tracker_blocking "uninstall"
-                            local RC=0
-                        fi
-                    else
-                        echo -e $cBRED"\a\n\tunbound NOT installed! or Ad Block /adservers NOT defined in 'unbound.conf'?"$cRESET
-                        local RC=1
-                    fi
+					
+					# List 2-char/3-char domains possible country codes defined in '/opt/share/unbound/configs/blockhost'		# v3.20
+					if [ "$ARG" == "country" ] || [ "$ARG" == "country3" ];then					# v3.20
+						echo -e $cBWHT"\n\tBlocked country domain"$cBCYA
+						case "$ARG" in 
+							country3)	grep -E "local\-zone: \".{2,3}\"" /opt/var/lib/unbound/adblock/adservers | sort;;	# e.g. "fit" or "icw" 
+							country)	grep -E "local\-zone: \"..\""     /opt/var/lib/unbound/adblock/adservers | sort;;	# e.g. "cn" or "ru"
+						esac
+					else
+						if [ "$(Unbound_Installed)" == "Y" ];then
+							if [ "$ARG" != "uninstall" ];then
+								AUTO_REPLY3="y"
+								echo
+								[ "$ARG" != "update" ] && Option_Ad_Tracker_Blocker "$AUTO_REPLY3" "$ARG" ||  Ad_Tracker_blocking "update"    # v3.10 v2.18 Hotfix
+								local RC=$?
+							else
+								Ad_Tracker_blocking "uninstall"
+								local RC=0
+							fi
+						else
+							echo -e $cBRED"\a\n\tunbound NOT installed! or Ad Block /adservers NOT defined in 'unbound.conf'?"$cRESET
+							local RC=1
+						fi
+					fi
                 ;;
                 youtube*)                                           # v3.11   [ update | uninstall ]
                     local ARG=
@@ -4044,8 +4053,10 @@ Check_GUI_NVRAM() {
             if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
                 if [ -z "$STATUSONLY" ];then                        # v2.18
                     [ -n "$(grep -m 1 "always_nxdomain" /opt/var/lib/unbound/adblock/adservers)" ] && PIXELSERVTXT= || PIXELSERVTXT="(via pixelserv-tls) " # v3.00
-                    local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Allowlist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v3.00 v2.14 v2.04
-                    # Check if Diversion is also running
+					local CC=$(grep -cE "local\-zone: \".{2}\"" /opt/var/lib/unbound/adblock/adservers)	# v3.20
+                    local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Allowlist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")",${cRESET}"Blocked Country="${cBMAG}$CC    # v3.20 v3.00 v2.14 v2.04
+
+					# Check if Diversion is also running
                     if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
                         local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v3.11 v2.18 Hotfix v1.24
                     fi
