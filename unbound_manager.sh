@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.19"
-#============================================================================================ © 2019-2020 Martineau v3.19
+VERSION="3.20"
+#============================================================================================ © 2019-2020 Martineau v3.20
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.19"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 30-Jun-2020
+# Last Updated Date: 30-Sep-2020
 #
 # Description:
 #
@@ -768,7 +768,7 @@ welcome_message() {
                     LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')             # v1.04
 
                     local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/master/unbound_manager.sh$cRESET)"
-                    [ "${VERSION#????}" == "b" ] && local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/dev/unbound_manager.sh$cRESET)"
+                    [ -n "$(echo $VERSION | grep "b")" ] && local CHANGELOG="$cRESET(${cBCYA}Change Log: ${cBYEL}https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/commits/dev/unbound_manager.sh$cRESET)"  # v3.20
 
                     # As the developer, I need to differentiate between the GitHub md5sum hasn't changed, which means I've tweaked it locally
                     if [ -n "$REMOTE_VERSION_NUMDOT" ];then
@@ -1653,25 +1653,34 @@ EOF
                     #echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
 
                 ;;
-                adblock*)                                           # v3.10 v2.18   [ youtube | track | update | uninstall ]
+                adblock*)                                           # v3.20 v3.10 v2.18   [ youtube | track | update | uninstall | country[3] ]
                     local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                     fi
-
-                    if [ "$(Unbound_Installed)" == "Y" ];then
-                        if [ "$ARG" != "uninstall" ];then
-                            AUTO_REPLY3="y"
-                            echo
-                            [ "$ARG" != "update" ] && Option_Ad_Tracker_Blocker "$AUTO_REPLY3" "$ARG" ||  Ad_Tracker_blocking "update"    # v3.10 v2.18 Hotfix
-                            local RC=$?
-                        else
-                            Ad_Tracker_blocking "uninstall"
-                            local RC=0
-                        fi
+                    
+                    # List 2-char/3-char domains possible country codes defined in '/opt/share/unbound/configs/blockhost'       # v3.20
+                    if [ "$ARG" == "country" ] || [ "$ARG" == "country3" ];then                 # v3.20
+                        echo -e $cBWHT"\n\tBlocked country domain"$cBCYA
+                        case "$ARG" in 
+                            country3)   grep -E "local\-zone: \".{2,3}\"" /opt/var/lib/unbound/adblock/adservers | sort;;   # e.g. "fit" or "icw" 
+                            country)    grep -E "local\-zone: \"..\""     /opt/var/lib/unbound/adblock/adservers | sort;;   # e.g. "cn" or "ru"
+                        esac
                     else
-                        echo -e $cBRED"\a\n\tunbound NOT installed! or Ad Block /adservers NOT defined in 'unbound.conf'?"$cRESET
-                        local RC=1
+                        if [ "$(Unbound_Installed)" == "Y" ];then
+                            if [ "$ARG" != "uninstall" ];then
+                                AUTO_REPLY3="y"
+                                echo
+                                [ "$ARG" != "update" ] && Option_Ad_Tracker_Blocker "$AUTO_REPLY3" "$ARG" ||  Ad_Tracker_blocking "update"    # v3.10 v2.18 Hotfix
+                                local RC=$?
+                            else
+                                Ad_Tracker_blocking "uninstall"
+                                local RC=0
+                            fi
+                        else
+                            echo -e $cBRED"\a\n\tunbound NOT installed! or Ad Block /adservers NOT defined in 'unbound.conf'?"$cRESET
+                            local RC=1
+                        fi
                     fi
                 ;;
                 youtube*)                                           # v3.11   [ update | uninstall ]
@@ -1776,10 +1785,16 @@ EOF
                                 grep -v -F "[BLOCKED" /tmp/syslog.log | grep -o "^.*DPT=53"  | sed -r 's/LEN.*PROTO=//' | sed -r 's/LEN.*PROTO=//' | sed -r "s/$WANIP/wan.isp.ip.addr/"  # v3.07 v3.05
                                 local RC=1
                             else
-                                AUTO_REPLY9="?"                                     # v3.05
-                                echo
-                                Option_Use_VPN_Tunnel "$AUTO_REPLY9" "$ARG" "$ARG2"
-                                local RC=$?
+                                if [ -n "$( echo "$ARG" | grep -E "^[1-5]$")" ];then        # v3.20
+                                    AUTO_REPLY9="?"                                     # v3.05
+                                    echo
+                                    Option_Use_VPN_Tunnel "$AUTO_REPLY9" "$ARG" "$ARG2"
+                                    local RC=$?
+                                else
+                                    echo -e $cBRED"\a\n\tVPN Client arg '$ARG' invalid, must be in range 1-5"$cRESET    # v3.20
+                                    local RC=1
+                                fi
+                                
                             fi
                         else
                             Use_VPN_Tunnel "disable"
@@ -3564,7 +3579,7 @@ remove_existing_installation() {
         Check_dnsmasq_postconf "del"
 
         # If bypass dnsmasq assume /jffs/addons/unbound.postconf won't be executed to remove 'port=0'etc. from /etc/dnsmasq.conf
-        if [ -n "$(grep "port=0" /jffs/configs/dnsmasq.conf.add)" ];then   # v3.15
+        if [ -f /jffs/configs/dnsmasq.conf.add ] && [ -n "$(grep "port=0" /jffs/configs/dnsmasq.conf.add)" ];then   # v3.20 v3.15
             sed -i '/unbound_manager/d' /jffs/configs/dnsmasq.conf.add      # v3.14
             # Reinstate Diversion just-in-case
             if [ -n "$(which diversion)" ];then                            # v3.15
@@ -3577,7 +3592,9 @@ remove_existing_installation() {
 
         echo -en $cBCYA"Restarting dnsmasq....."$cBGRE      # v1.14
         # If bypass dnsmasq assume /jffs/addons/unbound.postconf won't be executed to remove 'port=0' from /etc/dnsmasq.conf
-        sed -i '/unbound_manager/d' /jffs/configs/dnsmasq.conf.add   # v3.14
+        if [ -f /jffs/configs/dnsmasq.conf.add ];then                   #v.3.20
+            sed -i '/unbound_manager/d' /jffs/configs/dnsmasq.conf.add   # v3.14
+        fi  
         service restart_dnsmasq             # v1.14 relocated - Just in case reboot is skipped!
 
         Script_alias "delete"                   # v2.01
@@ -3866,8 +3883,8 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: no
     #            ip-v6: yes
     #
-    local STATEMENTS="server:|access-control:|private-address:|domain-insecure:|forward-addr:|include:|\
-interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:|tags:|access-control-tag:|ipset:|name-v4:|name-v6:"   # v3.12 v3.00 Hotfix
+    local STATEMENTS="server:|access-control:|private-address:|private-domain:|domain-insecure:|forward-addr:|include:|\
+interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:|tags:|access-control-tag:|ipset:|name-v4:|name-v6:"   # v3.20 v3.12 v3.00 Hotfix
     local DUPLICATES="$(sed '/^[[:space:]]*#/d' /opt/var/lib/unbound/unbound.conf | sed '/^[[:space:]]*$/d' | sed '/^$/d' | awk '{print $1}' | sort | uniq -cd | \
                        grep -vE "$STATEMENTS")"                                            # v3.07
 
@@ -3967,10 +3984,14 @@ Check_GUI_NVRAM() {
                 fi
 
                 # Originally, a check was made to ensure the native RMerlin NTP server is configured.
-                # v2.07, some wish to use ntpd by @JackYaz
+                # v3.20 v2.07, some wish to use ntpd/chronyd by @JackYaz
                 #if [ "$(/usr/bin/which ntpd)" == "/opt/sbin/ntpd" ];then
-                if [ -f /opt/etc/init.d/S77ntpd ];then
-                    [ -n "$(/opt/etc/init.d/S77ntpd check | grep "dead")" ] && { echo -e $cBYEL"\a\t[✖] Warning Entware NTP Server installed but not running? $cRESET \t\t\t\t\t"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Entware NTP server is running" 2>&1
+                if [ -f /opt/etc/init.d/S77ntpd ] || [ -f /opt/etc/init.d/S77chronyd ];then     # v3.20
+                    if [ -f /opt/etc/init.d/S77ntpd ];then                                      # v3.20
+                       [ -n "$(/opt/etc/init.d/S77ntpd check | grep "dead")" ] && { echo -e $cBYEL"\a\t[✖] Warning Entware NTP Server ${cBWHT}'S77ntpd'$cBYEL installed but not running? $cRESET \t\t\t\t\t"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Entware NTP server ${cBWHT}'S77ntpd'$cBGRE is running" 2>&1
+                    else                                                                        # v3.20
+                       [ -n "$(/opt/etc/init.d/S77chronyd check | grep "dead")" ] && { echo -e $cBYEL"\a\t[✖] Warning Entware NTP Server ${cBWHT}'S77chronyd'$cBYEL installed but not running? $cRESET \t\t\t\t\t"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Entware NTP server ${cBWHT}'S77chronyd'$cBGRE is running" 2>&1
+                    fi
                 else
                     if [ "$HARDWARE_MODEL" != "RT-AC56U" ] && [ $FIRMWARE -ne 38406 ];then  # v2.10
                         [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
@@ -4032,7 +4053,9 @@ Check_GUI_NVRAM() {
             if [ "$(Get_unbound_config_option "adblock/adservers" ${CONFIG_DIR}unbound.conf)" != "?" ];then
                 if [ -z "$STATUSONLY" ];then                        # v2.18
                     [ -n "$(grep -m 1 "always_nxdomain" /opt/var/lib/unbound/adblock/adservers)" ] && PIXELSERVTXT= || PIXELSERVTXT="(via pixelserv-tls) " # v3.00
-                    local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Allowlist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")"$cRESET    # v3.00 v2.14 v2.04
+                    local CC=$(grep -cE "local\-zone: \".{2}\"" /opt/var/lib/unbound/adblock/adservers) # v3.20
+                    local TXT="No. of Adblock ${PIXELSERVTXT}domains="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/adservers"),"${cRESET}"Blocked Hosts="$cBMAG"$(Record_CNT  "/opt/share/unbound/configs/blockhost"),"${cRESET}"Allowlist="$cBMAG"$(Record_CNT "${CONFIG_DIR}adblock/permlist")",${cRESET}"Blocked Country="${cBMAG}$CC    # v3.20 v3.00 v2.14 v2.04
+
                     # Check if Diversion is also running
                     if [ -f /opt/share/diversion/.conf/diversion.conf ] && [ "$(grep -E "^DIVERSION_STATUS" /opt/share/diversion/.conf/diversion.conf)" == "DIVERSION_STATUS=enabled" ];then    # v3.11 Hotfix
                         local TXT=$TXT", "$cBRED"- Warning Diversion is also ACTIVE"    # v3.11 v2.18 Hotfix v1.24
