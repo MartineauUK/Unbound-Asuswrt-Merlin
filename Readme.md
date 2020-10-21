@@ -22,7 +22,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 +======================================================================+
 |  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
 |                                                                      |
-|                      Version 3.20 by Martineau                       |
+|                      Version 3.21 by Martineau                       |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
@@ -52,7 +52,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 7  = n/a Enable DNS Firewall [?]
 
 
-unbound (pid 3113) is running... uptime: 0 Days, 01:14:24 version: 1.10.0 (# rgnldo User Install Custom Version vx.xx (Date Loaded by unbound_installer Tue Apr 14 17:26:55 DST 2020))
+unbound (pid 3113) is running... uptime: 0 Days, 01:14:24 version: 1.11.0 (# Version v1.11 (Date Loaded by unbound_installer Tue Apr 14 17:26:55 DST 2020))
 
 
 i  = Update unbound Installation ('/opt/var/lib/unbound/')      l  = Show unbound LIVE log entries (lx=Disable Logging)
