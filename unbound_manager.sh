@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.20"
-#============================================================================================ © 2019-2020 Martineau v3.20
+VERSION="3.21"
+#============================================================================================ © 2019-2020 Martineau v3.21
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.20"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 30-Sep-2020
+# Last Updated Date: 21-Oct-2020
 #
 # Description:
 #
@@ -2945,13 +2945,17 @@ Customise_config() {
             # integration IPV6
             #do-ip6: no                    # This is the default; must be explicitly commented out if IPv6 group ENABLED
             #do-ip6: yes                   #@From:
+            #edns-buffer-size: 1232        # IPv6 1232 to override IPv4 1472 @Linux_chemist
             #interface: ::0
             #access-control: ::0/0 refuse
             #access-control: ::1 allow
             #private-address: fd00::/8
-            #private-address: fe80::/10    #@@To:
+            #private-address: fe80::/10    #@@To:   
+         Edit_config_options "private-address: ::/0" "comment"                     # v3.21 Remove dropping of ALL IPv6 responses
+         Edit_config_options "edns-buffer-size: 1472" "comment"                    # v3.21 Remove IPv4 default @Linux_chemist
          Edit_config_options "do-ip6: yes" "private-address: fe80::" "uncomment"   # v1.28
          Edit_config_options "do-ip6: no" "comment"                                # v1.28 Remove default IPv6
+
      fi
 
      echo -e $cBCYA"Customising unbound configuration Options:"$cRESET
