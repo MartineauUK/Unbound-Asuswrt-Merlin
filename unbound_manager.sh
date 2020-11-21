@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.21b"
-#============================================================================================ © 2019-2020 Martineau v3.21b
+VERSION="3.22b"
+#============================================================================================ © 2019-2020 Martineau v3.22b
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.21b"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 09-Oct-2020
+# Last Updated Date: 21-Nov-2020
 #
 # Description:
 #
@@ -3888,7 +3888,7 @@ Valid_unbound_config_Syntax() {
     #            ip-v6: yes
     #
     local STATEMENTS="server:|access-control:|private-address:|private-domain:|domain-insecure:|forward-addr:|include:|\
-interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:|tags:|access-control-tag:|ipset:|name-v4:|name-v6:"   # v3.20 v3.12 v3.00 Hotfix
+interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:|tags:|access-control-tag:|ipset:|name-v4:|name-v6:|local-data:|local-zone:"   # v3.22 @sfatula v3.20 v3.12 v3.00 Hotfix
     local DUPLICATES="$(sed '/^[[:space:]]*#/d' /opt/var/lib/unbound/unbound.conf | sed '/^[[:space:]]*$/d' | sed '/^$/d' | awk '{print $1}' | sort | uniq -cd | \
                        grep -vE "$STATEMENTS")"                                            # v3.07
 
@@ -4452,6 +4452,47 @@ _quote() {
             [ -z "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "port=0                           # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
             [ -z "$(grep -F "dhcp-option=lan,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=lan,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
 
+            # v386.xx Guest SSID VLANs need to ensure 'dhcp-option=brX,6,<dnsip>' to 'dnsmasq.conf.add' for DNS     # v3.22 @juched
+            # see http://www.snbforums.com/threads/thread-1-386-1_alpha-build-s-testing-available-build-s.67101/post-631652     # v3.22 @juched
+            # e.g brctl show
+            #
+            #   bridge name bridge id       STP enabled interfaces
+            #   br0     8000.40xxxxxxxxxx   yes         eth1
+            #                                           eth2
+            #                                           eth3
+            #                                           eth4
+            #                                           eth5.0
+            #                                           eth6.0
+            #                                           wl0.2
+            #                                           wl0.3
+            #   br2     8000.40xxxxxxxxxx   yes         eth1.501
+            #                                           eth2.501
+            #                                           eth3.501
+            #                                           eth4.501
+            #                                           eth5.501
+            #                                           eth6.501
+            #                                           wl0.1
+            #   br3     8000.40xxxxxxxxxx   yes         eth1.502
+            #                                           eth2.502
+            #                                           eth3.502
+            #                                           eth4.502
+            #                                           eth5.502
+            #                                           eth6.502
+            #                                           wl1.1
+            if [ $FIRMWARE -ge 38600 ] then                                                     # v3.22
+
+                ROUTER=$(nvram get wan0_dns)                                                    # v3.22
+
+                if [ -n "$(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')"];then     # v3.22
+                    do
+                        echo -e "# v386.xx Guest VLAN DNS" >> /jffs/configs/dnsmasq.conf.add    # v3.22
+                        for BR in $(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')   # v3.22
+                            do
+                                [ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22
+                            done
+                    done
+
+            fi                                                                                  # v3.22
             #
             Convert_dnsmasq_LocalHosts                                              # v3.16
 
