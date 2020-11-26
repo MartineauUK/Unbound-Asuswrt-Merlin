@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.22b2"
-#============================================================================================ © 2019-2020 Martineau v3.22b2
+VERSION="3.22b3"
+#============================================================================================ © 2019-2020 Martineau v3.22b3
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.22b2"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 24-Nov-2020
+# Last Updated Date: 26-Nov-2020
 #
 # Description:
 #
@@ -746,9 +746,9 @@ welcome_message() {
             if [ "$1" = "uninstall" ]; then
                 menu1="z"                                   # v1.21
             else
-                if [ "$1" != "nochk" ];then                 # v2.13
+                #if [ "$1" != "nochk" ];then                 # v3.22 v2.13
                     Show_status                         # v2.18
-                fi
+                #fi
 
                 if [ $CHECK_GITHUB -eq 1 ];then             # v1.20
 
@@ -756,14 +756,16 @@ welcome_message() {
 
                     localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-                    [ "$1" != "nochk" ] && REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
-                    if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
-                       echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
-                       REMOTE_VERSION_NUMDOT=
-                    else
-                       [ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v3.16 Hotfix v1.11
-                       REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
-                    fi
+                    if [ "$1" != "nochk" ];then					# v3.22
+						REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
+						if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
+							echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
+							REMOTE_VERSION_NUMDOT=
+						else
+							[ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v3.16 Hotfix v1.11
+							REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
+						fi
+					fi
 
                     LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')             # v1.04
 
