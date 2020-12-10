@@ -1395,36 +1395,48 @@ welcome_message() {
                     esac
                 ;;
                 safesearch*)                                    # v3.22 @Somewhereovertherainbow
-                
-                    local ARG=                                              
+
+                    local ARG=
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                     fi
-                    
-                    
+
                     if [ "$(Unbound_Installed)" == "Y" ];then
                             local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.safesearch"       # v3.22
-                            if [ "$ARG" != "disable" ];then
-                                if [ -f $CONFIG_ADD ] && [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
-                                    echo -e $cBGRE"\nEnabling Safe Search....."$cRESET
-                                    Check_config_add_and_postconf
-                                    Restart_unbound
-                                    local RC=0
+                            if [ "$menu1" != "safesearchv" ] && [ "$menu1" != "safesearchx" ];then
+                                if [ "$ARG" != "disable" ];then
+                                    if [ -f $CONFIG_ADD ] && [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
+                                        echo -e $cBGRE"\nEnabling Safe Search....."$cRESET
+                                        Check_config_add_and_postconf
+                                        Restart_unbound
+                                        local RC=0
+                                    fi
+                                else
+                                    if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
+                                        echo -e $cBGRE"\nDisabling Safe Search....."$cRESET
+                                        [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}from '${CONFIG_DIR}unbound.conf'"$cBGRA
+                                        local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.safesearch\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
+                                        [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.08 v3.07
+                                        Restart_unbound
+                                        local RC=0
+                                    fi
                                 fi
                             else
-                                if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
-                                    echo -e $cBGRE"\nDisabling Safe Search....."$cRESET
-                                    [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}from '${CONFIG_DIR}unbound.conf'"$cBGRA
-                                    local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.safesearch\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
-                                    [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.08 v3.07
-                                    Restart_unbound
-                                    local RC=0
-                                fi
+                               local FN=$CONFIG_ADD
+                               [ "$menu1" == "safesearchv" ] && local ACCESS="--view"
+                               [ "$menu1" == "safesearchx" ] && { local ACCESS="--unix"; local PRE_MD5="$(md5sum $FN | awk '{print $1}')" ; }
+                               nano $ACCESS $FN
+                               if [ "$ACCESS" == "--unix" ];then
+                                  local POST_MD5="$(md5sum $FN | awk '{print $1}')"
+                                  if [ "$PRE_MD5" != "$POST_MD5" ];then
+                                     echo -e "\nDo you want to restart unbound to apply your config changes?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+                                     read -r "ANS"
+                                     [ "$ANS" == "y" ] && Restart_unbound
+                                  fi
+                               fi
                             fi
-                            
-
                     else
-                         echo -e $cBRED"\a\n\tunbound NOT installed! orSafe Search domains NOT defined in 'unbound.conf'?"$cRESET
+                         echo -e $cBRED"\a\n\tunbound NOT installed! or Safe Search domains NOT defined in 'unbound.conf'?"$cRESET
                          local RC=1
                     fi
                 ;;
@@ -1696,12 +1708,12 @@ EOF
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
                     fi
-                    
+
                     # List 2-char/3-char domains possible country codes defined in '/opt/share/unbound/configs/blockhost'       # v3.20
                     if [ "$ARG" == "country" ] || [ "$ARG" == "country3" ];then                 # v3.20
                         echo -e $cBWHT"\n\tBlocked country domain"$cBCYA
-                        case "$ARG" in 
-                            country3)   grep -E "local\-zone: \".{2,3}\"" /opt/var/lib/unbound/adblock/adservers | sort;;   # e.g. "fit" or "icw" 
+                        case "$ARG" in
+                            country3)   grep -E "local\-zone: \".{2,3}\"" /opt/var/lib/unbound/adblock/adservers | sort;;   # e.g. "fit" or "icw"
                             country)    grep -E "local\-zone: \"..\""     /opt/var/lib/unbound/adblock/adservers | sort;;   # e.g. "cn" or "ru"
                         esac
                     else
@@ -1832,7 +1844,7 @@ EOF
                                     echo -e $cBRED"\a\n\tVPN Client arg '$ARG' invalid, must be in range 1-5"$cRESET    # v3.20
                                     local RC=1
                                 fi
-                                
+
                             fi
                         else
                             Use_VPN_Tunnel "disable"
@@ -2923,7 +2935,7 @@ Check_config_add_and_postconf() {
         [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
         [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
-    
+
     # If Custom 'server:' Safe Search (domain redirect) directives e.g. redirect "google.com" to "forcesafesearch.google.com" are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.safesearch"'
     local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.safesearch"   # v3.22
     if [ -f $CONFIG_ADD ];then
@@ -2995,7 +3007,7 @@ Customise_config() {
             #access-control: ::0/0 refuse
             #access-control: ::1 allow
             #private-address: fd00::/8
-            #private-address: fe80::/10    #@@To:   
+            #private-address: fe80::/10    #@@To:
          Edit_config_options "private-address: ::/0" "comment"                     # v3.21 Remove dropping of ALL IPv6 responses
          Edit_config_options "edns-buffer-size: 1472" "comment"                    # v3.21 Remove IPv4 default @Linux_chemist
          Edit_config_options "do-ip6: yes" "private-address: fe80::" "uncomment"   # v1.28
@@ -3643,7 +3655,7 @@ remove_existing_installation() {
         # If bypass dnsmasq assume /jffs/addons/unbound.postconf won't be executed to remove 'port=0' from /etc/dnsmasq.conf
         if [ -f /jffs/configs/dnsmasq.conf.add ];then                   #v.3.20
             sed -i '/unbound_manager/d' /jffs/configs/dnsmasq.conf.add   # v3.14
-        fi  
+        fi
         service restart_dnsmasq             # v1.14 relocated - Just in case reboot is skipped!
 
         Script_alias "delete"                   # v2.01
@@ -4179,7 +4191,7 @@ Check_GUI_NVRAM() {
             if [ -n "$(grep -F "unbound.conf.views" ${CONFIG_DIR}unbound.conf)" ];then            # v3.17
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound 'views:' ENABLED ("${cBMAG}$(grep -c "name:" /opt/share/unbound/configs/unbound.conf.views )"$cRESET views$cBGRE)" 2>&1
             fi
-            
+
             if [ -n "$(grep -F "unbound.conf.safesearch" ${CONFIG_DIR}unbound.conf)" ];then            # v3.22
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Safe Search ENABLED ("${cBMAG}$(grep -c "redirect" /opt/share/unbound/configs/unbound.conf.safesearch )"$cRESET domains ${cBGRE}e.g. ${cBWHT}$(grep "local-" /opt/share/unbound/configs/unbound.conf.safesearch | head -n 2 | tr -d "\n" | sed 's/local-zone://g ; s/local-data://g ; s/ CNAME /" to "/g' | awk '{print $2" "$3" "$4" "$5}')$cBGRE)" 2>&1
             fi
@@ -4528,7 +4540,7 @@ _quote() {
             #                                           eth5.502
             #                                           eth6.502
             #                                           wl1.1
-            if [ $FIRMWARE -ge 38600 ];then                                                     # v3.22     
+            if [ $FIRMWARE -ge 38600 ];then                                                     # v3.22
                     ROUTER=$(nvram get wan0_dns)                                                    # v3.22
 
                     if [ -n "$(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')" ];then     # v3.22
