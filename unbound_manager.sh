@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.22b3"
-#============================================================================================ © 2019-2020 Martineau v3.22b3
+VERSION="3.22b4"
+#============================================================================================ © 2019-2020 Martineau v3.22b4
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.22b3"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 26-Nov-2020
+# Last Updated Date: 10-Dec-2020
 #
 # Description:
 #
@@ -399,6 +399,7 @@ Show_Advanced_Menu() {
     printf "%s\t\t%s\n"   "$MENUW_DNSMASQ"         "$MENU_EL"      # v3.10 v2.15
     printf "%s\t%s\n"       "$MENUW_DUMPCACHE" "$MENU_CA"      # v2.17 v2.12 v1.26
     printf "\t\t\t\t\t\t\t\t\t%s\n"                                "$MENUW_VIEWS"   # v3.17
+    printf "\t\t\t\t\t\t\t\t\t%s\n"                                "$MENUW_SAFESEARCH"   # v3.22
     printf "\n%s\t\t%s\n"           "$MENUW_DIG"     "$MENUW_LOOKUP" # v2.11
     printf "%s\t\t\t\t%s\n"         "$MENUW_DNSINFO" "$MENUW_DNSSEC"                 # v2.12 v1.28
     printf "%s\\n\n"                "$MENUW_LINKS"              # v1.28
@@ -653,6 +654,7 @@ welcome_message() {
               MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
               MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
               MENUW_VIEWS="$(printf '%bviews%b = [? | uninstall] | {view_name [? | remove]} | {view_name [[type] domain_name[...] | IP_address[...]] [del]} ]\n' "${cBYEL}" "${cRESET}")"
+              MENUW_SAFESEARCH="$(printf '%bsafesearch%b = Enable Safe Search [disable] e.g. redirect 'google.com' to 'forcesafesearch.google.com' \n' "${cBYEL}" "${cRESET}")"
               MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"
               MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
               MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
@@ -756,16 +758,16 @@ welcome_message() {
 
                     localmd5="$(md5sum "$0" | awk '{print $1}')"
 
-                    if [ "$1" != "nochk" ];then					# v3.22
-						REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
-						if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
-							echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
-							REMOTE_VERSION_NUMDOT=
-						else
-							[ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v3.16 Hotfix v1.11
-							REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
-						fi
-					fi
+                    if [ "$1" != "nochk" ];then                 # v3.22
+                        REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
+                        if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
+                            echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
+                            REMOTE_VERSION_NUMDOT=
+                        else
+                            [ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v3.16 Hotfix v1.11
+                            REMOTE_VERSION_NUM=$(echo $REMOTE_VERSION_NUMDOT | sed 's/[^0-9]*//g')  # v1.04
+                        fi
+                    fi
 
                     LOCAL_VERSION_NUM=$(echo $VERSION | sed 's/[^0-9]*//g')             # v1.04
 
@@ -1391,6 +1393,40 @@ welcome_message() {
                             #break
                             ;;
                     esac
+                ;;
+                safesearch*)                                    # v3.22 @Somewhereovertherainbow
+                
+                    local ARG=                                              
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"
+                    fi
+                    
+                    
+                    if [ "$(Unbound_Installed)" == "Y" ];then
+                            local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.safesearch"       # v3.22
+                            if [ "$ARG" != "disable" ];then
+                                if [ -f $CONFIG_ADD ] && [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
+                                    echo -e $cBGRE"\nEnabling Safe Search....."$cRESET
+                                    Check_config_add_and_postconf
+                                    Restart_unbound
+                                    local RC=0
+                                fi
+                            else
+                                if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
+                                    echo -e $cBGRE"\nDisabling Safe Search....."$cRESET
+                                    [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}from '${CONFIG_DIR}unbound.conf'"$cBGRA
+                                    local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.safesearch\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
+                                    [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.08 v3.07
+                                    Restart_unbound
+                                    local RC=0
+                                fi
+                            fi
+                            
+
+                    else
+                         echo -e $cBRED"\a\n\tunbound NOT installed! orSafe Search domains NOT defined in 'unbound.conf'?"$cRESET
+                         local RC=1
+                    fi
                 ;;
                 scribe*)                                                     # v3.06 v1.27
 
@@ -2887,6 +2923,13 @@ Check_config_add_and_postconf() {
         [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
         [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf    # v2.18 Hotfix @juched v2.10
     fi
+    
+    # If Custom 'server:' Safe Search (domain redirect) directives e.g. redirect "google.com" to "forcesafesearch.google.com" are to be included, append the 'include: "/opt/share/unbound/configs/unbound.conf.safesearch"'
+    local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.safesearch"   # v3.22
+    if [ -f $CONFIG_ADD ];then
+        [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Adding $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}to '${CONFIG_DIR}unbound.conf'"$cBGRA
+        [ -z "$(grep "^include.*\"$CONFIG_ADD\"" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninclude: \"$CONFIG_ADD\"\t\t# Custom server directives" >>  ${CONFIG_DIR}unbound.conf    # v3.22 @Somewhereovertherainbow
+    fi
 
     local POSTCONF_SCRIPT="/opt/share/unbound/configs/unbound.postconf"
     if [ -f $POSTCONF_SCRIPT ];then
@@ -4136,6 +4179,10 @@ Check_GUI_NVRAM() {
             if [ -n "$(grep -F "unbound.conf.views" ${CONFIG_DIR}unbound.conf)" ];then            # v3.17
                 [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] unbound 'views:' ENABLED ("${cBMAG}$(grep -c "name:" /opt/share/unbound/configs/unbound.conf.views )"$cRESET views$cBGRE)" 2>&1
             fi
+            
+            if [ -n "$(grep -F "unbound.conf.safesearch" ${CONFIG_DIR}unbound.conf)" ];then            # v3.22
+                [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Safe Search ENABLED ("${cBMAG}$(grep -c "redirect" /opt/share/unbound/configs/unbound.conf.safesearch )"$cRESET domains ${cBGRE}e.g. ${cBWHT}$(grep "local-" /opt/share/unbound/configs/unbound.conf.safesearch | head -n 2 | tr -d "\n" | sed 's/local-zone://g ; s/local-data://g ; s/ CNAME /" to "/g' | awk '{print $2" "$3" "$4" "$5}')$cBGRE)" 2>&1
+            fi
         fi
 
         local TXT=
@@ -4481,16 +4528,16 @@ _quote() {
             #                                           eth5.502
             #                                           eth6.502
             #                                           wl1.1
-            if [ $FIRMWARE -ge 38600 ];then                                                     # v3.22		
-					ROUTER=$(nvram get wan0_dns)                                                    # v3.22
+            if [ $FIRMWARE -ge 38600 ];then                                                     # v3.22     
+                    ROUTER=$(nvram get wan0_dns)                                                    # v3.22
 
-					if [ -n "$(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')" ];then     # v3.22
-							echo -e "# v386.xx Guest VLAN DNS" >> /jffs/configs/dnsmasq.conf.add    # v3.22
-							for BR in $(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')   # v3.22
-								do
-									[ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22
-								done
-					fi
+                    if [ -n "$(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')" ];then     # v3.22
+                            echo -e "# v386.xx Guest VLAN DNS" >> /jffs/configs/dnsmasq.conf.add    # v3.22
+                            for BR in $(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')   # v3.22
+                                do
+                                    [ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22
+                                done
+                    fi
             fi                                                                                  # v3.22
             #
             Convert_dnsmasq_LocalHosts                                              # v3.16
