@@ -58,7 +58,7 @@ VERSION="3.22b4"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 10-Dec-2020
+# Last Updated Date: 11-Dec-2020
 #
 # Description:
 #
@@ -1410,6 +1410,9 @@ welcome_message() {
                                         Check_config_add_and_postconf
                                         Restart_unbound
                                         local RC=0
+                                    else
+                                        echo -e $cBRED"\a\n\t'$CONFIG_ADD' does not exist!"$cRESET
+                                        local RC=1
                                     fi
                                 else
                                     if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
@@ -1424,19 +1427,29 @@ welcome_message() {
                             else
                                local FN=$CONFIG_ADD
                                [ "$menu1" == "safesearchv" ] && local ACCESS="--view"
-                               [ "$menu1" == "safesearchx" ] && { local ACCESS="--unix"; local PRE_MD5="$(md5sum $FN | awk '{print $1}')" ; }
-                               nano $ACCESS $FN
-                               if [ "$ACCESS" == "--unix" ];then
-                                  local POST_MD5="$(md5sum $FN | awk '{print $1}')"
-                                  if [ "$PRE_MD5" != "$POST_MD5" ];then
-                                     echo -e "\nDo you want to restart unbound to apply your config changes?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
-                                     read -r "ANS"
-                                     [ "$ANS" == "y" ] && Restart_unbound
-                                  fi
+                               if [ "$menu1" == "safesearchx" ];then
+                                  local ACCESS="--unix"
+                                  [ ! -f $FN ] && touch $FN
+                                  local PRE_MD5="$(md5sum $FN | awk '{print $1}')"
                                fi
+                               if [ -f $FN ];then
+                                    nano $ACCESS $FN
+                                    if [ "$ACCESS" == "--unix" ];then
+                                        local POST_MD5="$(md5sum $FN | awk '{print $1}')"
+                                        if [ "$PRE_MD5" != "$POST_MD5" ];then
+                                            echo -e "\nDo you want to restart unbound to apply your config changes?\n\n\tReply$cBRED 'y' ${cBGRE}or press [Enter] $cRESET to skip"
+                                            read -r "ANS"
+                                            [ "$ANS" == "y" ] && Restart_unbound
+                                        fi
+                                        [ ! -s $FN ] && rm $FN
+                                    fi
+                                else
+                                    echo -e $cBRED"\a\n\t'$FN' does not exist!"$cRESET
+                                    local RC=1
+                                fi
                             fi
                     else
-                         echo -e $cBRED"\a\n\tunbound NOT installed! or Safe Search domains NOT defined in 'unbound.conf'?"$cRESET
+                         echo -e $cBRED"\a\n\tunbound NOT installed!"$cRESET
                          local RC=1
                     fi
                 ;;
