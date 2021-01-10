@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.22b4"
-#============================================================================================ © 2019-2020 Martineau v3.22b4
+VERSION="3.22b5"
+#============================================================================================ © 2019-2020 Martineau v3.22b5
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.22b4"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 11-Dec-2020
+# Last Updated Date: 10-Jan-2021
 #
 # Description:
 #
@@ -1411,8 +1411,15 @@ welcome_message() {
                                         Restart_unbound
                                         local RC=0
                                     else
-                                        echo -e $cBRED"\a\n\t'$CONFIG_ADD' does not exist!"$cRESET
-                                        local RC=1
+                                        #echo -e $cRED"\a\n\t'$CONFIG_ADD' does not exist!....creating it now"$cRESET
+                                        #download_file $CONFIG_DIR unbound.conf.safesearch martineau dev
+                                        download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau dev
+                                        chmod +x /jffs/addons/unbound/unbound_SafeSearch.sh
+                                        sh /jffs/addons/unbound/unbound_SafeSearch.sh       # v3.22
+                                        echo -e $cBGRE"\nEnabling Safe Search....."$cRESET
+                                        [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ] && Check_config_add_and_postconf
+                                        Restart_unbound
+                                        local RC=0
                                     fi
                                 else
                                     if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
@@ -1420,6 +1427,7 @@ welcome_message() {
                                         [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}from '${CONFIG_DIR}unbound.conf'"$cBGRA
                                         local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.safesearch\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
                                         [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.08 v3.07
+                                        rm $CONFIG_ADD              # v3.22
                                         Restart_unbound
                                         local RC=0
                                     fi
