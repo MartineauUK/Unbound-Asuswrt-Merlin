@@ -1,0 +1,812 @@
+server:
+
+# Sun Jan 10 16:41:04 GMT 2021
+# Google Safe Search: https://www.google.com/supported_domains
+local-zone: "google.com" redirect 
+local-data: "google.com CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com" redirect 
+local-data: "www.google.com CNAME forcesafesearch.google.com" 
+local-zone: "google.ad" redirect 
+local-data: "google.ad CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ad" redirect 
+local-data: "www.google.ad CNAME forcesafesearch.google.com" 
+local-zone: "google.ae" redirect 
+local-data: "google.ae CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ae" redirect 
+local-data: "www.google.ae CNAME forcesafesearch.google.com" 
+local-zone: "google.com.af" redirect 
+local-data: "google.com.af CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.af" redirect 
+local-data: "www.google.com.af CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ag" redirect 
+local-data: "google.com.ag CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ag" redirect 
+local-data: "www.google.com.ag CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ai" redirect 
+local-data: "google.com.ai CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ai" redirect 
+local-data: "www.google.com.ai CNAME forcesafesearch.google.com" 
+local-zone: "google.al" redirect 
+local-data: "google.al CNAME forcesafesearch.google.com" 
+local-zone: "www.google.al" redirect 
+local-data: "www.google.al CNAME forcesafesearch.google.com" 
+local-zone: "google.am" redirect 
+local-data: "google.am CNAME forcesafesearch.google.com" 
+local-zone: "www.google.am" redirect 
+local-data: "www.google.am CNAME forcesafesearch.google.com" 
+local-zone: "google.co.ao" redirect 
+local-data: "google.co.ao CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.ao" redirect 
+local-data: "www.google.co.ao CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ar" redirect 
+local-data: "google.com.ar CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ar" redirect 
+local-data: "www.google.com.ar CNAME forcesafesearch.google.com" 
+local-zone: "google.as" redirect 
+local-data: "google.as CNAME forcesafesearch.google.com" 
+local-zone: "www.google.as" redirect 
+local-data: "www.google.as CNAME forcesafesearch.google.com" 
+local-zone: "google.at" redirect 
+local-data: "google.at CNAME forcesafesearch.google.com" 
+local-zone: "www.google.at" redirect 
+local-data: "www.google.at CNAME forcesafesearch.google.com" 
+local-zone: "google.com.au" redirect 
+local-data: "google.com.au CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.au" redirect 
+local-data: "www.google.com.au CNAME forcesafesearch.google.com" 
+local-zone: "google.az" redirect 
+local-data: "google.az CNAME forcesafesearch.google.com" 
+local-zone: "www.google.az" redirect 
+local-data: "www.google.az CNAME forcesafesearch.google.com" 
+local-zone: "google.ba" redirect 
+local-data: "google.ba CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ba" redirect 
+local-data: "www.google.ba CNAME forcesafesearch.google.com" 
+local-zone: "google.com.bd" redirect 
+local-data: "google.com.bd CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.bd" redirect 
+local-data: "www.google.com.bd CNAME forcesafesearch.google.com" 
+local-zone: "google.be" redirect 
+local-data: "google.be CNAME forcesafesearch.google.com" 
+local-zone: "www.google.be" redirect 
+local-data: "www.google.be CNAME forcesafesearch.google.com" 
+local-zone: "google.bf" redirect 
+local-data: "google.bf CNAME forcesafesearch.google.com" 
+local-zone: "www.google.bf" redirect 
+local-data: "www.google.bf CNAME forcesafesearch.google.com" 
+local-zone: "google.bg" redirect 
+local-data: "google.bg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.bg" redirect 
+local-data: "www.google.bg CNAME forcesafesearch.google.com" 
+local-zone: "google.com.bh" redirect 
+local-data: "google.com.bh CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.bh" redirect 
+local-data: "www.google.com.bh CNAME forcesafesearch.google.com" 
+local-zone: "google.bi" redirect 
+local-data: "google.bi CNAME forcesafesearch.google.com" 
+local-zone: "www.google.bi" redirect 
+local-data: "www.google.bi CNAME forcesafesearch.google.com" 
+local-zone: "google.bj" redirect 
+local-data: "google.bj CNAME forcesafesearch.google.com" 
+local-zone: "www.google.bj" redirect 
+local-data: "www.google.bj CNAME forcesafesearch.google.com" 
+local-zone: "google.com.bn" redirect 
+local-data: "google.com.bn CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.bn" redirect 
+local-data: "www.google.com.bn CNAME forcesafesearch.google.com" 
+local-zone: "google.com.bo" redirect 
+local-data: "google.com.bo CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.bo" redirect 
+local-data: "www.google.com.bo CNAME forcesafesearch.google.com" 
+local-zone: "google.com.br" redirect 
+local-data: "google.com.br CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.br" redirect 
+local-data: "www.google.com.br CNAME forcesafesearch.google.com" 
+local-zone: "google.bs" redirect 
+local-data: "google.bs CNAME forcesafesearch.google.com" 
+local-zone: "www.google.bs" redirect 
+local-data: "www.google.bs CNAME forcesafesearch.google.com" 
+local-zone: "google.bt" redirect 
+local-data: "google.bt CNAME forcesafesearch.google.com" 
+local-zone: "www.google.bt" redirect 
+local-data: "www.google.bt CNAME forcesafesearch.google.com" 
+local-zone: "google.co.bw" redirect 
+local-data: "google.co.bw CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.bw" redirect 
+local-data: "www.google.co.bw CNAME forcesafesearch.google.com" 
+local-zone: "google.by" redirect 
+local-data: "google.by CNAME forcesafesearch.google.com" 
+local-zone: "www.google.by" redirect 
+local-data: "www.google.by CNAME forcesafesearch.google.com" 
+local-zone: "google.com.bz" redirect 
+local-data: "google.com.bz CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.bz" redirect 
+local-data: "www.google.com.bz CNAME forcesafesearch.google.com" 
+local-zone: "google.ca" redirect 
+local-data: "google.ca CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ca" redirect 
+local-data: "www.google.ca CNAME forcesafesearch.google.com" 
+local-zone: "google.cd" redirect 
+local-data: "google.cd CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cd" redirect 
+local-data: "www.google.cd CNAME forcesafesearch.google.com" 
+local-zone: "google.cf" redirect 
+local-data: "google.cf CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cf" redirect 
+local-data: "www.google.cf CNAME forcesafesearch.google.com" 
+local-zone: "google.cg" redirect 
+local-data: "google.cg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cg" redirect 
+local-data: "www.google.cg CNAME forcesafesearch.google.com" 
+local-zone: "google.ch" redirect 
+local-data: "google.ch CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ch" redirect 
+local-data: "www.google.ch CNAME forcesafesearch.google.com" 
+local-zone: "google.ci" redirect 
+local-data: "google.ci CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ci" redirect 
+local-data: "www.google.ci CNAME forcesafesearch.google.com" 
+local-zone: "google.co.ck" redirect 
+local-data: "google.co.ck CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.ck" redirect 
+local-data: "www.google.co.ck CNAME forcesafesearch.google.com" 
+local-zone: "google.cl" redirect 
+local-data: "google.cl CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cl" redirect 
+local-data: "www.google.cl CNAME forcesafesearch.google.com" 
+local-zone: "google.cm" redirect 
+local-data: "google.cm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cm" redirect 
+local-data: "www.google.cm CNAME forcesafesearch.google.com" 
+local-zone: "google.cn" redirect 
+local-data: "google.cn CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cn" redirect 
+local-data: "www.google.cn CNAME forcesafesearch.google.com" 
+local-zone: "google.com.co" redirect 
+local-data: "google.com.co CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.co" redirect 
+local-data: "www.google.com.co CNAME forcesafesearch.google.com" 
+local-zone: "google.co.cr" redirect 
+local-data: "google.co.cr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.cr" redirect 
+local-data: "www.google.co.cr CNAME forcesafesearch.google.com" 
+local-zone: "google.com.cu" redirect 
+local-data: "google.com.cu CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.cu" redirect 
+local-data: "www.google.com.cu CNAME forcesafesearch.google.com" 
+local-zone: "google.cv" redirect 
+local-data: "google.cv CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cv" redirect 
+local-data: "www.google.cv CNAME forcesafesearch.google.com" 
+local-zone: "google.com.cy" redirect 
+local-data: "google.com.cy CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.cy" redirect 
+local-data: "www.google.com.cy CNAME forcesafesearch.google.com" 
+local-zone: "google.cz" redirect 
+local-data: "google.cz CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cz" redirect 
+local-data: "www.google.cz CNAME forcesafesearch.google.com" 
+local-zone: "google.de" redirect 
+local-data: "google.de CNAME forcesafesearch.google.com" 
+local-zone: "www.google.de" redirect 
+local-data: "www.google.de CNAME forcesafesearch.google.com" 
+local-zone: "google.dj" redirect 
+local-data: "google.dj CNAME forcesafesearch.google.com" 
+local-zone: "www.google.dj" redirect 
+local-data: "www.google.dj CNAME forcesafesearch.google.com" 
+local-zone: "google.dk" redirect 
+local-data: "google.dk CNAME forcesafesearch.google.com" 
+local-zone: "www.google.dk" redirect 
+local-data: "www.google.dk CNAME forcesafesearch.google.com" 
+local-zone: "google.dm" redirect 
+local-data: "google.dm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.dm" redirect 
+local-data: "www.google.dm CNAME forcesafesearch.google.com" 
+local-zone: "google.com.do" redirect 
+local-data: "google.com.do CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.do" redirect 
+local-data: "www.google.com.do CNAME forcesafesearch.google.com" 
+local-zone: "google.dz" redirect 
+local-data: "google.dz CNAME forcesafesearch.google.com" 
+local-zone: "www.google.dz" redirect 
+local-data: "www.google.dz CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ec" redirect 
+local-data: "google.com.ec CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ec" redirect 
+local-data: "www.google.com.ec CNAME forcesafesearch.google.com" 
+local-zone: "google.ee" redirect 
+local-data: "google.ee CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ee" redirect 
+local-data: "www.google.ee CNAME forcesafesearch.google.com" 
+local-zone: "google.com.eg" redirect 
+local-data: "google.com.eg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.eg" redirect 
+local-data: "www.google.com.eg CNAME forcesafesearch.google.com" 
+local-zone: "google.es" redirect 
+local-data: "google.es CNAME forcesafesearch.google.com" 
+local-zone: "www.google.es" redirect 
+local-data: "www.google.es CNAME forcesafesearch.google.com" 
+local-zone: "google.com.et" redirect 
+local-data: "google.com.et CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.et" redirect 
+local-data: "www.google.com.et CNAME forcesafesearch.google.com" 
+local-zone: "google.fi" redirect 
+local-data: "google.fi CNAME forcesafesearch.google.com" 
+local-zone: "www.google.fi" redirect 
+local-data: "www.google.fi CNAME forcesafesearch.google.com" 
+local-zone: "google.com.fj" redirect 
+local-data: "google.com.fj CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.fj" redirect 
+local-data: "www.google.com.fj CNAME forcesafesearch.google.com" 
+local-zone: "google.fm" redirect 
+local-data: "google.fm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.fm" redirect 
+local-data: "www.google.fm CNAME forcesafesearch.google.com" 
+local-zone: "google.fr" redirect 
+local-data: "google.fr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.fr" redirect 
+local-data: "www.google.fr CNAME forcesafesearch.google.com" 
+local-zone: "google.ga" redirect 
+local-data: "google.ga CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ga" redirect 
+local-data: "www.google.ga CNAME forcesafesearch.google.com" 
+local-zone: "google.ge" redirect 
+local-data: "google.ge CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ge" redirect 
+local-data: "www.google.ge CNAME forcesafesearch.google.com" 
+local-zone: "google.gg" redirect 
+local-data: "google.gg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.gg" redirect 
+local-data: "www.google.gg CNAME forcesafesearch.google.com" 
+local-zone: "google.com.gh" redirect 
+local-data: "google.com.gh CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.gh" redirect 
+local-data: "www.google.com.gh CNAME forcesafesearch.google.com" 
+local-zone: "google.com.gi" redirect 
+local-data: "google.com.gi CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.gi" redirect 
+local-data: "www.google.com.gi CNAME forcesafesearch.google.com" 
+local-zone: "google.gl" redirect 
+local-data: "google.gl CNAME forcesafesearch.google.com" 
+local-zone: "www.google.gl" redirect 
+local-data: "www.google.gl CNAME forcesafesearch.google.com" 
+local-zone: "google.gm" redirect 
+local-data: "google.gm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.gm" redirect 
+local-data: "www.google.gm CNAME forcesafesearch.google.com" 
+local-zone: "google.gr" redirect 
+local-data: "google.gr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.gr" redirect 
+local-data: "www.google.gr CNAME forcesafesearch.google.com" 
+local-zone: "google.com.gt" redirect 
+local-data: "google.com.gt CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.gt" redirect 
+local-data: "www.google.com.gt CNAME forcesafesearch.google.com" 
+local-zone: "google.gy" redirect 
+local-data: "google.gy CNAME forcesafesearch.google.com" 
+local-zone: "www.google.gy" redirect 
+local-data: "www.google.gy CNAME forcesafesearch.google.com" 
+local-zone: "google.com.hk" redirect 
+local-data: "google.com.hk CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.hk" redirect 
+local-data: "www.google.com.hk CNAME forcesafesearch.google.com" 
+local-zone: "google.hn" redirect 
+local-data: "google.hn CNAME forcesafesearch.google.com" 
+local-zone: "www.google.hn" redirect 
+local-data: "www.google.hn CNAME forcesafesearch.google.com" 
+local-zone: "google.hr" redirect 
+local-data: "google.hr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.hr" redirect 
+local-data: "www.google.hr CNAME forcesafesearch.google.com" 
+local-zone: "google.ht" redirect 
+local-data: "google.ht CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ht" redirect 
+local-data: "www.google.ht CNAME forcesafesearch.google.com" 
+local-zone: "google.hu" redirect 
+local-data: "google.hu CNAME forcesafesearch.google.com" 
+local-zone: "www.google.hu" redirect 
+local-data: "www.google.hu CNAME forcesafesearch.google.com" 
+local-zone: "google.co.id" redirect 
+local-data: "google.co.id CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.id" redirect 
+local-data: "www.google.co.id CNAME forcesafesearch.google.com" 
+local-zone: "google.ie" redirect 
+local-data: "google.ie CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ie" redirect 
+local-data: "www.google.ie CNAME forcesafesearch.google.com" 
+local-zone: "google.co.il" redirect 
+local-data: "google.co.il CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.il" redirect 
+local-data: "www.google.co.il CNAME forcesafesearch.google.com" 
+local-zone: "google.im" redirect 
+local-data: "google.im CNAME forcesafesearch.google.com" 
+local-zone: "www.google.im" redirect 
+local-data: "www.google.im CNAME forcesafesearch.google.com" 
+local-zone: "google.co.in" redirect 
+local-data: "google.co.in CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.in" redirect 
+local-data: "www.google.co.in CNAME forcesafesearch.google.com" 
+local-zone: "google.iq" redirect 
+local-data: "google.iq CNAME forcesafesearch.google.com" 
+local-zone: "www.google.iq" redirect 
+local-data: "www.google.iq CNAME forcesafesearch.google.com" 
+local-zone: "google.is" redirect 
+local-data: "google.is CNAME forcesafesearch.google.com" 
+local-zone: "www.google.is" redirect 
+local-data: "www.google.is CNAME forcesafesearch.google.com" 
+local-zone: "google.it" redirect 
+local-data: "google.it CNAME forcesafesearch.google.com" 
+local-zone: "www.google.it" redirect 
+local-data: "www.google.it CNAME forcesafesearch.google.com" 
+local-zone: "google.je" redirect 
+local-data: "google.je CNAME forcesafesearch.google.com" 
+local-zone: "www.google.je" redirect 
+local-data: "www.google.je CNAME forcesafesearch.google.com" 
+local-zone: "google.com.jm" redirect 
+local-data: "google.com.jm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.jm" redirect 
+local-data: "www.google.com.jm CNAME forcesafesearch.google.com" 
+local-zone: "google.jo" redirect 
+local-data: "google.jo CNAME forcesafesearch.google.com" 
+local-zone: "www.google.jo" redirect 
+local-data: "www.google.jo CNAME forcesafesearch.google.com" 
+local-zone: "google.co.jp" redirect 
+local-data: "google.co.jp CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.jp" redirect 
+local-data: "www.google.co.jp CNAME forcesafesearch.google.com" 
+local-zone: "google.co.ke" redirect 
+local-data: "google.co.ke CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.ke" redirect 
+local-data: "www.google.co.ke CNAME forcesafesearch.google.com" 
+local-zone: "google.com.kh" redirect 
+local-data: "google.com.kh CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.kh" redirect 
+local-data: "www.google.com.kh CNAME forcesafesearch.google.com" 
+local-zone: "google.ki" redirect 
+local-data: "google.ki CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ki" redirect 
+local-data: "www.google.ki CNAME forcesafesearch.google.com" 
+local-zone: "google.kg" redirect 
+local-data: "google.kg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.kg" redirect 
+local-data: "www.google.kg CNAME forcesafesearch.google.com" 
+local-zone: "google.co.kr" redirect 
+local-data: "google.co.kr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.kr" redirect 
+local-data: "www.google.co.kr CNAME forcesafesearch.google.com" 
+local-zone: "google.com.kw" redirect 
+local-data: "google.com.kw CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.kw" redirect 
+local-data: "www.google.com.kw CNAME forcesafesearch.google.com" 
+local-zone: "google.kz" redirect 
+local-data: "google.kz CNAME forcesafesearch.google.com" 
+local-zone: "www.google.kz" redirect 
+local-data: "www.google.kz CNAME forcesafesearch.google.com" 
+local-zone: "google.la" redirect 
+local-data: "google.la CNAME forcesafesearch.google.com" 
+local-zone: "www.google.la" redirect 
+local-data: "www.google.la CNAME forcesafesearch.google.com" 
+local-zone: "google.com.lb" redirect 
+local-data: "google.com.lb CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.lb" redirect 
+local-data: "www.google.com.lb CNAME forcesafesearch.google.com" 
+local-zone: "google.li" redirect 
+local-data: "google.li CNAME forcesafesearch.google.com" 
+local-zone: "www.google.li" redirect 
+local-data: "www.google.li CNAME forcesafesearch.google.com" 
+local-zone: "google.lk" redirect 
+local-data: "google.lk CNAME forcesafesearch.google.com" 
+local-zone: "www.google.lk" redirect 
+local-data: "www.google.lk CNAME forcesafesearch.google.com" 
+local-zone: "google.co.ls" redirect 
+local-data: "google.co.ls CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.ls" redirect 
+local-data: "www.google.co.ls CNAME forcesafesearch.google.com" 
+local-zone: "google.lt" redirect 
+local-data: "google.lt CNAME forcesafesearch.google.com" 
+local-zone: "www.google.lt" redirect 
+local-data: "www.google.lt CNAME forcesafesearch.google.com" 
+local-zone: "google.lu" redirect 
+local-data: "google.lu CNAME forcesafesearch.google.com" 
+local-zone: "www.google.lu" redirect 
+local-data: "www.google.lu CNAME forcesafesearch.google.com" 
+local-zone: "google.lv" redirect 
+local-data: "google.lv CNAME forcesafesearch.google.com" 
+local-zone: "www.google.lv" redirect 
+local-data: "www.google.lv CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ly" redirect 
+local-data: "google.com.ly CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ly" redirect 
+local-data: "www.google.com.ly CNAME forcesafesearch.google.com" 
+local-zone: "google.co.ma" redirect 
+local-data: "google.co.ma CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.ma" redirect 
+local-data: "www.google.co.ma CNAME forcesafesearch.google.com" 
+local-zone: "google.md" redirect 
+local-data: "google.md CNAME forcesafesearch.google.com" 
+local-zone: "www.google.md" redirect 
+local-data: "www.google.md CNAME forcesafesearch.google.com" 
+local-zone: "google.me" redirect 
+local-data: "google.me CNAME forcesafesearch.google.com" 
+local-zone: "www.google.me" redirect 
+local-data: "www.google.me CNAME forcesafesearch.google.com" 
+local-zone: "google.mg" redirect 
+local-data: "google.mg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.mg" redirect 
+local-data: "www.google.mg CNAME forcesafesearch.google.com" 
+local-zone: "google.mk" redirect 
+local-data: "google.mk CNAME forcesafesearch.google.com" 
+local-zone: "www.google.mk" redirect 
+local-data: "www.google.mk CNAME forcesafesearch.google.com" 
+local-zone: "google.ml" redirect 
+local-data: "google.ml CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ml" redirect 
+local-data: "www.google.ml CNAME forcesafesearch.google.com" 
+local-zone: "google.com.mm" redirect 
+local-data: "google.com.mm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.mm" redirect 
+local-data: "www.google.com.mm CNAME forcesafesearch.google.com" 
+local-zone: "google.mn" redirect 
+local-data: "google.mn CNAME forcesafesearch.google.com" 
+local-zone: "www.google.mn" redirect 
+local-data: "www.google.mn CNAME forcesafesearch.google.com" 
+local-zone: "google.ms" redirect 
+local-data: "google.ms CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ms" redirect 
+local-data: "www.google.ms CNAME forcesafesearch.google.com" 
+local-zone: "google.com.mt" redirect 
+local-data: "google.com.mt CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.mt" redirect 
+local-data: "www.google.com.mt CNAME forcesafesearch.google.com" 
+local-zone: "google.mu" redirect 
+local-data: "google.mu CNAME forcesafesearch.google.com" 
+local-zone: "www.google.mu" redirect 
+local-data: "www.google.mu CNAME forcesafesearch.google.com" 
+local-zone: "google.mv" redirect 
+local-data: "google.mv CNAME forcesafesearch.google.com" 
+local-zone: "www.google.mv" redirect 
+local-data: "www.google.mv CNAME forcesafesearch.google.com" 
+local-zone: "google.mw" redirect 
+local-data: "google.mw CNAME forcesafesearch.google.com" 
+local-zone: "www.google.mw" redirect 
+local-data: "www.google.mw CNAME forcesafesearch.google.com" 
+local-zone: "google.com.mx" redirect 
+local-data: "google.com.mx CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.mx" redirect 
+local-data: "www.google.com.mx CNAME forcesafesearch.google.com" 
+local-zone: "google.com.my" redirect 
+local-data: "google.com.my CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.my" redirect 
+local-data: "www.google.com.my CNAME forcesafesearch.google.com" 
+local-zone: "google.co.mz" redirect 
+local-data: "google.co.mz CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.mz" redirect 
+local-data: "www.google.co.mz CNAME forcesafesearch.google.com" 
+local-zone: "google.com.na" redirect 
+local-data: "google.com.na CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.na" redirect 
+local-data: "www.google.com.na CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ng" redirect 
+local-data: "google.com.ng CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ng" redirect 
+local-data: "www.google.com.ng CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ni" redirect 
+local-data: "google.com.ni CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ni" redirect 
+local-data: "www.google.com.ni CNAME forcesafesearch.google.com" 
+local-zone: "google.ne" redirect 
+local-data: "google.ne CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ne" redirect 
+local-data: "www.google.ne CNAME forcesafesearch.google.com" 
+local-zone: "google.nl" redirect 
+local-data: "google.nl CNAME forcesafesearch.google.com" 
+local-zone: "www.google.nl" redirect 
+local-data: "www.google.nl CNAME forcesafesearch.google.com" 
+local-zone: "google.no" redirect 
+local-data: "google.no CNAME forcesafesearch.google.com" 
+local-zone: "www.google.no" redirect 
+local-data: "www.google.no CNAME forcesafesearch.google.com" 
+local-zone: "google.com.np" redirect 
+local-data: "google.com.np CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.np" redirect 
+local-data: "www.google.com.np CNAME forcesafesearch.google.com" 
+local-zone: "google.nr" redirect 
+local-data: "google.nr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.nr" redirect 
+local-data: "www.google.nr CNAME forcesafesearch.google.com" 
+local-zone: "google.nu" redirect 
+local-data: "google.nu CNAME forcesafesearch.google.com" 
+local-zone: "www.google.nu" redirect 
+local-data: "www.google.nu CNAME forcesafesearch.google.com" 
+local-zone: "google.co.nz" redirect 
+local-data: "google.co.nz CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.nz" redirect 
+local-data: "www.google.co.nz CNAME forcesafesearch.google.com" 
+local-zone: "google.com.om" redirect 
+local-data: "google.com.om CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.om" redirect 
+local-data: "www.google.com.om CNAME forcesafesearch.google.com" 
+local-zone: "google.com.pa" redirect 
+local-data: "google.com.pa CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.pa" redirect 
+local-data: "www.google.com.pa CNAME forcesafesearch.google.com" 
+local-zone: "google.com.pe" redirect 
+local-data: "google.com.pe CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.pe" redirect 
+local-data: "www.google.com.pe CNAME forcesafesearch.google.com" 
+local-zone: "google.com.pg" redirect 
+local-data: "google.com.pg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.pg" redirect 
+local-data: "www.google.com.pg CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ph" redirect 
+local-data: "google.com.ph CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ph" redirect 
+local-data: "www.google.com.ph CNAME forcesafesearch.google.com" 
+local-zone: "google.com.pk" redirect 
+local-data: "google.com.pk CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.pk" redirect 
+local-data: "www.google.com.pk CNAME forcesafesearch.google.com" 
+local-zone: "google.pl" redirect 
+local-data: "google.pl CNAME forcesafesearch.google.com" 
+local-zone: "www.google.pl" redirect 
+local-data: "www.google.pl CNAME forcesafesearch.google.com" 
+local-zone: "google.pn" redirect 
+local-data: "google.pn CNAME forcesafesearch.google.com" 
+local-zone: "www.google.pn" redirect 
+local-data: "www.google.pn CNAME forcesafesearch.google.com" 
+local-zone: "google.com.pr" redirect 
+local-data: "google.com.pr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.pr" redirect 
+local-data: "www.google.com.pr CNAME forcesafesearch.google.com" 
+local-zone: "google.ps" redirect 
+local-data: "google.ps CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ps" redirect 
+local-data: "www.google.ps CNAME forcesafesearch.google.com" 
+local-zone: "google.pt" redirect 
+local-data: "google.pt CNAME forcesafesearch.google.com" 
+local-zone: "www.google.pt" redirect 
+local-data: "www.google.pt CNAME forcesafesearch.google.com" 
+local-zone: "google.com.py" redirect 
+local-data: "google.com.py CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.py" redirect 
+local-data: "www.google.com.py CNAME forcesafesearch.google.com" 
+local-zone: "google.com.qa" redirect 
+local-data: "google.com.qa CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.qa" redirect 
+local-data: "www.google.com.qa CNAME forcesafesearch.google.com" 
+local-zone: "google.ro" redirect 
+local-data: "google.ro CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ro" redirect 
+local-data: "www.google.ro CNAME forcesafesearch.google.com" 
+local-zone: "google.ru" redirect 
+local-data: "google.ru CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ru" redirect 
+local-data: "www.google.ru CNAME forcesafesearch.google.com" 
+local-zone: "google.rw" redirect 
+local-data: "google.rw CNAME forcesafesearch.google.com" 
+local-zone: "www.google.rw" redirect 
+local-data: "www.google.rw CNAME forcesafesearch.google.com" 
+local-zone: "google.com.sa" redirect 
+local-data: "google.com.sa CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.sa" redirect 
+local-data: "www.google.com.sa CNAME forcesafesearch.google.com" 
+local-zone: "google.com.sb" redirect 
+local-data: "google.com.sb CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.sb" redirect 
+local-data: "www.google.com.sb CNAME forcesafesearch.google.com" 
+local-zone: "google.sc" redirect 
+local-data: "google.sc CNAME forcesafesearch.google.com" 
+local-zone: "www.google.sc" redirect 
+local-data: "www.google.sc CNAME forcesafesearch.google.com" 
+local-zone: "google.se" redirect 
+local-data: "google.se CNAME forcesafesearch.google.com" 
+local-zone: "www.google.se" redirect 
+local-data: "www.google.se CNAME forcesafesearch.google.com" 
+local-zone: "google.com.sg" redirect 
+local-data: "google.com.sg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.sg" redirect 
+local-data: "www.google.com.sg CNAME forcesafesearch.google.com" 
+local-zone: "google.sh" redirect 
+local-data: "google.sh CNAME forcesafesearch.google.com" 
+local-zone: "www.google.sh" redirect 
+local-data: "www.google.sh CNAME forcesafesearch.google.com" 
+local-zone: "google.si" redirect 
+local-data: "google.si CNAME forcesafesearch.google.com" 
+local-zone: "www.google.si" redirect 
+local-data: "www.google.si CNAME forcesafesearch.google.com" 
+local-zone: "google.sk" redirect 
+local-data: "google.sk CNAME forcesafesearch.google.com" 
+local-zone: "www.google.sk" redirect 
+local-data: "www.google.sk CNAME forcesafesearch.google.com" 
+local-zone: "google.com.sl" redirect 
+local-data: "google.com.sl CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.sl" redirect 
+local-data: "www.google.com.sl CNAME forcesafesearch.google.com" 
+local-zone: "google.sn" redirect 
+local-data: "google.sn CNAME forcesafesearch.google.com" 
+local-zone: "www.google.sn" redirect 
+local-data: "www.google.sn CNAME forcesafesearch.google.com" 
+local-zone: "google.so" redirect 
+local-data: "google.so CNAME forcesafesearch.google.com" 
+local-zone: "www.google.so" redirect 
+local-data: "www.google.so CNAME forcesafesearch.google.com" 
+local-zone: "google.sm" redirect 
+local-data: "google.sm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.sm" redirect 
+local-data: "www.google.sm CNAME forcesafesearch.google.com" 
+local-zone: "google.sr" redirect 
+local-data: "google.sr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.sr" redirect 
+local-data: "www.google.sr CNAME forcesafesearch.google.com" 
+local-zone: "google.st" redirect 
+local-data: "google.st CNAME forcesafesearch.google.com" 
+local-zone: "www.google.st" redirect 
+local-data: "www.google.st CNAME forcesafesearch.google.com" 
+local-zone: "google.com.sv" redirect 
+local-data: "google.com.sv CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.sv" redirect 
+local-data: "www.google.com.sv CNAME forcesafesearch.google.com" 
+local-zone: "google.td" redirect 
+local-data: "google.td CNAME forcesafesearch.google.com" 
+local-zone: "www.google.td" redirect 
+local-data: "www.google.td CNAME forcesafesearch.google.com" 
+local-zone: "google.tg" redirect 
+local-data: "google.tg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.tg" redirect 
+local-data: "www.google.tg CNAME forcesafesearch.google.com" 
+local-zone: "google.co.th" redirect 
+local-data: "google.co.th CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.th" redirect 
+local-data: "www.google.co.th CNAME forcesafesearch.google.com" 
+local-zone: "google.com.tj" redirect 
+local-data: "google.com.tj CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.tj" redirect 
+local-data: "www.google.com.tj CNAME forcesafesearch.google.com" 
+local-zone: "google.tl" redirect 
+local-data: "google.tl CNAME forcesafesearch.google.com" 
+local-zone: "www.google.tl" redirect 
+local-data: "www.google.tl CNAME forcesafesearch.google.com" 
+local-zone: "google.tm" redirect 
+local-data: "google.tm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.tm" redirect 
+local-data: "www.google.tm CNAME forcesafesearch.google.com" 
+local-zone: "google.tn" redirect 
+local-data: "google.tn CNAME forcesafesearch.google.com" 
+local-zone: "www.google.tn" redirect 
+local-data: "www.google.tn CNAME forcesafesearch.google.com" 
+local-zone: "google.to" redirect 
+local-data: "google.to CNAME forcesafesearch.google.com" 
+local-zone: "www.google.to" redirect 
+local-data: "www.google.to CNAME forcesafesearch.google.com" 
+local-zone: "google.com.tr" redirect 
+local-data: "google.com.tr CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.tr" redirect 
+local-data: "www.google.com.tr CNAME forcesafesearch.google.com" 
+local-zone: "google.tt" redirect 
+local-data: "google.tt CNAME forcesafesearch.google.com" 
+local-zone: "www.google.tt" redirect 
+local-data: "www.google.tt CNAME forcesafesearch.google.com" 
+local-zone: "google.com.tw" redirect 
+local-data: "google.com.tw CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.tw" redirect 
+local-data: "www.google.com.tw CNAME forcesafesearch.google.com" 
+local-zone: "google.co.tz" redirect 
+local-data: "google.co.tz CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.tz" redirect 
+local-data: "www.google.co.tz CNAME forcesafesearch.google.com" 
+local-zone: "google.com.ua" redirect 
+local-data: "google.com.ua CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.ua" redirect 
+local-data: "www.google.com.ua CNAME forcesafesearch.google.com" 
+local-zone: "google.co.ug" redirect 
+local-data: "google.co.ug CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.ug" redirect 
+local-data: "www.google.co.ug CNAME forcesafesearch.google.com" 
+local-zone: "google.co.uk" redirect 
+local-data: "google.co.uk CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.uk" redirect 
+local-data: "www.google.co.uk CNAME forcesafesearch.google.com" 
+local-zone: "google.com.uy" redirect 
+local-data: "google.com.uy CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.uy" redirect 
+local-data: "www.google.com.uy CNAME forcesafesearch.google.com" 
+local-zone: "google.co.uz" redirect 
+local-data: "google.co.uz CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.uz" redirect 
+local-data: "www.google.co.uz CNAME forcesafesearch.google.com" 
+local-zone: "google.com.vc" redirect 
+local-data: "google.com.vc CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.vc" redirect 
+local-data: "www.google.com.vc CNAME forcesafesearch.google.com" 
+local-zone: "google.co.ve" redirect 
+local-data: "google.co.ve CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.ve" redirect 
+local-data: "www.google.co.ve CNAME forcesafesearch.google.com" 
+local-zone: "google.vg" redirect 
+local-data: "google.vg CNAME forcesafesearch.google.com" 
+local-zone: "www.google.vg" redirect 
+local-data: "www.google.vg CNAME forcesafesearch.google.com" 
+local-zone: "google.co.vi" redirect 
+local-data: "google.co.vi CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.vi" redirect 
+local-data: "www.google.co.vi CNAME forcesafesearch.google.com" 
+local-zone: "google.com.vn" redirect 
+local-data: "google.com.vn CNAME forcesafesearch.google.com" 
+local-zone: "www.google.com.vn" redirect 
+local-data: "www.google.com.vn CNAME forcesafesearch.google.com" 
+local-zone: "google.vu" redirect 
+local-data: "google.vu CNAME forcesafesearch.google.com" 
+local-zone: "www.google.vu" redirect 
+local-data: "www.google.vu CNAME forcesafesearch.google.com" 
+local-zone: "google.ws" redirect 
+local-data: "google.ws CNAME forcesafesearch.google.com" 
+local-zone: "www.google.ws" redirect 
+local-data: "www.google.ws CNAME forcesafesearch.google.com" 
+local-zone: "google.rs" redirect 
+local-data: "google.rs CNAME forcesafesearch.google.com" 
+local-zone: "www.google.rs" redirect 
+local-data: "www.google.rs CNAME forcesafesearch.google.com" 
+local-zone: "google.co.za" redirect 
+local-data: "google.co.za CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.za" redirect 
+local-data: "www.google.co.za CNAME forcesafesearch.google.com" 
+local-zone: "google.co.zm" redirect 
+local-data: "google.co.zm CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.zm" redirect 
+local-data: "www.google.co.zm CNAME forcesafesearch.google.com" 
+local-zone: "google.co.zw" redirect 
+local-data: "google.co.zw CNAME forcesafesearch.google.com" 
+local-zone: "www.google.co.zw" redirect 
+local-data: "www.google.co.zw CNAME forcesafesearch.google.com" 
+local-zone: "google.cat" redirect 
+local-data: "google.cat CNAME forcesafesearch.google.com" 
+local-zone: "www.google.cat" redirect 
+local-data: "www.google.cat CNAME forcesafesearch.google.com" 
+
+# Custom Safe Search:
+local-zone: "duckduckgo.com" redirect 
+local-data: "duckduckgo.com CNAME safe.duckduckgo.com" 
+local-zone: "www.duckduckgo.com" redirect 
+local-data: "www.duckduckgo.com CNAME safe.duckduckgo.com" 
+local-zone: "start.duckduckgo.com" redirect 
+local-data: "start.duckduckgo.com CNAME safe.duckduckgo.com" 
+local-zone: "duck.com" redirect 
+local-data: "duck.com CNAME safe.duckduckgo.com" 
+local-zone: "www.duck.com" redirect 
+local-data: "www.duck.com CNAME safe.duckduckgo.com" 
+local-zone: "bing.com" redirect 
+local-data: "bing.com CNAME strict.bing.com" 
+local-zone: "www.bing.com" redirect 
+local-data: "www.bing.com CNAME strict.bing.com" 
+local-zone: "pixabay.com" redirect 
+local-data: "pixabay.com CNAME safesearch.pixabay.com" 
+local-zone: "www.youtube.com" redirect 
+local-data: "www.youtube.com CNAME restrictmoderate.youtube.com" 
+local-zone: "m.youtube.com" redirect 
+local-data: "m.youtube.com CNAME restrictmoderate.youtube.com" 
+local-zone: "youtubei.googleapis.com" redirect 
+local-data: "youtubei.googleapis.com CNAME restrictmoderate.youtube.com" 
+local-zone: "youtube.googleapis.com" redirect 
+local-data: "youtube.googleapis.com CNAME restrictmoderate.youtube.com" 
+local-zone: "www.youtube-nocookie.com" redirect 
+local-data: "www.youtube-nocookie.com CNAME restrictmoderate.youtube.com" 
+local-zone: "yandex.com" redirect 
+local-data: "yandex.com CNAME familysearch.yandex.ru" 
+local-zone: "yandex.ru" redirect 
+local-data: "yandex.ru CNAME familysearch.yandex.ru" 
+local-zone: "yandex.ua" redirect 
+local-data: "yandex.ua CNAME familysearch.yandex.ru" 
+local-zone: "yandex.by" redirect 
+local-data: "yandex.by CNAME familysearch.yandex.ru" 
+local-zone: "yandex.kz" redirect 
+local-data: "yandex.kz CNAME familysearch.yandex.ru" 
+local-zone: "www.yandex.com" redirect 
+local-data: "www.yandex.com CNAME familysearch.yandex.ru" 
+local-zone: "www.yandex.ru" redirect 
+local-data: "www.yandex.ru CNAME familysearch.yandex.ru" 
+local-zone: "www.yandex.ua" redirect 
+local-data: "www.yandex.ua CNAME familysearch.yandex.ru" 
+local-zone: "www.yandex.by" redirect 
+local-data: "www.yandex.by CNAME familysearch.yandex.ru" 
+local-zone: "www.yandex.kz" redirect 
+local-data: "www.yandex.kz CNAME familysearch.yandex.ru" 
