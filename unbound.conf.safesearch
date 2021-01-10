@@ -1,5 +1,7 @@
 server:
 
+# curl --retry 3 "https://raw.githubusercontent.com/MartineauUK/Unbound-Asuswrt-Merlin/dev/unbound.conf.safesearch" -o "/opt/share/unbound/configs/unbound.conf.safesearch"
+
 # Sun Jan 10 16:41:04 GMT 2021
 # Google Safe Search: https://www.google.com/supported_domains
 local-zone: "google.com" redirect 
