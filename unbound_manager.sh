@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.22b5"
-#============================================================================================ © 2019-2020 Martineau v3.22b5
+VERSION="3.22b6"
+#============================================================================================ © 2019-2020 Martineau v3.22b6
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -312,6 +312,10 @@ Smart_LineInsert() {
 Is_HND() {
     [ -n "$(uname -m | grep "aarch64")" ] && { echo Y; return 0; } || { echo N; return 1; }
 }
+Repeat() {                                                      # v3.22
+    # Print 25 '=' use HDRLINE=$(Repeat 25 "=")
+    printf "%${1}s\n" | tr " " "$2"
+}
 Edit_config_options() {
 # v2.12 renamed function
 _quote() {
@@ -419,7 +423,10 @@ Show_credits() {
     printf '\n+======================================================================+\n'
     printf '|  Welcome to the %bunbound Manager/Installation script (Asuswrt-Merlin)%b |\n' "$cBGRE" "$cRESET"
     printf '|                                                                      |\n'
-    printf '|                      Version %b%s%b by Martineau                       |\n' "$cBMAG" "$VERSION" "$cRESET"
+    local local CNT=23;VERSION_LENGTH=${#VERSION}                                   # v3.22
+    [ $VERSION_LENGTH -gt 4 ] && CNT=$((CNT-(VERSION_LENGTH-4)))                    # v3.22
+    local BLANKS=$(Repeat $CNT " ")                                                 # v3.22
+    printf '|                      Version %b%s%b by Martineau%b' "$cBMAG" "$VERSION" "${cRESET}" "${BLANKS}|\n"    # v3.22
     printf '|                                                                      |\n'
 }
 Show_status() {
@@ -923,6 +930,11 @@ welcome_message() {
                             else
                                MENUW_YOUTUBE="$(printf '%b8 %b = %bInstall%b YouTube Ad blocker' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"  # v3.15
                             fi
+                            if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then                    # v3.22
+                               MENUW_SAFESEARCH="$(printf '%b9 %b = %bUninstall%b Safe Search' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"   # v3.22
+                            else
+                               MENUW_SAFESEARCH="$(printf '%b9 %b = %bInstall%b Safe Search e.g. google.com->safesearchgoogle.com' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"  # v3.22
+                            fi
                         else
                             if [ -f /opt/etc/init.d/S61unbound ];then
                                 MENU_S="$(printf '%b3 %b = %bStart%b unbound' "${cBYEL}" "${cRESET}" "${cBGRE}" "${cRESET}")"
@@ -933,6 +945,7 @@ welcome_message() {
                             MENU_T="$(printf '%b6 %b = n/a Install Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}$cGRA")"
                             MENUW_RPZ="$(printf '%b7 %b = n/a Enable DNS Firewall' "${cBYEL}" "${cRESET}$cGRA")"   # v3.02 Hotfix
                             MENUW_YOUTUBE="$(printf '%b8 %b = n/a Install YouTube Ad blocker' "${cBYEL}" "${cRESET}$cGRA")"   # v3.14
+                            MENUW_SAFESEARCH="$(printf '%b8 %b = n/a Install Safe Search' "${cBYEL}" "${cRESET}$cGRA")"   # v3.22
                         fi
                         if [ -f ${CONFIG_DIR}unbound.conf ] && [ -n "$(grep -E "^[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
                             MENU_AD="$(printf '%b5 %b = %bUninstall%b Ad and Tracker blocker (Ad Block)' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"   # v3.15
@@ -951,7 +964,8 @@ welcome_message() {
                         printf "%s\t\t\t\t\t\t%s\n"                 "$MENU_I" "$MENU_AD"           # v3.15
                         printf "%s\t\t\t\t\t\t\t%s\n"               "$MENU_Z" "$MENU_T"
                         printf "%s\t\t\t\t\t\t\t\t\t%s\n"           "$MENU_S" "$MENUW_RPZ"         # v3.02 Hotfix
-                        printf "%s\t\t\t\t\t\t\t\t%s\n"             "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
+                        printf "%s\t\t\t\t\t\t\t\t%b\n"             "$MENU_ST" "$MENUW_YOUTUBE"     # v3.11
+                        printf "\t\t\t\t\t\t\t\t\t\t\t%b\n"         "$MENUW_SAFESEARCH"             # v3.22
                         printf "\n%s\t\t\t\t\t\n"                   "$MENU__"
                         printf "%s\t\t\n"                           "$MENU_VX"
 
@@ -999,6 +1013,7 @@ welcome_message() {
                                   fi
                     ;;
                     8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;   #v3.11
+                    9*|safesearch*) [ -n "$(echo "$MENUW_SAFESEARCH" | grep "Uninstall" )" ] && menu1="safesearch disable" || menu1="safesearch";;   #v3.22
                     u|uf*) ;;                           # v3.14
                     "?") ;;
                     v|vx|vh) ;;                         # v3.06 v3.04
@@ -1404,20 +1419,16 @@ welcome_message() {
                     if [ "$(Unbound_Installed)" == "Y" ];then
                             local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.safesearch"       # v3.22
                             if [ "$menu1" != "safesearchv" ] && [ "$menu1" != "safesearchx" ];then
-                                if [ "$ARG" != "disable" ];then
-                                    if [ -f $CONFIG_ADD ] && [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
+                                if [ "$ARG" != "disable" ];then 
+                                    if [ ! -f $CONFIG_ADD ]; then
+                                        echo -e $cBCYA"\nGenerating Safe Search domains....."$cRESET
+                                        [ "$ARG" != "dev" ] && download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau || download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau dev
+                                        chmod +x /jffs/addons/unbound/unbound_SafeSearch.sh
+                                        sh /jffs/addons/unbound/unbound_SafeSearch.sh
+                                    fi
+                                    if [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
                                         echo -e $cBGRE"\nEnabling Safe Search....."$cRESET
                                         Check_config_add_and_postconf
-                                        Restart_unbound
-                                        local RC=0
-                                    else
-                                        #echo -e $cRED"\a\n\t'$CONFIG_ADD' does not exist!....creating it now"$cRESET
-                                        #download_file $CONFIG_DIR unbound.conf.safesearch martineau dev
-                                        download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau dev
-                                        chmod +x /jffs/addons/unbound/unbound_SafeSearch.sh
-                                        sh /jffs/addons/unbound/unbound_SafeSearch.sh       # v3.22
-                                        echo -e $cBGRE"\nEnabling Safe Search....."$cRESET
-                                        [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ] && Check_config_add_and_postconf
                                         Restart_unbound
                                         local RC=0
                                     fi
@@ -1430,6 +1441,8 @@ welcome_message() {
                                         rm $CONFIG_ADD              # v3.22
                                         Restart_unbound
                                         local RC=0
+                                    else
+                                        echo -e $cBRED"\a\nSafesearch NOT ENABLED?\n"$cRESET
                                     fi
                                 fi
                             else
@@ -4528,7 +4541,7 @@ _quote() {
             Edit_config_options "interface: 127.0.0.1@53" "uncomment"
             [ "${ROUTER:0:8}" != "192.168." ] && sed -i "s~^#access-control: 0\.0\.0\.0/0 allow~access-control: $UNBOUND_LISTENSED/24 allow~1" ${CONFIG_DIR}unbound.conf
             #=====================================TEMPORARY HACK PENDING 'unbound.conf' v1.10 ===========================================
-            sed -i 's~access-control: 192.168.0.0/24 allow~access-control: 192.168.0.0/16 allow~' ${CONFIG_DIR}unbound.conf   # v3.10 Hotfix
+            #sed -i 's~access-control: 192.168.0.0/24 allow~access-control: 192.168.0.0/16 allow~' ${CONFIG_DIR}unbound.conf   # v3.22 v3.10 Hotfix
             #============================================================================================================================
 
             [ -z "$(grep -F "port=0" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "port=0                           # unbound_manager" >> /jffs/configs/dnsmasq.conf.add
@@ -4561,6 +4574,7 @@ _quote() {
             #                                           eth5.502
             #                                           eth6.502
             #                                           wl1.1
+
             if [ $FIRMWARE -ge 38600 ];then                                                     # v3.22
                     ROUTER=$(nvram get wan0_dns)                                                    # v3.22
 
@@ -4569,6 +4583,8 @@ _quote() {
                             for BR in $(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')   # v3.22
                                 do
                                     [ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22
+            # http://www.snbforums.com/threads/unbound_manager-manager-installer-utility-for-unbound-recursive-dns-server-general-questions-discussion-thread-2.67968/post-645861
+                                    [ -n "$(grep -F "interface: $ROUTER" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninterface: $ROUTER\t\t# v386.xx Guest SSID VLAN (dnsmasq disabled)" >> ${CONFIG_DIR}unbound.conf  # v3.22 @juched
                                 done
                     fi
             fi                                                                                  # v3.22
