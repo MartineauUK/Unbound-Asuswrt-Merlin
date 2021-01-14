@@ -933,7 +933,7 @@ welcome_message() {
                             if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then                    # v3.22
                                MENUW_SAFESEARCH="$(printf '%b9 %b = %bUninstall%b Safe Search' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"   # v3.22
                             else
-                               MENUW_SAFESEARCH="$(printf '%b9 %b = %bInstall%b Safe Search e.g. google.com->safesearchgoogle.com' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"  # v3.22
+                               MENUW_SAFESEARCH="$(printf '%b9 %b = %bInstall%b Safe Search e.g. google.com->forcesafesearch.google.com' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"  # v3.22
                             fi
                         else
                             if [ -f /opt/etc/init.d/S61unbound ];then
