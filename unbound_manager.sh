@@ -1013,6 +1013,7 @@ welcome_message() {
                                   fi
                     ;;
                     8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;   #v3.11
+                    safesearchv|safesearchx) ;;         # v3.22
                     9*|safesearch*) [ -n "$(echo "$MENUW_SAFESEARCH" | grep "Uninstall" )" ] && menu1="safesearch disable" || menu1="safesearch";;   #v3.22
                     u|uf*) ;;                           # v3.14
                     "?") ;;
