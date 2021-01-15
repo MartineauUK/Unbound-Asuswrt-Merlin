@@ -58,13 +58,13 @@ VERSION="3.22b6"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 10-Jan-2021
+# Last Updated Date: 15-Jan-2021
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -4561,14 +4561,14 @@ _quote() {
             #                                           eth6.0
             #                                           wl0.2
             #                                           wl0.3
-            #   br2     8000.40xxxxxxxxxx   yes         eth1.501
+            #   br1     8000.40xxxxxxxxxx   yes         eth1.501
             #                                           eth2.501
             #                                           eth3.501
             #                                           eth4.501
             #                                           eth5.501
             #                                           eth6.501
             #                                           wl0.1
-            #   br3     8000.40xxxxxxxxxx   yes         eth1.502
+            #   br2     8000.40xxxxxxxxxx   yes         eth1.502
             #                                           eth2.502
             #                                           eth3.502
             #                                           eth4.502
@@ -4581,11 +4581,19 @@ _quote() {
 
                     if [ -n "$(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')" ];then     # v3.22
                             echo -e "# v386.xx Guest VLAN DNS" >> /jffs/configs/dnsmasq.conf.add    # v3.22
-                            for BR in $(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}')   # v3.22
-                                do
-                                    [ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22
+                            local VLAN_INTERFACES=$(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}' | tr "\n" " ") # v3.22
+                            local I=1
+                            for BR in  $VLAN_INTERFACES  # v3.22
+                                do 
+                                    if [ $I -eq 1 ];then
+                                        local POS=$(grep -nE "^interface: 127.0.0.1@53" ${CONFIG_DIR}unbound.conf | cut -d':' -f1 | tail -n 1)  # v3.22
+                                        sed -i '/AiMesh Guest SSID VLAN TAG/d' ${CONFIG_DIR}unbound.conf
+                                        local I=$((I+1))
+                                    fi
+                                    [ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22                 
             # http://www.snbforums.com/threads/unbound_manager-manager-installer-utility-for-unbound-recursive-dns-server-general-questions-discussion-thread-2.67968/post-645861
-                                    [ -n "$(grep -F "interface: $ROUTER" ${CONFIG_DIR}unbound.conf)" ] && echo -e "server:\ninterface: $ROUTER\t\t# v386.xx Guest SSID VLAN (dnsmasq disabled)" >> ${CONFIG_DIR}unbound.conf  # v3.22 @juched
+                                    local VLAN_IPADDR=$(ifconfig $BR | grep inet  | tr ":" " " | awk ' {print $3}')                                                                                                 
+                                    [ -z "$(grep -F "interface: $VLAN_IPADDR" ${CONFIG_DIR}unbound.conf)" ] && sed -i "${POS}ainterface: $VLAN_IPADDR@53\t\t# v1.12 AiMesh Guest SSID VLAN TAG (dnsmasq disabled) @juched" ${CONFIG_DIR}unbound.conf  # v3.22 @juched
                                 done
                     fi
             fi                                                                                  # v3.22
@@ -4670,6 +4678,8 @@ _quote() {
 
             local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.localhosts\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
             [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.16
+
+            sed -i '/AiMesh Guest SSID VLAN TAG/d' ${CONFIG_DIR}unbound.conf        # v3.22 
 
             # Wipe the 'include: unbound.conf.localhosts'
             #true > $FN                                                     # v3.16
