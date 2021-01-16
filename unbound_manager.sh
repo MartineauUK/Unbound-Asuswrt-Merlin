@@ -64,7 +64,7 @@ VERSION="3.22b6"
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,@sfatula  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
