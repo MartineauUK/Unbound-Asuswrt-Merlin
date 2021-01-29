@@ -1,5 +1,5 @@
 #!/bin/sh
-
+VER="1.01"
 # Original script http://www.snbforums.com/threads/safesearchenforcement-with-unbound.68314/ by SNBForum member @SomeWhereOverTheRainBow
 
 URL="https://www.google.com/supported_domains"
