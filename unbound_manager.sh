@@ -661,7 +661,7 @@ welcome_message() {
               MENUW_STUBBY="$(printf '%bStubby%b = Enable Stubby Integration\n' "${cBYEL}" "${cRESET}")"  # v3.00
               MENUW_DNSMASQ="$(printf '%bdnsmasq%b = Disable dnsmasq [disable | interfaces | nointerfaces]\n' "${cBYEL}" "${cRESET}")"  # v3.10
               MENUW_VIEWS="$(printf '%bviews%b = [? | uninstall] | {view_name [? | remove]} | {view_name [[type] domain_name[...] | IP_address[...]] [del]} ]\n' "${cBYEL}" "${cRESET}")"
-              MENUW_SAFESEARCH="$(printf '%bsafesearch%b = Enable Safe Search [disable] e.g. redirect 'google.com' to 'forcesafesearch.google.com' \n' "${cBYEL}" "${cRESET}")"
+              MENUW_SAFESEARCH="$(printf '%bsafesearch%b = Enable Safe Search [disable | status | ? ] e.g. redirect 'google.com' to 'forcesafesearch.google.com' \n' "${cBYEL}" "${cRESET}")"
               MENUW_DOT="$(printf '%bDoT%b = Enable DNS-over-TLS\n' "${cBYEL}" "${cRESET}")"
               MENUW_RPZ="$(printf '%bfirewall%b = Enable DNS Firewall [disable | ?]\n' "${cBYEL}" "${cRESET}")"  # v3.02
               MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
@@ -1420,7 +1420,21 @@ welcome_message() {
                     if [ "$(Unbound_Installed)" == "Y" ];then
                             local CONFIG_ADD="/opt/share/unbound/configs/unbound.conf.safesearch"       # v3.22
                             if [ "$menu1" != "safesearchv" ] && [ "$menu1" != "safesearchx" ];then
-                                if [ "$ARG" != "disable" ];then 
+                                case "$ARG" in
+                                    status|"?")
+                                    if [ -n "$(grep -F "unbound.conf.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
+                                        echo -e "\n\t"${cBMAG}$(grep -c "redirect" /opt/share/unbound/configs/unbound.conf.safesearch)$cBGRE "Safe Search domain redirects e.g.\n"$cRESET
+                                        for ARG in google.com youtube.com duckduckgo.com bing.com yandex.com pixabay.com
+                                            do
+                                                dig $ARG | grep -iA 1 cname
+                                                echo -e
+                                            done
+                                            echo -e $cBCYA"\tetc.\n"$cRESET
+                                    else
+                                        echo -e $cBRED"\n\a\tSafe Search domain redirects NOT ENABLED!"
+                                    fi
+                                ;;
+                                    '') 
                                     if [ ! -f $CONFIG_ADD ]; then
                                         echo -e $cBCYA"\nGenerating Safe Search domains....."$cRESET
                                         [ "$ARG" != "dev" ] && download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau || download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau dev
@@ -1433,7 +1447,8 @@ welcome_message() {
                                         Restart_unbound
                                         local RC=0
                                     fi
-                                else
+                                ;;
+                                disable)
                                     if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
                                         echo -e $cBGRE"\nDisabling Safe Search....."$cRESET
                                         [ "$VERBOSE" == "Y" ] && echo -e $cBCYA"Removing $cBGRE'include: \"$CONFIG_ADD\" ${cBCYA}from '${CONFIG_DIR}unbound.conf'"$cBGRA
@@ -1445,7 +1460,8 @@ welcome_message() {
                                     else
                                         echo -e $cBRED"\a\nSafesearch NOT ENABLED?\n"$cRESET
                                     fi
-                                fi
+                                ;;
+                                esac
                             else
                                local FN=$CONFIG_ADD
                                [ "$menu1" == "safesearchv" ] && local ACCESS="--view"
