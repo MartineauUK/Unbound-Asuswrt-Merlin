@@ -17,7 +17,7 @@ for DOMAIN in $DOMAINS;do
 done
 echo -e "\n# Youtube Safe Search:" >> "${FN}"                   # Martineau Hack
 #for DOMAIN in youtube; do
-    for PREFIX in youtube www.youtube m.youtube youtubei.googleapis youtube.googleapis www.youtube-nocookie;do  # Martineau Hac
+    for PREFIX in youtube www.youtube m.youtube youtubei.googleapis youtube.googleapis youtube-nocookie www.youtube-nocookie;do  # Martineau Hac
         printf 'local-zone: "%s.com" redirect \n' $PREFIX >> "${FN}"
         printf 'local-data: "%s.com CNAME restrictmoderate.youtube.com" \n' $PREFIX >> "${FN}"
     done
@@ -41,6 +41,13 @@ echo -e "\n# Bing Safe Search:" >> "${FN}"                      # Martineau Hack
     for PREFIX in bing www.bing;do  # Martineau Hac
         printf 'local-zone: "%s.com" redirect \n' $PREFIX >> "${FN}"
         printf 'local-data: "%s.com CNAME strict.bing.com" \n' $PREFIX >> "${FN}"
+    done
+#done
+echo -e "\n# QWant Safe Api:" >> "${FN}"                      # Martineau Hack
+#for DOMAIN in qwant;do
+    for PREFIX in api.qwant.com;do
+        printf 'local-zone: "%s" redirect \n' $PREFIX >> "${FN}"
+        printf 'local-data: "%s CNAME safe%s" \n' $PREFIX $PREFIX >> "${FN}"
     done
 #done
 echo -e "\n# pixabay Safe Search:" >> "${FN}"                   # Martineau Hack
