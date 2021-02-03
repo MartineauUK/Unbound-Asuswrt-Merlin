@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23b"
-#============================================================================================ © 2019-2021 Martineau v3.23b
+VERSION="3.23b1"
+#============================================================================================ © 2019-2021 Martineau v3.23b1
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -1302,8 +1302,8 @@ welcome_message() {
                             fi
                         else
                             # List available .conf files
-                            echo -e $cBMAG
-                            ls -lAhC /opt/share/unbound/configs/                # v1.22
+                            echo -e $cRESET"\n\t${cBMAG}'unbound.conf'$cBGRE Configuration backups\n"$cRESET    # v3.23
+                            ls -lahecr /opt/share/unbound/configs/*.conf | sed 's/^.*root//'            # v3.23
                             echo -en $cRESET
                         fi
                     else
