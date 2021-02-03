@@ -64,7 +64,7 @@ VERSION="3.23b"
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,@sfatula  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -1188,7 +1188,7 @@ welcome_message() {
                     [ $? -eq 1 ] && { exit_message; exit 0; } || echo -en $cRESET"\nunbound uninstall CANCELled\n"$cRESET           # v2.05 v2.00
                     #break
                 ;;
-                v|vx|vb|vh)                                             # v3.06
+                v|vx|vh|vhb|vb" "*)                                     # v3.23 v3.06
                     case $menu1 in
                         v|vh) ACCESS="--view"                           # v1.11 View/Readonly
                               [ ! -d /opt/share/unbound/configs/doc ] && mkdir /opt/share/unbound/configs/doc     # v3.06
@@ -1199,8 +1199,17 @@ welcome_message() {
                         vx) ACCESS="--unix"                             # Edit in Unix format
                             local PRE_MD5="$(md5sum ${CONFIG_DIR}unbound.conf | awk '{print $1}')"              # v3.05
                         ;;
-                        vb) echo -e "\n"$(Backup_unbound_config "msg")  # v1.27
-                            continue
+                        vb" "*)                                         # v3.23 
+                                if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then    # v3.23
+                                    ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"  # v3.23
+                                fi
+                                if [ "$ARG" == "?" ];then # v3.23
+                                    echo -e $cRESET"\n\t${cBMAG}'unbound.conf'$cBGRE Configuration backups\n"$cRESET    # v3.23
+                                    ls -lahecr /opt/share/unbound/configs/*.conf | sed 's/^.*root//'            # v3.23
+                                else
+                                    echo -e "\n"$(Backup_unbound_config "msg" $ARG)  # v3.23 v1.27
+                                fi
+                                continue
                         ;;
                     esac
 
@@ -2933,7 +2942,7 @@ Get_RootDNS() {
 }
 Backup_unbound_config() {
     local NOW=$(date +"%Y%m%d-%H%M%S") # v1.27
-    local BACKUP_CONFIG=$NOW"_unbound.conf"
+    [ -z "$2" ] && local BACKUP_CONFIG=$NOW"_unbound.conf" || { [ -z "$(echo $2 | grep -E ".conf$")" ] && local BACKUP_CONFIG=$2".conf" || local BACKUP_CONFIG=$2 ; }   # v3.23
     cp -p ${CONFIG_DIR}unbound.conf /opt/share/unbound/configs/$BACKUP_CONFIG
     if [ "$1" == "msg" ];then
         echo -e $cRESET"\nActive $cBMAG'unbound.conf' ${cRESET}backed up to $cBMAG'/opt/share/unbound/configs/$BACKUP_CONFIG'"$cRESET
