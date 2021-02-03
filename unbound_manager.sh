@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.22b6"
-#============================================================================================ © 2019-2020 Martineau v3.22b6
+VERSION="3.22"
+#============================================================================================ © 2019-2021 Martineau v3.22
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.22b6"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 15-Jan-2021
+# Last Updated Date: 02-Feb-2021
 #
 # Description:
 #
@@ -1014,10 +1014,16 @@ welcome_message() {
                     ;;
                     8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;   #v3.11
                     safesearchv|safesearchx) ;;         # v3.22
-                    9*|safesearch*) [ -n "$(echo "$MENUW_SAFESEARCH" | grep "Uninstall" )" ] && menu1="safesearch disable" || menu1="safesearch";;   #v3.22
+                    9*) 															#v3.22
+								  if [ -n "$(echo "$MENUW_SAFESEARCH" | grep "Uninstall" )" ];then
+									[ -n "$(echo "$menu1" | grep -E "9.*\?")" ] && menu1="safesearch ?" || menu1="safesearch disable"
+								  else
+									[ -n "$(echo "$menu1" | grep -E "9.*\?")" ] && menu1="safesearch ?" || menu1="safesearch"
+								  fi
+					;;   
                     u|uf*) ;;                           # v3.14
                     "?") ;;
-                    v|vx|vh) ;;                         # v3.06 v3.04
+                    v|vx|vh|vb) ;;                      # v3.22 v3.06 v3.04
                     l|lo|lx) ;;                         # v3 .12
                     debug) ;;                           # v3.04
                     rl) ;;                              # v3.04
@@ -1424,7 +1430,7 @@ welcome_message() {
                                     status|"?")
                                     if [ -n "$(grep -F "unbound.conf.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
                                         echo -e "\n\t"${cBMAG}$(grep -c "redirect" /opt/share/unbound/configs/unbound.conf.safesearch)$cBGRE "Safe Search domain redirects e.g.\n"$cRESET
-                                        for ARG in google.com youtube.com duckduckgo.com bing.com yandex.com pixabay.com
+                                        for ARG in google.com youtube.com duckduckgo.com bing.com yandex.com api.qwant.com pixabay.com	# v3.22 @SomeWhereOverTheRainbow
                                             do
                                                 dig $ARG | grep -iA 1 cname
                                                 echo -e
@@ -1435,18 +1441,9 @@ welcome_message() {
                                     fi
                                 ;;
                                     '') 
-                                    if [ ! -f $CONFIG_ADD ]; then
-                                        echo -e $cBCYA"\nGenerating Safe Search domains....."$cRESET
-                                        [ "$ARG" != "dev" ] && download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau || download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau dev
-                                        chmod +x /jffs/addons/unbound/unbound_SafeSearch.sh
-                                        sh /jffs/addons/unbound/unbound_SafeSearch.sh
-                                    fi
-                                    if [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
-                                        echo -e $cBGRE"\nEnabling Safe Search....."$cRESET
-                                        Check_config_add_and_postconf
-                                        Restart_unbound
-                                        local RC=0
-                                    fi
+									Configure_SafesearchDomains $ARG2
+                                    Restart_unbound
+                                    local RC=0
                                 ;;
                                 disable)
                                     if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
@@ -1676,9 +1673,9 @@ EOF
                        if [ -z "$ARG" ] || [ "$ARG" == "disable" ];then                 # v3.16
                             if [ "$ARG" == "disable" ];then
                                 AUTO_REPLY11="?"
-                                echo
-                                Option_Disable_dnsmasq "$AUTO_REPLY11" "$ARG"   # unbound will be the DNS server for ALl LAN Clients
-                                local RC=$?
+                                echo -e					
+                                Option_Disable_dnsmasq "$AUTO_REPLY11" "$ARG"   # unbound will be the DNS server for ALL LAN Clients
+								local RC=$?				
                             else
                                 case "$ARG" in
                                     "") Disable_dnsmasq                                 # Reinstate dnsmasq as the DNS reolver for ALL LAN Clients.
@@ -4671,6 +4668,13 @@ _quote() {
                         fi
                     done
             fi
+			
+			if [ -f /jffs/configs/dnsmasq.conf.add ];then						# v3.22
+				if [ $(grep -Ec "^host-record=[safe|force]" /jffs/configs/dnsmasq.conf.add) -gt 0 ];then
+					echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting dnsmasq Safe search domains 'host-record=safe*/force*' directives to 'unbound'....."$cRESET
+					Configure_SafesearchDomains	# v3.22
+				fi
+			fi
 
             # Must be processed last as 'dnsmasq {nointerfaces | interfaces} wipes every thing from first interface to EOF!
             Convert_dnsmasq_Interfaces
@@ -4763,12 +4767,13 @@ Convert_dnsmasq_LocalHosts() {
                     fi
                 done
 
-            if [ -f /etc/hosts ] || [ -f /var/lib/misc/dnsmasq.leases ];then      # v3.16 v3.15
-                [ -f /etc/hosts ] && cat /etc/hosts.dnsmasq | tr ' ' ';' >> /tmp/localhosts               # v3.16
+            if [ -f /etc/hosts ] || [ -f /jffs/addons/YazDHCP.d/.staticlist ] || [ -f /var/lib/misc/dnsmasq.leases ];then      # v3.22 v3.16 v3.15
+				[ -f /jffs/addons/YazDHCP.d/.staticlist ] && awk 'BEGIN { -F","; OFS = ";"; ORS = "\n"  } {print $3}' /var/lib/misc/dnsmasq.leases >> /tmp/localhosts    # v3.22
+				[ -f /etc/hosts.dnsmasq ] && cat /etc/hosts.dnsmasq | tr ' ' ';' >> /tmp/localhosts               # v3.22 v3.16
                 [ -f /var/lib/misc/dnsmasq.leases ] && awk 'BEGIN { OFS = ";"; ORS = "\n"  } {print $3,$4}' /var/lib/misc/dnsmasq.leases >> /tmp/localhosts   # v3.16
-            fi
+			fi
             if [ -f /tmp/localhosts ];then
-                echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts'/'/var/lib/misc/dnsmasq.leases' local hosts to 'unbound'....."$cRESET
+                echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting '/etc/hosts.dnsmasq'/'/var/lib/misc/dnsmasq.leases' local hosts to 'unbound'....."$cRESET
                 for LINE in  $(sort -t. -g -k4 /tmp/localhosts | uniq)                # v3.16
                     do
                         IP_ADDR="$(echo "$LINE" | awk -F";" '{print $1}')"
@@ -5253,7 +5258,21 @@ _quote() {
         /opt/etc/init.d/S80pixelserv-tls start
     fi
 }
+Configure_SafesearchDomains() {
 
+	local ARG=$1
+	
+	if [ ! -f $CONFIG_ADD ]; then
+		echo -e $cBCYA"\nGenerating Safe Search domains....."$cRESET
+		[ "$ARG" != "dev" ] && download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau || download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau dev
+		chmod +x /jffs/addons/unbound/unbound_SafeSearch.sh
+		sh /jffs/addons/unbound/unbound_SafeSearch.sh
+	fi
+	if [ -z "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then
+		echo -e $cBGRE"\nEnabling Safe Search....."$cRESET
+		Check_config_add_and_postconf
+	fi
+}
 
 #=============================================Main=============================================================
 # shellcheck disable=SC2068
