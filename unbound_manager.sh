@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.22"
-#============================================================================================ © 2019-2021 Martineau v3.22
+VERSION="3.23b"
+#============================================================================================ © 2019-2021 Martineau v3.23b
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.22"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 02-Feb-2021
+# Last Updated Date: 03-Feb-2021
 #
 # Description:
 #
@@ -1037,6 +1037,8 @@ welcome_message() {
             fi
 
             [ -n "$DEBUGMODE" ] && set -x                 # v3.10
+    
+            menu1=$(printf "%s" "$menu1" | sed 's/^[ \t]*//;s/[ \t]*$//')       # v3.23 Old-skool strip leading/trailing spaces
 
             case "$menu1" in
                 0|splash)                                           # v2.12
@@ -1602,7 +1604,7 @@ EOF
                         Check_GUI_NVRAM
                     fi
                 ;;
-                sa*|"q?"|fs|oq|oq*|ox|ox*|s+|s-|sp|s*)                      # v2.07 v1.08
+                "q?"|fs|oq|oq*|ox|ox*|s+|s-|sp|sa|s|s" "*)                      # v3.23 v2.07 v1.08
 
                     echo
                     unbound_Control "$menu1"                                # v1.16
