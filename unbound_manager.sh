@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23b2"
-#============================================================================================ © 2019-2021 Martineau v3.23b2
+VERSION="3.23b3"
+#============================================================================================ © 2019-2021 Martineau v3.23b3
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.23b2"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 03-Feb-2021
+# Last Updated Date: 05-Feb-2021
 #
 # Description:
 #
@@ -467,7 +467,7 @@ Show_status() {
                     #sed -i "1s/Date.*Loaded.*$/$TAG/" ${CONFIG_DIR}unbound.conf
                     :
                 fi
-                echo -e $cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET      # v1.19
+                echo -e ${cRESET}$cBMAG"\n"$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"\n"$cRESET      # v3.23 v1.19
                 [ "$1" == "syslog" ] && SayT "$UNBOUND_STATUS $UNBOUND_CONF_VER_TXT"    # v2.18 Hotfix
             else
                 local TAG="Date Loaded by unbound_manager "$(date)")"
@@ -749,9 +749,8 @@ welcome_message() {
 
                 HDR="N"                                     # v1.09
 
-            else
-                echo -e ${cRESET}$cWGRE"\n"$cRESET      # Separator line
             fi
+
             if [ "$1" = "uninstall" ]; then
                 menu1="z"                                   # v1.21
             else
@@ -1857,7 +1856,7 @@ EOF
 
                     echo -e $cBGRA
                     ;;
-                e*)
+                e|exit)                                         # v3.23
                     [ -n "$(echo "$menu1" | grep -E "e.*\?")" ] && exit_message "0" || exit_message
                     break
 
@@ -2284,6 +2283,8 @@ EOF
                     printf '\n\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cRESET" "$menu1" "$cBRED"
                 ;;
             esac
+
+            echo -en ${cWGRE}"\n"$cRESET      # Separator line
 set +x
         done
 }
