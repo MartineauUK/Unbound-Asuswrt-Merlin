@@ -1,0 +1,28 @@
+#!/bin/sh
+VER=1.01
+# v1.01 Martineau Differentiate between 'logger' message  
+
+#logger -t S02haveged "Starting Haveged entropy $0"
+case $1 in															# v1.01
+	start|restart)
+				logger -t S02haveged "Starting Haveged entropy $0"	# v1.01
+	;;
+	stop)
+				logger -t S02haveged "Stopping Haveged entropy $0"	# v1.01
+	;;
+	*)
+				logger -t S02haveged $1 "request....Haveged entropy $0"	# v1.01
+	;;
+esac
+
+# set environment PATH to system binaries
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:$PATH
+export TZ=$(cat /etc/TZ)
+ENABLED=yes
+PROCS=haveged
+ARGS="-w 1024 -d 32 -i 32 -v 1"
+PREARGS=""
+DESC=$PROCS
+PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+. /opt/etc/init.d/rc.func
