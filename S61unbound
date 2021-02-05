@@ -2,7 +2,7 @@
 VER="1.02"
 
 # v1.01 08-May-2020 Martineau Allow dnsmasq bypass; (Stop dnsmasq to release '127.0.0.1@53')
-# v1.02 05-Feb-2020 Martineau Remove 'blocking' NTP spin-loop as per
+# v1.02 05-Feb-2021 Martineau Remove 'blocking' NTP spin-loop as per
 # 		http://www.snbforums.com/threads/mounting-issues-with-add-ons.69807/post-658337
 
 if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
