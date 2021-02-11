@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23b3"
-#============================================================================================ © 2019-2021 Martineau v3.23b3
+VERSION="3.23b4"
+#============================================================================================ © 2019-2021 Martineau v3.23b4
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -1612,7 +1612,7 @@ EOF
                         Check_GUI_NVRAM
                     fi
                 ;;
-                "q?"|fs|oq|oq*|ox|ox*|s+|s-|sp|sa|s|s" "*)                      # v3.23 v2.07 v1.08
+                "q?"|fs|oq|oq*|ox|ox*|s+|s-|sp|sa|s|sgui*|s" "*)                      # v3.23 v2.07 v1.08
 
                     echo
                     unbound_Control "$menu1"                                # v1.16
@@ -1810,10 +1810,20 @@ EOF
                                         Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG"
                                         local RC=$?
                                     else
-                                       YouTube_Adblock "update"    # v3.11
+                                        if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then    # v3.23
+                                            YouTube_Adblock "update"    # v3.11
+                                        else 
+                                            echo -e $cBRED"\a\n\tYouTube Adblock NOT installed!?"$cRESET        # v3.23
+                                            local RC=1
+                                        fi
                                     fi
                                 else
-                                    ${CONFIG_DIR}/adblock/gen_ytadblock.sh "force_newip"           # v3.13
+                                    if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then    # v3.23
+                                        ${CONFIG_DIR}/adblock/gen_ytadblock.sh "force_newip"           # v3.13
+                                    else 
+                                        echo -e $cBRED"\a\n\tYouTube Adblock NOT installed!?"$cRESET        # v3.23
+                                        local RC=1
+                                    fi
                                 fi
                             else
                                 YouTube_Adblock "uninstall"
@@ -3073,6 +3083,17 @@ Customise_config() {
          Edit_config_options "do-ip6: yes" "private-address: fe80::" "uncomment"   # v1.28
          Edit_config_options "do-ip6: no" "comment"                                # v1.28 Remove default IPv6
 
+     fi
+     
+     # TLS Certificate usage https://www.ctrl.blog/entry/unbound-tls-forwarding.html
+     # For @john9572's fork, 'tls-cert-bundle:' is in a different location 
+     #  e.g. http://www.snbforums.com/threads/release-v3-22.69886/post-662313
+     
+     #       Merlin:            tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt" # v1.01 as per @dave14305 minimal config
+     #       @john7572 Fork:    tls-cert-bundle: "/tmp/mnt/Entware/entware/etc/ssl/certs/ca-certificates.crt" # 1.13 @john9572 Fork @Make Wifi Great Again
+     if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then                  # v3.23
+        sed -i "/^tls-cert-bundle:/ s~[^ ]*[^ ]~\"/tmp/mnt/Entware/entware/etc/ssl/certs/ca-certificates.crt\"~2" ${CONFIG_DIR}unbound.conf # v3.23
+        sed -i "/^tls-cert-bundle:/ s~#.*$~# 1\.13 \@john9572 Fork \@Make Wifi Great Again~"${CONFIG_DIR}unbound.conf   # v3.23
      fi
 
      echo -e $cBCYA"Customising unbound configuration Options:"$cRESET
