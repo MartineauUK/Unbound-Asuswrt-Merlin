@@ -2,11 +2,11 @@
 VER="1.02"
 
 # v1.01 08-May-2020 Martineau Allow dnsmasq bypass; (Stop dnsmasq to release '127.0.0.1@53')
-# v1.02 05-Feb-2021 Martineau Remove 'blocking' NTP spin-loop as per
-# 		http://www.snbforums.com/threads/mounting-issues-with-add-ons.69807/post-658337
-
+# v1.02 12-Feb-2021 Martineau Remove spin-loop waiting for NTP, instead ensure event 'restart_diskmon' triggers the actual start of Unbound. @dave14305
+#       see http://www.snbforums.com/threads/mounting-issues-with-add-ons.69807/post-658337
+#       see http://www.snbforums.com/threads/mounting-issues-with-add-ons.69807/post-658396
 if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
-        # Wait for NTP before starting					# v1.02
+        # Wait for NTP before starting
         # ntptimer=0
         # while [ "$(nvram get ntp_ready)" = "0" ] && [ "$ntptimer" -lt "300" ]; do
                 # ntptimer=$((ntptimer+1))
@@ -18,12 +18,19 @@ if [ "$1" = "start" ] || [ "$1" = "restart" ]; then
                 # logger -st "S61unbound" "NTP failed to sync after 5 minutes - please check immediately!"
                 # exit 1
         # fi
-		
-		TXT=
-		# Default unbound+dnsmasq uses 'port: 53535'; if not then assume dnsmasq bypass ('port 53')
-		[ -z "$(grep "^port: 53535" /opt/var/lib/unbound/unbound.conf)" ] && { service stop_dnsmasq; TXT="(bypass dnsmasq)"; } # (Release '127.0.0.1@53')
-		
-        logger -t S61unbound "$1 Unbound DNS server $TXT $0"		
+        if [ "$(nvram get ntp_ready)" = "0" ];then              # v1.02 Ensure event 'restart_diskmon' triggers the actual start of Unbound.
+            FN="/jffs/scripts/service-event-end"
+            [ ! -f $FN ] && { echo "#!/bin/sh" > $FN; chmod +x $FN; }
+            [ -z "$(grep "unbound" $FN)" ] && echo -e "if [ "\$2" = "diskmon" ]; then { sh /jffs/addons/unbound/unbound_manager.sh restart & } ; fi # unbound_manager" >> $FN   # v1.02
+            logger -t S61unbound "$1 Unbound DNS server delayed for NTP synch event trigger 'restart_diskmon'"  # v1.02
+            exit 99
+        fi
+
+        TXT=
+        # Default unbound+dnsmasq uses 'port: 53535'; if not then assume dnsmasq bypass ('port 53')
+        [ -z "$(grep "^port: 53535" /opt/var/lib/unbound/unbound.conf)" ] && { service stop_dnsmasq; TXT="(bypass dnsmasq)"; } # (Release '127.0.0.1@53')
+
+        logger -t S61unbound "$1 Unbound DNS server $TXT $0"
 fi
 
 
