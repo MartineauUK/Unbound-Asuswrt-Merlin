@@ -1019,7 +1019,7 @@ welcome_message() {
                                   else
                                     [ -n "$(echo "$menu1" | grep -E "9.*\?")" ] && menu1="safesearch ?" || menu1="safesearch"
                                   fi
-                    ;;   
+                    ;;
                     u|uf*) ;;                           # v3.14
                     "?") ;;
                     v|vx|vh|vb) ;;                      # v3.22 v3.06 v3.04
@@ -1036,7 +1036,7 @@ welcome_message() {
             fi
 
             [ -n "$DEBUGMODE" ] && set -x                 # v3.10
-    
+
             menu1=$(printf "%s" "$menu1" | sed 's/^[ \t]*//;s/[ \t]*$//')       # v3.23 Old-skool strip leading/trailing spaces
 
             case "$menu1" in
@@ -1198,7 +1198,7 @@ welcome_message() {
                         vx) ACCESS="--unix"                             # Edit in Unix format
                             local PRE_MD5="$(md5sum ${CONFIG_DIR}unbound.conf | awk '{print $1}')"              # v3.05
                         ;;
-                        vb" "*)                                         # v3.23 
+                        vb" "*)                                         # v3.23
                                 if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then    # v3.23
                                     ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"  # v3.23
                                 fi
@@ -1450,7 +1450,7 @@ welcome_message() {
                                         echo -e $cBRED"\n\a\tSafe Search domain redirects NOT ENABLED!"
                                     fi
                                 ;;
-                                    '') 
+                                    '')
                                     Configure_SafesearchDomains $ARG2
                                     Restart_unbound
                                     local RC=0
@@ -1683,9 +1683,9 @@ EOF
                        if [ -z "$ARG" ] || [ "$ARG" == "disable" ];then                 # v3.16
                             if [ "$ARG" == "disable" ];then
                                 AUTO_REPLY11="?"
-                                echo -e                 
+                                echo -e
                                 Option_Disable_dnsmasq "$AUTO_REPLY11" "$ARG"   # unbound will be the DNS server for ALL LAN Clients
-                                local RC=$?             
+                                local RC=$?
                             else
                                 case "$ARG" in
                                     "") Disable_dnsmasq                                 # Reinstate dnsmasq as the DNS reolver for ALL LAN Clients.
@@ -1812,7 +1812,7 @@ EOF
                                     else
                                         if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then    # v3.23
                                             YouTube_Adblock "update"    # v3.11
-                                        else 
+                                        else
                                             echo -e $cBRED"\a\n\tYouTube Adblock NOT installed!?"$cRESET        # v3.23
                                             local RC=1
                                         fi
@@ -1820,7 +1820,7 @@ EOF
                                 else
                                     if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then    # v3.23
                                         ${CONFIG_DIR}/adblock/gen_ytadblock.sh "force_newip"           # v3.13
-                                    else 
+                                    else
                                         echo -e $cBRED"\a\n\tYouTube Adblock NOT installed!?"$cRESET        # v3.23
                                         local RC=1
                                     fi
@@ -3084,11 +3084,11 @@ Customise_config() {
          Edit_config_options "do-ip6: no" "comment"                                # v1.28 Remove default IPv6
 
      fi
-     
+
      # TLS Certificate usage https://www.ctrl.blog/entry/unbound-tls-forwarding.html
-     # For @john9572's fork, 'tls-cert-bundle:' is in a different location 
+     # For @john9572's fork, 'tls-cert-bundle:' is in a different location
      #  e.g. http://www.snbforums.com/threads/release-v3-22.69886/post-662313
-     
+
      #       Merlin:            tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt" # v1.01 as per @dave14305 minimal config
      #       @john7572 Fork:    tls-cert-bundle: "/tmp/mnt/Entware/entware/etc/ssl/certs/ca-certificates.crt" # 1.13 @john9572 Fork @Make Wifi Great Again
      if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then                  # v3.23
@@ -3670,7 +3670,13 @@ remove_existing_installation() {
 
         # Remove 3rd Party scripts
         sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start            # v2.18 HotFix
+        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/services-start   # v3.23 Strip trailing blank lines
         sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event             # v2.18 HotFix
+        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/service-event    # v3.23 Strip trailing blank lines
+
+        # Remove new-style Unbound start-up triggered by service diskmon    # v3.23 @dave14305
+        sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event-end        # v3.23
+        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/service-event-end    # v3.23 Strip trailing blank lines
 
         echo -en $cRESET
 
@@ -4630,15 +4636,15 @@ _quote() {
                             local VLAN_INTERFACES=$(brctl show | grep -E "^br[1-9].*\.50" | awk '{print $1}' | tr "\n" " ") # v3.22
                             local I=1
                             for BR in  $VLAN_INTERFACES  # v3.22
-                                do 
+                                do
                                     if [ $I -eq 1 ];then
                                         local POS=$(grep -nE "^interface: 127.0.0.1@53" ${CONFIG_DIR}unbound.conf | cut -d':' -f1 | tail -n 1)  # v3.22
                                         sed -i '/AiMesh Guest SSID VLAN TAG/d' ${CONFIG_DIR}unbound.conf
                                         local I=$((I+1))
                                     fi
-                                    [ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22                 
+                                    [ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22
             # http://www.snbforums.com/threads/unbound_manager-manager-installer-utility-for-unbound-recursive-dns-server-general-questions-discussion-thread-2.67968/post-645861
-                                    local VLAN_IPADDR=$(ifconfig $BR | grep inet  | tr ":" " " | awk ' {print $3}')                                                                                                 
+                                    local VLAN_IPADDR=$(ifconfig $BR | grep inet  | tr ":" " " | awk ' {print $3}')
                                     [ -z "$(grep -F "interface: $VLAN_IPADDR" ${CONFIG_DIR}unbound.conf)" ] && sed -i "${POS}ainterface: $VLAN_IPADDR@53\t\t# v1.12 AiMesh Guest SSID VLAN TAG (dnsmasq disabled) @juched" ${CONFIG_DIR}unbound.conf  # v3.22 @juched
                                 done
                     fi
@@ -4701,7 +4707,7 @@ _quote() {
                         fi
                     done
             fi
-            
+
             if [ -f /jffs/configs/dnsmasq.conf.add ];then                       # v3.22
                 if [ $(grep -Ec "^host-record=[safe|force]" /jffs/configs/dnsmasq.conf.add) -gt 0 ];then
                     echo -e ${cBCYA}$(date "+%H:%M:%S")" Converting dnsmasq Safe search domains 'host-record=safe*/force*' directives to 'unbound'....."$cRESET
@@ -4732,7 +4738,7 @@ _quote() {
             local TO="$(awk '/^include.*\/opt\/share\/unbound\/configs\/unbound\.conf\.localhosts\"/ {print NR}' "${CONFIG_DIR}unbound.conf")";local FROM=$((TO - 1))
             [ -n "$TO" ] && sed -i "$FROM,$TO d" ${CONFIG_DIR}unbound.conf                     # v3.16
 
-            sed -i '/AiMesh Guest SSID VLAN TAG/d' ${CONFIG_DIR}unbound.conf        # v3.22 
+            sed -i '/AiMesh Guest SSID VLAN TAG/d' ${CONFIG_DIR}unbound.conf        # v3.22
 
             # Wipe the 'include: unbound.conf.localhosts'
             #true > $FN                                                     # v3.16
@@ -5294,7 +5300,7 @@ _quote() {
 Configure_SafesearchDomains() {
 
     local ARG=$1
-    
+
     if [ ! -f $CONFIG_ADD ]; then
         echo -e $cBCYA"\nGenerating Safe Search domains....."$cRESET
         [ "$ARG" != "dev" ] && download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau || download_file /jffs/addons/unbound unbound_SafeSearch.sh martineau dev
