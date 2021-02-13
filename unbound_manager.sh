@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23b4"
-#============================================================================================ © 2019-2021 Martineau v3.23b4
+VERSION="3.23b5"
+#============================================================================================ © 2019-2021 Martineau v3.23b5
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.23b4"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 05-Feb-2021
+# Last Updated Date: 13-Feb-2021
 #
 # Description:
 #
@@ -3090,7 +3090,7 @@ Customise_config() {
      #  e.g. http://www.snbforums.com/threads/release-v3-22.69886/post-662313
 
      #       Merlin:            tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt" # v1.01 as per @dave14305 minimal config
-     #       @john7572 Fork:    tls-cert-bundle: "/tmp/mnt/Entware/entware/etc/ssl/certs/ca-certificates.crt" # 1.13 @john9572 Fork @Make Wifi Great Again
+     #       @john9572 Fork:    tls-cert-bundle: "/tmp/mnt/Entware/entware/etc/ssl/certs/ca-certificates.crt" # 1.13 @john9572 Fork @Make Wifi Great Again
      if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then                  # v3.23
         sed -i "/^tls-cert-bundle:/ s~[^ ]*[^ ]~\"/tmp/mnt/Entware/entware/etc/ssl/certs/ca-certificates.crt\"~2" ${CONFIG_DIR}unbound.conf # v3.23
         sed -i "/^tls-cert-bundle:/ s~#.*$~# 1\.13 \@john9572 Fork \@Make Wifi Great Again~"${CONFIG_DIR}unbound.conf   # v3.23
@@ -4582,6 +4582,7 @@ _quote() {
 
         local ARG=$1
         local ROUTER="$(nvram get lan_ipaddr_rt)"      # v3.10 Hotfix
+        [ $(echo "$ROUTER" | awk '{print NF}') -eq 2 ] && ROUTER=$(echo "$ROUTER" | tr " " ",")                             # v3.23 @juched
         local UNBOUND_LISTEN=$ROUTER                  # v3.11 Hotfix
         local UNBOUND_LISTENSED=$(_quote "$UNBOUND_LISTEN")
 
