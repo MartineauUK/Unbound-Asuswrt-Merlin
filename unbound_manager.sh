@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23b5"
-#============================================================================================ © 2019-2021 Martineau v3.23b5
+VERSION="3.23b6"
+#============================================================================================ © 2019-2021 Martineau v3.23b6
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.23b5"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 13-Feb-2021
+# Last Updated Date: 24-Feb-2021
 #
 # Description:
 #
@@ -865,7 +865,12 @@ welcome_message() {
 
                                         if [ -f /jffs/addons/unbound/unboundstats_www.asp ];then
                                             GUI_TAB=                                                    # v2.15 'sgui uninstall=' ?
-                                            EXTENDEDSTATS_OPTION=$cBYEL"$HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/"$(grep -i unbound /tmp/menuTree.js  | grep -Eo "(user.*\.asp)")$cRESET # v2.16
+                                            if [ -f /tmp/menuTree.js ];then                                                     # v3.23
+                                                EXTENDEDSTATS_OPTION=$cBYEL"$HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/"$(grep -i unbound /tmp/menuTree.js  | grep -Eo "(user.*\.asp)")$cRESET # v2.16
+                                            else
+                                                # Error unbound is not ACTUALLY in '/tmp/menuTree.js' so indicate user should run 'sgui'        # v3.23
+                                                GUI_TAB="sgui=Install GUI TAB [all]; "                  # v3.23
+                                            fi
                                         fi
 
                                         MENU_S="$(printf '%bs %b = Show unbound%b statistics (s=Summary Totals; sa=All; %s%b)\n' "${cBYEL}" "${cRESET}" "${EXTENDEDSTATS}" "${GUI_TAB}" "${EXTENDEDSTATS_OPTION}")"   # v2.16
@@ -1340,6 +1345,46 @@ welcome_message() {
                     else
                         echo -e $cBRED"\a\n\t***ERROR Please specify valid domain for logtrace"
                     fi
+                ;;
+                localhost*)                                                                 # v3.23 { domain_name {IP_address | 'del'} }
+                    local ARG=
+                    if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
+                        local ARG="$(printf "%s" "$menu1" | cut -d' ' -f2)"
+                    fi
+                    if [ "$(echo "$menu1" | wc -w)" -ge 3 ];then
+                        local ARG2="$(printf "%s" "$menu1" | cut -d' ' -f3)"
+                    fi
+
+                    if [ "$(Unbound_Installed)" == "Y" ];then
+
+                        [ ! -f /opt/share/unbound/configs/unbound.conf.localhosts ] && true > /opt/share/unbound/configs/unbound.conf.localhosts
+                        if [ -n "$ARG" ] && [ "$ARG" != "del" ];then
+                            if [ -z "$(echo $menu1 | grep -wo "del")" ];then
+                                if [ -n "$(echo "$ARG2" | Is_IPv4)" ];then
+                                    local RTYPE="A"
+                                    echo -en $cBCYA"\nAdding localhost '$ARG' -> '$ARG2'"$cRESET
+                                    echo -e "local-zone: \""${ARG}".\" static\nlocal-data: \"${ARG}. IN $RTYPE $ARG2\"" >> /opt/share/unbound/configs/unbound.conf.localhosts
+                                    sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /opt/share/unbound/configs/unbound.conf.localhosts
+                                    RC=0
+                                else
+                                    echo -e $cBRED"\a\n\t'$ARG2' is NOT a valid IP address!"$cRESET
+                                    local RC=1
+                                fi
+                            else
+                                echo -en $cBCYA"\nDeleting localhost '$ARG $ARG2'"$cRESET
+                                sed -i "/$ARG\./d" /opt/share/unbound/configs/unbound.conf.localhosts
+                                sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /opt/share/unbound/configs/unbound.conf.localhosts
+                                RC=0
+                            fi
+                        else
+                            echo -e $cBRED"\a\n\tMissing 'domain/IP' for 'del' request!"$cRESET
+                            local RC=1
+                        fi
+                    else
+                        echo -e $cBRED"\a\n\tunbound NOT installed!"$cRESET
+                        local RC=1
+                    fi
+                    [ $RC -eq 0 ] && Restart_unbound
                 ;;
                 l|lx|ln*|lo*)                                                    # v1.16
 
@@ -5339,10 +5384,12 @@ if [ "$1" == "-h" ] || [ "$1" == "help" ];then
     exit 0
 fi
 
-if [ "$1" == "debug" ];then                                                          # v3.10
-   DEBUGMODE="$(echo -e ${cRESET}$cWRED"Debug mode enabled"$cRESET)"
-   shift
-   set +x
+if [ "$1" == "debug" ] || [ "$1" == "debugall" ];then                          # v3.23 v3.10
+    if [ "$1" == "debug" ];then
+        DEBUGMODE="$(echo -e ${cRESET}$cWRED"Debug mode enabled"$cRESET)"
+        shift
+    fi
+   [ "$1" == "debug" ] && set +x                    # v3.23
 fi
 
 [ ! -L "/opt/bin/unbound_manager" ] && Script_alias "create"                # v2.06 Hotfix for amtm v1.08
