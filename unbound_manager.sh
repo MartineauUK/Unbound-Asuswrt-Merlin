@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23b6"
-#============================================================================================ © 2019-2021 Martineau v3.23b6
+VERSION="3.23b7"
+#============================================================================================ © 2019-2021 Martineau v3.23b7
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.23b6"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 24-Feb-2021
+# Last Updated Date: 25-Feb-2021
 #
 # Description:
 #
@@ -434,7 +434,7 @@ Show_status() {
 
     if [ "$(Unbound_Installed)" == "Y" ];then
 
-        local CONFIG_STATUS="$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")"   # V3.00
+        local CONFIG_STATUS="Y"   # v3.23 Hack v3.00
 
         if [ -z "$(which unbound-control)" ] || [ "$CONFIG_STATUS" == "Y" ];then # V3.00 v2.03
 
@@ -769,7 +769,7 @@ welcome_message() {
                     if [ "$1" != "nochk" ];then                 # v3.22
                         REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION" | tr -d '"' | sed 's/VERSION\=//')" || REMOTE_VERSION_NUMDOT="?.??" # v3.16 Hotfix v1.11 v1.05
                         if [ -z "$REMOTE_VERSION_NUMDOT" ] || [ "$REMOTE_VERSION_NUMDOT" == "?.??" ];then
-                            echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n"$cRESET
+                            echo -e ${cRESET}$cRED_"\a\t***ERROR Unable to verify Github version...check DNS/Internet access!\n\n"$cRESET
                             REMOTE_VERSION_NUMDOT=
                         else
                             [ "$1" != "nochk" ] && remotemd5="$(curl -${SILENT}fL  --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | md5sum | awk '{print $1}')"  # v3.16 Hotfix v1.11
@@ -837,7 +837,7 @@ welcome_message() {
 
                     # Always rebuild the dynamic menu items if unbound INSTALLED & UP
                     if [ "$1" != "nochk" ];then                                                         # v2.13
-                        if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v2.03
+                        #if [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then # v3.23 v2.03
                             if [ "$(Unbound_Installed)" == "Y" ];then           # Installed?  v2.18 Hotfix @toazd
                                 if [ -n "$(pidof unbound)" ];then   # UP ?
                                     if [ "$EASYMENU" == "N" ];then
@@ -885,7 +885,7 @@ welcome_message() {
                                     fi
                                 fi
                             fi
-                        fi
+                        #fi
                     fi
 
                     if [ "$EASYMENU" == "N" ] && [ -n "$(which diversion)" ] ;then
@@ -3155,21 +3155,32 @@ Restart_unbound() {
 
     # v2.12 moved to Restart_unbound() function
 
-    if [ "$2" == "nochk" ] || [ "$(Valid_unbound_config_Syntax "${CONFIG_DIR}unbound.conf")" == "Y" ];then     # v2.03
-
-        if [ "$2" != "nochk" ];then                                                     # v2.13
-           echo -e ${cBCYA}$(date "+%H:%M:%S")" Checking 'unbound.conf' for valid Syntax....."
-           local CHK_Config_Syntax="$(unbound-checkconf ${CONFIG_DIR}unbound.conf 2>/dev/null)"           # v2.03
-           if [ -n "$(echo "$CHK_Config_Syntax" | grep -o "no errors in")" ];then         # v2.03
-              echo -en $cBGRE
-           else
-              echo -en $cBRED"\a"
-              echo "$CHK_Config_Syntax"
-           fi
-
-           # Pre-UP checks...... 'outgoing-interface' and 'interface:' will cause unbound to fail if they cannot bind
-
+    if [ "$2" != "nochk" ];then                                                     # v2.13
+        echo -e ${cBCYA}$(date "+%H:%M:%S")" Checking 'unbound.conf' etc. for valid Syntax....."        # v3.23
+        local CHK_Config_Syntax="$(unbound-checkconf $CHECKTHIS 2>&1)"                  # v3.23 v2.03
+        if [ -z "$(echo "$CHK_Config_Syntax" | grep -o "no errors in" )" ];then             # v2.03
+            echo -e $cBRED"\a"
+            unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
+            echo -e $cBRED"\n***ERROR ${cRESET}requested re(Start) of unbound ABORTed! - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file"$cBGRE
+            SayT "***ERROR requested re(Start) of unbound ABORTed! - use option 'vx'$cRESET to correct 'unbound.conf' or ${cBMAG}'rl' to load a valid configuration file"   # v2.14
+            STATUS=1
         fi
+        # v3.23 non-Fatal Warning errors are now reported e.g. duplicates in include files such as the Adblock domain names
+        # e.g.
+        #       [1614273457] unbound-checkconf[27734:0] warning: duplicate local-zone 76gmail.com.
+        #       unbound-checkconf: no errors in /opt/var/lib/unbound/unbound.conf
+        #
+        if [ -n "$(echo "$CHK_Config_Syntax" | grep -o "warning: duplicate")" ];then    # v3.23
+            local DUPLICATES=$(echo "$CHK_Config_Syntax" | awk '{$1="";print $0}' | sed "s~\n~; ~; s~\(no errors.*\)~\\${cRESET}- \\${cBGRE}\1~")           # v3.23
+            echo -e $cBYEL"\a\n\tNon-Fatal: "$DUPLICATES"\n"$cRESET
+            SayT "Non-Fatal: "$DUPLICATES                                               # v3.23
+        fi
+
+       # Pre-UP checks...... 'outgoing-interface' and 'interface:' will cause unbound to fail if they cannot bind
+
+    fi
+
+    if [ $STATUS -eq 0 ];then                                                           # v3.23
 
         # Don't save the cache if unbound is UP and 'rs nocache' requested.
         if [ -n "$(pidof unbound)" ] && [ "$NOCACHE" != "nocache" ];then                # v2.11
@@ -3213,12 +3224,6 @@ Restart_unbound() {
         else
             echo -en $cBCYA
         fi
-    else
-        echo -e $cBRED"\a"
-        unbound-checkconf ${CONFIG_DIR}unbound.conf         # v2.03
-        echo -e $cBRED"\n***ERROR ${cRESET}requested re(Start) of unbound ABORTed! - use option ${cBMAG}'vx'$cRESET to correct $cBMAG'unbound.conf'$cRESET or ${cBMAG}'rl'${cRESET} to load a valid configuration file"$cBGRE
-        SayT "***ERROR requested re(Start) of unbound ABORTed! - use option 'vx'$cRESET to correct 'unbound.conf' or ${cBMAG}'rl' to load a valid configuration file"   # v2.14
-        STATUS=1
     fi
 
     return $STATUS
@@ -4084,8 +4089,8 @@ interface:|outgoing-interface|name:|zonefile:|rpz.*:|url:|tags:|access-control-t
                        grep -vE "$STATEMENTS")"                                            # v3.07
 
     if [ -z "$DUPLICATES"  ];then   # v3.00
-       local CHK_Config_Syntax="$(unbound-checkconf $CHECKTHIS 2>/dev/null)"           # v2.03
-       if [ -z "$(echo "$CHK_Config_Syntax" | grep -o "no errors in" )" ];then         # v2.03
+       local CHK_Config_Syntax="$(unbound-checkconf $CHECKTHIS 2>/dev/null)"            # v2.03
+       if [ -z "$(echo "$CHK_Config_Syntax" | grep -o "no errors in" )" ];then          # v2.03
           local VALID="N"               # v3.00 Invalid Syntax detected
           local RC=1                    # v3.00
        fi
