@@ -64,7 +64,7 @@ VERSION="3.23b9"
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister,francovilar  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -1257,6 +1257,9 @@ welcome_message() {
                             el|el*)
                                 if [ "$(echo "$menu1" | wc -w)" -gt 1 ];then
                                     local FN=$(echo "$menu1" | awk '{print $2}')
+                                else
+                                    echo -en $cRED"\a\n\tAd Block file to be edited not specified"$cRESET   # v3.23 Fix @francovilar
+                                    local FN=
                                 fi
                             ;;
                         esac
