@@ -1264,7 +1264,7 @@ welcome_message() {
                             ;;
                         esac
 
-                        if [ -f $FN ];then
+                        if [ -f "$FN" ];then
                             local PRE_MD5="$(md5sum "$FN" | awk '{print $1}')"
                             nano $ACCESS $FN
                             local POST_MD5="$(md5sum "$FN" | awk '{print $1}')"
