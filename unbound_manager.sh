@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23b8"
-#============================================================================================ © 2019-2021 Martineau v3.23b8
+VERSION="3.23b9"
+#============================================================================================ © 2019-2021 Martineau v3.23b9
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,13 +58,13 @@ VERSION="3.23b8"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 01-Mar-2021
+# Last Updated Date: 02-Mar-2021
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister,francovilar  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -652,7 +652,7 @@ welcome_message() {
         if [ -z "$MENU_Z" ];then                                # v2.12
             if [ "$EASYMENU" != "Y" ];then
               MENU_Z="$(printf '%bz %b = %bRemove%b unbound/unbound_manager\n' "${cBYEL}" "${cRESET}" "${cBRED}" "${cRESET}")"         # v2.06 Hotfix for amtm
-              MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  #v1.28
+              MENU_VB="$(printf '%bvb%b = Backup current %b(%s)%b Configuration [filename]\n' "${cBYEL}" "${cRESET}" "$cBGRE" "${CONFIG_DIR}unbound.conf" "${cRESET}")"  # v3.23 @mister v1.28
               MENU_3="$(printf '%b3 %b = Advanced Tools\n' "${cBYEL}" "${cRESET}")"
               MENU__="$(printf '%b? %b = About Configuration\n' "${cBYEL}" "${cRESET}")"  # v1.17
               MENUW_X="$(printf '%bx %b = Stop unbound\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -1194,7 +1194,7 @@ welcome_message() {
                     [ $? -eq 1 ] && { exit_message; exit 0; } || echo -en $cRESET"\nunbound uninstall CANCELled\n"$cRESET           # v2.05 v2.00
                     #break
                 ;;
-                v|vx|vh|vhb|vb" "*)                                     # v3.23 v3.06
+                v|vx|vh|vhb|vb|vb" "*)                                     # v3.23 @mister v3.06
                     case $menu1 in
                         v|vh) ACCESS="--view"                           # v1.11 View/Readonly
                               [ ! -d /opt/share/unbound/configs/doc ] && mkdir /opt/share/unbound/configs/doc     # v3.06
@@ -1205,7 +1205,7 @@ welcome_message() {
                         vx) ACCESS="--unix"                             # Edit in Unix format
                             local PRE_MD5="$(md5sum ${CONFIG_DIR}unbound.conf | awk '{print $1}')"              # v3.05
                         ;;
-                        vb" "*)                                         # v3.23
+                        vb|vb" "*)                                         # v3.23 @mister
                                 if [ "$(echo "$menu1" | wc -w)" -eq 2 ];then    # v3.23
                                     ARG="$(printf "%s" "$menu1" | cut -d' ' -f2-)"  # v3.23
                                 fi
@@ -1257,14 +1257,11 @@ welcome_message() {
                             el|el*)
                                 if [ "$(echo "$menu1" | wc -w)" -gt 1 ];then
                                     local FN=$(echo "$menu1" | awk '{print $2}')
-                                else
-                                    echo -en $cRED"\a\n\tAd Block file to be edited not specified"$cRESET   # v3.23 Fix @francovilar
-                                    local FN=
                                 fi
                             ;;
                         esac
 
-                        if [ -f "$FN" ];then                                                        # v3.23 Fix @francovilar
+                        if [ -f $FN ];then
                             local PRE_MD5="$(md5sum "$FN" | awk '{print $1}')"
                             nano $ACCESS $FN
                             local POST_MD5="$(md5sum "$FN" | awk '{print $1}')"
