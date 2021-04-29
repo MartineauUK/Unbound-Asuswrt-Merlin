@@ -17,7 +17,7 @@ for DOMAIN in $DOMAINS;do
 done
 echo -e "\n# Youtube Safe Search:" >> "${FN}"                   # Martineau Hack
 #for DOMAIN in youtube; do
-    for PREFIX in youtube www.youtube m.youtube youtubei.googleapis youtube.googleapis youtube-nocookie www.youtube-nocookie;do  # Martineau Hac
+    for PREFIX in www.youtube m.youtube youtubei.googleapis youtube.googleapis www.youtube-nocookie;do  # Martineau Hac
         printf 'local-zone: "%s.com" redirect \n' $PREFIX >> "${FN}"
         printf 'local-data: "%s.com CNAME restrictmoderate.youtube.com" \n' $PREFIX >> "${FN}"
     done
