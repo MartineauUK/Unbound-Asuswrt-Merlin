@@ -10,8 +10,8 @@ echo -e "\n# $(date)\n# Google Safe Search: "$URL >> "${FN}"    # Martineau Hack
 DOMAINS=$(curl $URL 2>/dev/null)
 for DOMAIN in $DOMAINS;do
     DOMAIN=$(echo $DOMAIN | cut -c 2-)
-    printf 'local-zone: "%s" redirect \n' $DOMAIN >> "${FN}"
-    printf 'local-data: "%s CNAME forcesafesearch.google.com" \n' $DOMAIN >> "${FN}"
+    #printf 'local-zone: "%s" redirect \n' $DOMAIN >> "${FN}" ## Disable so android properly recieves push notifications
+    #printf 'local-data: "%s CNAME forcesafesearch.google.com" \n' $DOMAIN >> "${FN}" ## Disable so android properly recieves push notifications
     printf 'local-zone: "www.%s" redirect \n' $DOMAIN >> "${FN}"
     printf 'local-data: "www.%s CNAME forcesafesearch.google.com" \n' $DOMAIN >> "${FN}"
 done
