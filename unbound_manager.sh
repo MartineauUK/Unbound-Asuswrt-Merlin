@@ -58,7 +58,7 @@ VERSION="3.23bA"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 08-May-2021
+# Last Updated Date: 26-May-2021
 #
 # Description:
 #
@@ -2834,7 +2834,7 @@ Use_VPN_Tunnel() {
                 if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
                     Edit_config_options "outgoing-interface:"  "uncomment"
                     # v3.23 https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/issues/20 @AlexanderPavlenko
-                    local VPN_CLIENT_GW=$(ip route | grep "dev tun1${VPN_ID}.*proto" | awk '{print $NF}')   # v3.23 @AlexanderPavlenko
+                    local VPN_CLIENT_GW=$(ip route | grep -E "dev tun1${VPN_ID}.*proto" | awk '{print $NF}')   # v3.23 @AlexanderPavlenko
                     if [ -n "$VPN_CLIENT_GW" ];then         # v3.05
                         sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$VPN_CLIENT_GW/2" ${CONFIG_DIR}unbound.conf
                         if [ "$TRACK" == "debug" ] && [ -z "$(iptables -nvL OUTPUT | grep "DNS")" ];then   # v3.05
