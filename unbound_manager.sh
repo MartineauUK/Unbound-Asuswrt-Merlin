@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23b9"
-#============================================================================================ © 2019-2021 Martineau v3.23b9
+VERSION="3.23bA"
+#============================================================================================ © 2019-2021 Martineau v3.23bA
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,13 +58,13 @@ VERSION="3.23b9"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 03-Mar-2021
+# Last Updated Date: 08-May-2021
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister,francovilar,PeterR  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister,francovilar,PeterR,AlexanderPavlenko  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -1668,7 +1668,7 @@ EOF
                     unbound_Control "$menu1"                                # v1.16
                     #break
                 ;;
-                u|uf*)                                                      # v3.00 v1.07
+                u|uf|uf*)
                     [ "$menu1" == "uf" ] && echo -e ${cRESET}$cWRED"\nForced Update"$cRESET"\n"  # v2.06 v1.07
                     # Safeguard against cURL failure i.e. Github DOWN
                     cp $0 $0.u                                             # v3.06
@@ -2833,7 +2833,8 @@ Use_VPN_Tunnel() {
         1|2|3|4|5)
                 if [ "$(nvram get vpn_client${VPN_ID}_state)" == "2"  ];then
                     Edit_config_options "outgoing-interface:"  "uncomment"
-                    local VPN_CLIENT_GW=$(ip route | grep "dev tun1"${VPN_ID} | awk '{print $NF}')
+                    # v3.23 https://github.com/MartineauUK/Unbound-Asuswrt-Merlin/issues/20 @AlexanderPavlenko
+                    local VPN_CLIENT_GW=$(ip route | grep "dev tun1${VPN_ID}.*proto" | awk '{print $NF}')   # v3.23 @AlexanderPavlenko
                     if [ -n "$VPN_CLIENT_GW" ];then         # v3.05
                         sed -i "/^outgoing-interface:/ s/[^ ]*[^ ]/$VPN_CLIENT_GW/2" ${CONFIG_DIR}unbound.conf
                         if [ "$TRACK" == "debug" ] && [ -z "$(iptables -nvL OUTPUT | grep "DNS")" ];then   # v3.05
@@ -3744,6 +3745,7 @@ remove_existing_installation() {
             if opkg --force-depends --force-removal-of-dependent-packages remove $ENTWARE_UNBOUND; then echo -e $cBGRE"unbound Entware packages '$ENTWARE_UNBOUND' successfully removed"; else echo -e $cBRED"\a\t***Error occurred when removing unbound"$cRESET; fi # v2.07 v1.15
             #if opkg remove haveged; then echo "haveged successfully removed"; else echo "Error occurred when removing haveged"; fi
             #if opkg remove coreutils-nproc; then echo "coreutils-nproc successfully removed"; else echo "Error occurred when removing coreutils-nproc"; fi
+            [ -n "$(which jitterentropy-rngd)" ] && opkg remove haveged >/dev/null  # v3.23 just in case we previously installed pre v3.23
         else
             echo -e $cRED"Unable to remove unbound - 'unbound' not installed?"$cRESET
         fi
@@ -3923,9 +3925,14 @@ install_unbound() {
         Install_Entware_opkg "diffutils"                        # v1.25
         Install_Entware_opkg "bind-dig"                         # v2.09
 
-        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v2.10 v1.26 As per dave14305
-            Install_Entware_opkg "haveged"
-            S02haveged_update
+        # v386.2 installs '/usr/sbin/jitterentropy-rngd'        # v3.23
+        # he doesn't have the decency to personally inform devs despite the fact he's implemented the change!
+        # http://www.snbforums.com/threads/jitterentropy-rngd-high-cpu-use.72340/post-687202
+        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v2.10 v1.26 As per dave14305 http://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/post-542767
+            if [ -z "$(which jitterentropy-rngd)" ];then        # v3.23
+                Install_Entware_opkg "haveged"
+                S02haveged_update
+            fi
         fi
 
         Check_dnsmasq_postconf
@@ -5390,8 +5397,18 @@ if [ "$1" == "-h" ] || [ "$1" == "help" ];then
     clear                                                   # v1.21
     echo -e $cBWHT
     ShowHelp
-    echo -e $cRESET
+    echo -e $cRESET3.23
     exit 0
+fi
+
+# If 'jitterentropy-rngd' installed in RMerlin firmware, then the 'haveged' package is redundant and should be removed  # v3.23
+if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ -n "$(which haveged)" ];then      # v3.23
+    if [ -n "$(which jitterentropy-rngd)" ]; then
+        if [ -n "$(ps -w | grep -v grep | grep "jitterentropy-rngd")" ];then        # v3.23
+            [ -f /opt/etc/init.d/S02haveged ] && /opt/etc/init.d/S02haveged stop
+        fi
+        opkg remove haveged >/dev/null
+    fi
 fi
 
 if [ "$1" == "debug" ] || [ "$1" == "debugall" ];then                          # v3.23 v3.10
