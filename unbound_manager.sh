@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23bA"
+VERSION="3.23bB"
 #============================================================================================ © 2019-2021 Martineau v3.23bA
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
@@ -58,7 +58,7 @@ VERSION="3.23bA"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 26-May-2021
+# Last Updated Date: 12-Aug-2021
 #
 # Description:
 #
@@ -1033,6 +1033,7 @@ welcome_message() {
                     l|lo|lx) ;;                         # v3 .12
                     debug) ;;                           # v3.04
                     rl) ;;                              # v3.04
+                    rs) ;;                              # v3.23
                     "") ;;
                     easy|adv*) ;;
                     e*) ;;
