@@ -1,6 +1,8 @@
 #!/bin/sh
+VER="v1.01"
 
-# Martineau Hack from @Swinson original see http://www.snbforums.com/threads/unbound-dns-vpn-client-w-policy-rules.67370/post-653427
+# v1.00 12 Oct 2021 Martineau Hack from @Swinson original see http://www.snbforums.com/threads/unbound-dns-vpn-client-w-policy-rules.67370/post-653427
+
 
 Check_Tun_Con() {
     ping -c1 -w1 -I tun1$VPN_ID 9.9.9.9
@@ -32,11 +34,13 @@ Post_log() {
 #=============================================================Main==============================================================
 Main() { true; }                                # Syntax that is Atom Shellchecker compatible!
 
+modprobe xt_comment                 # v1.01
+
 [ -z "$2" ] && Post_log "Script request Invalid e.g. Usage: $(basename "$0") 1 start" && exit 1 || Post_log "Starting Script Execution $@"
 
 VPN_ID=$1                                       # The desired VPN instance (1 to 5)
 
-[ -z $(echo "$VPN_ID" | grep -E "[1-5]") ] && { Post_log "Invalid VPN client '$VPN_ID' - use 1-5 e.g. $(basename "$0") 1 start"; exit 1; }
+[ -z $(echo "$VPN_ID" | grep -E "^[1-5]$") ] && { Post_log "Invalid VPN client '$VPN_ID' - use 1-5 e.g. $(basename "$0") 1 start"; exit 1; }    # v1.01
 
 [ -z "$3" ] && MAX_WAIT=150 || MAX_WAIT=$3       # Maximum wait time for tunnel is x 2secs i.e. MAX_WAIT=5 is total 10 secs
 
