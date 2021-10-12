@@ -38,7 +38,7 @@ VPN_ID=$1                                       # The desired VPN instance (1 to
 
 [ -z $(echo "$VPN_ID" | grep -E "[1-5]") ] && { Post_log "Invalid VPN client '$VPN_ID' - use 1-5 e.g. $(basename "$0") 1 start"; exit 1; }
 
-[ -z "$3" ] && MAX_WAIT=150 || MAX_WAIT=5       # Maximum wait time for tunnel is x 2secs i.e. MAX_WAIT=5 is total 10 secs
+[ -z "$3" ] && MAX_WAIT=150 || MAX_WAIT=$3       # Maximum wait time for tunnel is x 2secs i.e. MAX_WAIT=5 is total 10 secs
 
 
 # nat-start must contain see https://github.com/RMerl/asuswrt-merlin.ng/wiki/Policy-based-Port-routing-(manual-method)#installation
