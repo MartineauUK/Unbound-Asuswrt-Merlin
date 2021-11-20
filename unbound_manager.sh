@@ -3090,7 +3090,7 @@ Customise_config() {
      /opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key
      #/opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key 2>/dev/null
      # or use IPv4 ONLY flag '-4'
-     [ "$(nvram get ipv6_service)" == "disabled" ] && /opt/sbin/unbound-anchor -a -4 ${CONFIG_DIR}root.key || /opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key
+     [ "$(nvram get ipv6_service)" == "disabled" ] && /opt/sbin/unbound-anchor -4 -a ${CONFIG_DIR}root.key || /opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key
 
 
      Get_RootDNS                                                                # v1.24                                                             # v1.24 Now a function
