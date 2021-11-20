@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
 VERSION="3.23bB"
-#============================================================================================ © 2019-2021 Martineau v3.23bA
+#============================================================================================ © 2019-2021 Martineau v3.23bB
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.23bB"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 12-Aug-2021
+# Last Updated Date: 20-Nov-2021
 #
 # Description:
 #
@@ -3075,7 +3075,23 @@ Check_config_add_and_postconf() {
 Customise_config() {
 
      echo -e $cBCYA"Generating unbound-anchor 'root.key'....."$cBGRA            # v1.07
+
+    # Suppress
+    # [1635840435] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:503:c27::2:30 port 53
+    # [1635840435] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:dc3::35 port 53
+    # [1635840436] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:7fe::53 port 53
+    # [1635840436] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:500:12::d0d port 53
+    # [1635840436] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:dc3::35 port 53
+    # [1635840436] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:500:200::b port 53
+    # [1635840436] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:503:ba3e::2:30 port 53
+    # [1635840436] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:dc3::35 port 53
+    # [1635840436] libunbound[16108:0] error: udp connect failed: Cannot assign requested address for 2001:503:c27::2:30 port 53
+
      /opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key
+     #/opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key 2>/dev/null
+     # or use IPv4 ONLY flag '-4'
+     [ "$(nvram get ipv6_service)" == "disabled" ] && /opt/sbin/unbound-anchor -a -4 ${CONFIG_DIR}root.key || /opt/sbin/unbound-anchor -a ${CONFIG_DIR}root.key
+
 
      Get_RootDNS                                                                # v1.24                                                             # v1.24 Now a function
 
