@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23bB"
-#============================================================================================ © 2019-2021 Martineau v3.23bB
+VERSION="3.23bC"
+#============================================================================================ © 2019-2021 Martineau v3.23bC
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.23bB"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 20-Nov-2021
+# Last Updated Date: 28-Nov-2021
 #
 # Description:
 #
@@ -3463,14 +3463,15 @@ unbound_Control() {
                 ;;
                 load|rest)
                     if [ -s $FN ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
-                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
+                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")     # v3.08
+                        $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null             # v3.23
+                        $UNBOUNCTRLCMD dump_cache > $FN                         # v3.23 report on loaded cache
                         local CACHE_MEM_MSG=$(unbound-control stats_noreset | grep "msg.cache" | cut -d'=' -f2)
                         local CACHE_MEM_RRSET=$(unbound-control stats_noreset | grep "rrset.cache" | cut -d'=' -f2)
                         local DUMPCACHE_MEM_MSG=$(grep -c "^msg" $FN)
                         local DUMPCACHE_MEM_RRSET=$(grep -c "^;rrset" $FN)
-                        echo -e ${cBCYA}$(date "+%H:%M:%S")" Restoring ${cRESET}unbound cache$cBCYA from $cBGRE'"$FN"'"$cRESET "("$TIMESTAMP")" "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET    # v3.08 v2.12
-                        $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
-                        SayT "unbound cache RESTORED from '"$FN"' ("$TIMESTAMP")" "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET
+                        echo -e ${cBCYA}$(date "+%H:%M:%S")" Restoring ${cRESET}unbound cache$cBCYA from $cBGRE'"$FN"'"$cRESET "("$TIMESTAMP")" "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET
+
                         rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
                     fi
                 ;;
