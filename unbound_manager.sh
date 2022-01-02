@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23bC"
-#============================================================================================ © 2019-2021 Martineau v3.23bC
+VERSION="3.23bD"
+#============================================================================================ © 2019-2022 Martineau v3.23bD
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.23bC"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 28-Nov-2021
+# Last Updated Date: 02-Jan-2021
 #
 # Description:
 #
@@ -310,7 +310,7 @@ Smart_LineInsert() {
 
 }
 Is_HND() {
-    [ -n "$(uname -m | grep "aarch64")" ] && { echo Y; return 0; } || { echo N; return 1; }
+    [ -n "$(/bin/uname -m | grep "aarch64")" ] && { echo Y; return 0; } || { echo N; return 1; }
 }
 Repeat() {                                                      # v3.22
     # Print 25 '=' use HDRLINE=$(Repeat 25 "=")
@@ -2454,7 +2454,7 @@ if [ -n "\$(pidof unbound)" ];then
         UNBOUNDLISTENADDR="127.0.0.1#53535"
         #UNBOUNDLISTENADDR="\$(netstat -nlup | awk '/unbound/ { print \$4 } ' | tr ':' '#')"   # unbound_manager
         pc_append "server=\$UNBOUNDLISTENADDR" \$CONFIG
-        if [ "\$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then   # Requested by @dave14305
+        if [ "\$(/bin/uname -o)" == "ASUSWRT-Merlin-LTS" ];then   # Requested by @dave14305
             pc_delete "resolv-file" \$CONFIG
             pc_append "no-resolv" \$CONFIG
         fi
@@ -2594,7 +2594,7 @@ Stubby_Integration() {
     # Check for firmware support of Stubby (Merlin "dnspriv" or John's fork "stubby")       # v2.08 **Pull Request @dave14305**
     if nvram get rc_support | tr ' ' '\n' | grep -qE "dnspriv|stubby"; then
         # router supports stubby natively
-        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ $FIRMWARE -ge 38406 ];then        # v2.10
+        if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ $FIRMWARE -ge 38406 ];then        # v2.10
             # Merlin firmware
             if [ "$(nvram get dnspriv_enable)" -eq "1" ]; then
                 # set Unbound forward address to 127.0.1.1:53
@@ -3159,7 +3159,7 @@ Customise_config() {
 
      #       Merlin:            tls-cert-bundle: "/etc/ssl/certs/ca-certificates.crt" # v1.01 as per @dave14305 minimal config
      #       @john9572 Fork:    tls-cert-bundle: "/tmp/mnt/Entware/entware/etc/ssl/certs/ca-certificates.crt" # 1.13 @john9572 Fork @Make Wifi Great Again
-     if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then                  # v3.23
+     if [ "$(/bin/uname -o)" == "ASUSWRT-Merlin-LTS" ];then                  # v3.23
         sed -i "/^tls-cert-bundle:/ s~[^ ]*[^ ]~\"/tmp/mnt/Entware/entware/etc/ssl/certs/ca-certificates.crt\"~2" ${CONFIG_DIR}unbound.conf # v3.23
         sed -i "/^tls-cert-bundle:/ s~#.*$~# 1\.13 \@john9572 Fork \@Make Wifi Great Again~"${CONFIG_DIR}unbound.conf   # v3.23
      fi
@@ -3463,15 +3463,14 @@ unbound_Control() {
                 ;;
                 load|rest)
                     if [ -s $FN ];then # v2.13 Change '-f' ==> '-s' (Exists AND NOT Empty!)
-                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")     # v3.08
-                        $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null             # v3.23
-                        $UNBOUNCTRLCMD dump_cache > $FN                         # v3.23 report on loaded cache
+                        local TIMESTAMP=$(date -r $FN "+%Y-%m-%d %H:%M:%S")   # v3.08
                         local CACHE_MEM_MSG=$(unbound-control stats_noreset | grep "msg.cache" | cut -d'=' -f2)
                         local CACHE_MEM_RRSET=$(unbound-control stats_noreset | grep "rrset.cache" | cut -d'=' -f2)
                         local DUMPCACHE_MEM_MSG=$(grep -c "^msg" $FN)
                         local DUMPCACHE_MEM_RRSET=$(grep -c "^;rrset" $FN)
-                        echo -e ${cBCYA}$(date "+%H:%M:%S")" Restoring ${cRESET}unbound cache$cBCYA from $cBGRE'"$FN"'"$cRESET "("$TIMESTAMP")" "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET
-
+                        echo -e ${cBCYA}$(date "+%H:%M:%S")" Restoring ${cRESET}unbound cache$cBCYA from $cBGRE'"$FN"'"$cRESET "("$TIMESTAMP")" "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET    # v3.08 v2.12
+                        $UNBOUNCTRLCMD load_cache < $FN 1>/dev/null
+                        SayT "unbound cache RESTORED from '"$FN"' ("$TIMESTAMP")" "msg.cache="$CACHE_MEM_MSG"/"$DUMPCACHE_MEM_MSG "rrset.cache="$CACHE_MEM_RRSET"/"$DUMPCACHE_MEM_RRSET
                         rm $FN 2>/dev/null                              # as per @JSewell suggestion as file is in plain text
                     fi
                 ;;
@@ -3946,7 +3945,7 @@ install_unbound() {
         # v386.2 installs '/usr/sbin/jitterentropy-rngd'        # v3.23
         # he doesn't have the decency to personally inform devs despite the fact he's implemented the change!
         # http://www.snbforums.com/threads/jitterentropy-rngd-high-cpu-use.72340/post-687202
-        if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v2.10 v1.26 As per dave14305 http://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/post-542767
+        if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v2.10 v1.26 As per dave14305 http://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/post-542767
             if [ -z "$(which jitterentropy-rngd)" ];then        # v3.23
                 Install_Entware_opkg "haveged"
                 S02haveged_update
@@ -4203,7 +4202,7 @@ Check_GUI_NVRAM() {
                 [ $(nvram get dnsfilter_mode) != "11" ] && { echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET \t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp ->LAN->DNSFilter"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] DNS Filter=ROUTER" 2>&1
             fi
 
-            if [ "$(uname -o)" == "ASUSWRT-Merlin-LTS" ];then               # v1.26 HotFix @dave14305
+            if [ "$(/bin/uname -o)" == "ASUSWRT-Merlin-LTS" ];then               # v1.26 HotFix @dave14305
                     [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
            else
                 if [ $FIRMWARE -ne 38406 ] && [ "$HARDWARE_MODEL" != "RT-AC56U" ] ;then     # v2.10
@@ -5420,7 +5419,7 @@ if [ "$1" == "-h" ] || [ "$1" == "help" ];then
 fi
 
 # If 'jitterentropy-rngd' installed in RMerlin firmware, then the 'haveged' package is redundant and should be removed  # v3.23
-if [ "$(uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ -n "$(which haveged)" ];then      # v3.23
+if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ -n "$(which haveged)" ];then      # v3.23
     if [ -n "$(which jitterentropy-rngd)" ]; then
         if [ -n "$(ps -w | grep -v grep | grep "jitterentropy-rngd")" ];then        # v3.23
             [ -f /opt/etc/init.d/S02haveged ] && /opt/etc/init.d/S02haveged stop
