@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23bD"
-#============================================================================================ © 2019-2022 Martineau v3.23bD
+VERSION="3.23bE"
+#============================================================================================ © 2019-2022 Martineau v3.23bE
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.23bD"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 02-Jan-2021
+# Last Updated Date: 14-May-2022
 #
 # Description:
 #
@@ -160,7 +160,7 @@ Chk_Entware() {
         TRIES="0"
 
         while [ "$TRIES" -lt "$MAX_TRIES" ]; do
-            if [ -f "/opt/bin/opkg" ]; then
+            if [ -n "$(which opkg)" ]; then                     # v3.23
                 if [ -n "$ENTWARE_UTILITY" ]; then            # Specific Entware utility installed?
                     if [ -n "$(opkg list-installed "$ENTWARE_UTILITY")" ]; then
                         READY="0"                             # Specific Entware utility found
@@ -889,7 +889,7 @@ welcome_message() {
                     fi
 
                     if [ "$EASYMENU" == "N" ] && [ -n "$(which diversion)" ] ;then
-                        MENU_AD="$(printf '%bad%b = Analyse Diversion White/Block lists ([ file_name ['type=adblock'] ])\n' "${cBYEL}" "${cRESET}")"
+                        MENU_AD="$(printf '%bad%b = Analyse Diversion White/Block lists [ file_name ] ["type=adblock"] ["action=merge"]\n' "${cBYEL}" "${cRESET}")"
                     fi
 
                     # v1.08 Use 'context aware' horizontal menu!!!! Radical eh?
@@ -1924,11 +1924,15 @@ EOF
                 ;;
                 ad|ad*)
 
-                    echo -e $cBCYA"\nAnalyzing, please be patient.....may take 30 seconds"
+                    # ad [ 'all' | file_name ] [ 'type=adblock' ] [ 'action=merge' ]
+
+                    local FN="all"
+                    local ACTION="Analyz"       # Merg
+                    #echo -e $cBCYA"\n${ACTION}ing, please be patient.....may take 30 seconds"
 
                     if [ "$(echo "$menu1" | wc -w)" -ge 2 ];then
                         local FN=$(echo "$menu1" | awk '{print $2}')
-                        [ "${FN:0:5}" = "type=" ] && { TYPE=$(echo "$menu1" | awk '{print $2}'); FN="all"; }
+                        [ "${FN:0:5}" = "type=" ] && { local TYPE=$(echo "$menu1" | awk '{print $2}'); local FN="all"; }
 
                         [ "$(echo "$menu1" | wc -w)" -gt 2 ] && local TYPE=$(echo "$menu1" | awk '{print $3}')
                         Diversion_to_unbound_list "$FN" "$TYPE"             # v1.25
@@ -5235,17 +5239,22 @@ _quote() {
 
     local ACTION="Analyze"
     #local ACTION="Merge"
+    local TYPE=$(echo "$@" | sed -n "s/^.*action=//p" | awk '{print $1}' | tr 'm' 'M')     # Force ACTION action=merge
 
     local MSG=$cRESET"Analysed Diversion file:$cBMAG" || local MSG=$cRESET"\nMerged Diversion file:$cBGRE"
 
     if [ "$1" != "all" ] || [ "${1:0:5}" != "type" ];then
         local DIVERSION_FILES=$1                                            # User specific file to be processed
     fi
+
     local TYPE=$(echo "$@" | sed -n "s/^.*type=//p" | awk '{print $1}')     # Force TYPE type=adblock or type=pixelserv
 
     if [ -z "$DIVERSION_FILES" ] || [ "$DIVERSION_FILES" == "all" ];then
         local DIVERSION_FILES="blockinglist blacklist whitelist"
     fi
+
+    local ACTION=$(echo "$ACTION" | sed 's/e$//')
+    echo -e $cBCYA"\n${ACTION}ing '$DIVERSION_FILES', please be patient.....may take 30 seconds" 2>&1
 
     local DIV_DIR="/opt/share/diversion/list/"
 
@@ -5362,7 +5371,7 @@ _quote() {
             rm ${DIVERSION}X    2>/dev/null
 
             #sed -i "1i# Diversion $FN \($TYPE\)" $UNBOUND
-            [ "$ACTION" == "Merge" ] && { cat $UNBOUND >> $UNBOUNDADBLOCK; REQUIRE_PIXELSERV="Y"; }
+            [ "${ACTION:0:4}" == "Merg" ] && { cat $UNBOUND >> $UNBOUNDADBLOCK; REQUIRE_PIXELSERV="Y"; }
 
             local CNT_DIFF=$((CNT_DIVERSION-CNT_UNBOUNDADBLOCK))
             if [ $CNT_DIFF -gt 0 ] && [ "$FN" == "blacklist" ];then
@@ -5372,6 +5381,13 @@ _quote() {
 
             echo -e $MSG "'"$FN"'\t ${cRESET}Type=$TYPE, (Adblock $DESC=$cBMAG"$CNT_UNBOUNDADBLOCK")${cRESET} would add$cBMAG" $CNT_DIFF $cRESET"entries" 2>&1
         done
+
+    #Ensure merged duplicates are removed
+    if [ "${ACTION:0:4}" == "Merg" ];then
+        sort -k 2,1 /opt/var/lib/unbound/adblock/adservers | uniq > /opt/var/lib/unbound/adblock/adservers
+        sort -k 2,1 /opt/var/lib/unbound/adblock/permlist  | uniq > /opt/var/lib/unbound/adblock/permlist
+        echo -e $cBCYA"\n${ACTION}ed '$DIVERSION_FILES'" 2>&1
+    fi
 
     if [ -f /opt/etc/init.d/S80pixelserv-tls ] && [ -n "$REQUIRE_PIXELSERV" ] && [ -z "$(pidof pixelserv-tls)" ];then
         /opt/etc/init.d/S80pixelserv-tls start
