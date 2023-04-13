@@ -1,6 +1,6 @@
 # unbound Manager/Installer script for ASUS Router running RMerlin firmware.
 
-## Installation ##
+## Installation (NOTE:Entware is required, so older MIPS based routers may not be supported.)##
 
 Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm, PuTTY etc. 
 
