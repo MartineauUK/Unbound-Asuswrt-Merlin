@@ -1,10 +1,10 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23bE"
+VERSION="3.23bF"
 #============================================================================================ © 2019-2022 Martineau v3.23bE
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
-# Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
+# Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['stop'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
 #                              ['vpn='{vpn_id [ delay=nnn ] | 'disable' } ] [bind | nobind] ['noreadline']
 #
 #           unbound_manager
@@ -5573,6 +5573,17 @@ case "$1" in
         NOMSG="NOMSG"               # v2.15 if unbound isn't running then suppress errors/messages i.e. 'unbound-control dump_cache'
         Restart_unbound "nochk"     # v2.15 skip the unbound restart status check
         exit_message
+        ;;
+    x|stop)                                                     # v3.23
+        [ "$(Unbound_Installed)" == "N" ] && { echo -e $cBRED"\a\n\tunbound NOT installed! - option unavailable"$cRESET; exit_message; }    # v3.23
+
+        echo
+        Manage_cache_stats "save"                               # v3.23
+        /opt/etc/init.d/S61unbound stop                         # v3.23
+        echo -en $cBCYA"\nRestarting dnsmasq....."$cBGRE        # v3.23
+        service restart_dnsmasq                                 # v3.23
+        echo -en $cBCYA"\nunbound STOPPED."$cBGRE               # v3.23
+        SayT "unbound STOPPED"                                  # v3.23
         ;;
     reload)                         # v2.17 Hotfix
         exit_message
