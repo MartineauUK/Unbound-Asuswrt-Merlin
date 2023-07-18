@@ -3762,7 +3762,7 @@ remove_existing_installation() {
             if opkg --force-depends --force-removal-of-dependent-packages remove $ENTWARE_UNBOUND; then echo -e $cBGRE"unbound Entware packages '$ENTWARE_UNBOUND' successfully removed"; else echo -e $cBRED"\a\t***Error occurred when removing unbound"$cRESET; fi # v2.07 v1.15
             #if opkg remove haveged; then echo "haveged successfully removed"; else echo "Error occurred when removing haveged"; fi
             #if opkg remove coreutils-nproc; then echo "coreutils-nproc successfully removed"; else echo "Error occurred when removing coreutils-nproc"; fi
-            [ -n "$(which jitterentropy-rngd)" ] && opkg remove haveged >/dev/null  # v3.23 just in case we previously installed pre v3.23
+            [ -n "$(which jitterentropy-rngd haveged | grep -E "^(/usr/sbin/.*)")" ] && opkg remove haveged >/dev/null  # v3.23 just in case we previously installed pre v3.23
         else
             echo -e $cRED"Unable to remove unbound - 'unbound' not installed?"$cRESET
         fi
@@ -3946,7 +3946,7 @@ install_unbound() {
         # he doesn't have the decency to personally inform devs despite the fact he's implemented the change!
         # http://www.snbforums.com/threads/jitterentropy-rngd-high-cpu-use.72340/post-687202
         if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v2.10 v1.26 As per dave14305 http://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/post-542767
-            if [ -z "$(which jitterentropy-rngd)" ];then        # v3.23
+            if [ -z "$(which jitterentropy-rngd haveged | grep -E "^(/usr/sbin/.*)")" ];then        # v3.23
                 Install_Entware_opkg "haveged"
                 S02haveged_update
             fi
@@ -5432,8 +5432,8 @@ fi
 
 # If 'jitterentropy-rngd' installed in RMerlin firmware, then the 'haveged' package is redundant and should be removed  # v3.23
 if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ -n "$(which haveged)" ];then      # v3.23
-    if [ -n "$(which jitterentropy-rngd)" ]; then
-        if [ -n "$(ps -w | grep -v grep | grep "jitterentropy-rngd")" ];then        # v3.23
+    if [ -n "$(which jitterentropy-rngd haveged | grep -E "^(/usr/sbin/.*)")" ]; then
+        if [ -n "$(ps -w | grep -v grep | grep "jitterentropy-rngd")" ] && [ -n "$(ps -w | grep -v grep | grep "/opt/sbin/haveged")" ];then        # v3.23
             [ -f /opt/etc/init.d/S02haveged ] && /opt/etc/init.d/S02haveged stop
         fi
         opkg remove haveged >/dev/null
