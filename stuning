@@ -1,0 +1,90 @@
+#!/bin/sh
+
+# Copyright (C) 2013-2016 Jeremy Chadwick. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+
+# /proc tuning adjustments for TomatoUSB.
+# /proc tuning adjustments for Unbound AsusWRT-Merlin.
+# https://github.com/rgnldo/Unbound-Asuswrt-Merlin
+#
+NAME="stuning[$$]"
+
+start() {
+  #
+  # Set IPv4 icmp_ratelimit to 0 (no rate limiting) to ensure that outbound
+  # mtrs (which repeatedly send ICMP packets to each hop, including the router)
+  # aren't affected.
+  #
+  echo 0 > /proc/sys/net/ipv4/icmp_ratelimit
+
+  #
+  # Increase ARP cache sizes and GC thresholds; may alleviate "Neighbour table
+  # overflow" warnings that some users are seeing.
+  #
+  # http://www.linksysinfo.org/index.php?threads/ipv6-and-comcast.38006/page-2#post-184563
+  #
+  echo  256 > /proc/sys/net/ipv4/neigh/default/gc_thresh1
+  echo 1024 > /proc/sys/net/ipv4/neigh/default/gc_thresh2
+  echo 2048 > /proc/sys/net/ipv4/neigh/default/gc_thresh3
+
+  #
+  # Increase storage USB
+  #
+  # echo 100 > /proc/sys/vm/dirty_writeback_centisecs
+  # echo 100 > /proc/sys/vm/dirty_expire_centisecs
+
+  # Lower conntrack tcp_timeout_max_retrans from 300 to 240.
+  #
+  echo 240 > /proc/sys/net/netfilter/nf_conntrack_tcp_timeout_max_retrans
+
+  #
+  # IPv6 adjustments for some of the above stuff.  NOTE: Pathname for icmp ratelimit
+  # differs from IPv4 tunable.
+  #
+  if [ -n "`nvram get ipv6_service`" ]; then
+    echo    0 > /proc/sys/net/ipv6/icmp/ratelimit
+    echo  256 > /proc/sys/net/ipv6/neigh/default/gc_thresh1
+    echo 1024 > /proc/sys/net/ipv6/neigh/default/gc_thresh2
+    echo 2048 > /proc/sys/net/ipv6/neigh/default/gc_thresh3
+  fi
+}
+
+
+ACTION=$1
+CALLER=$2
+
+case $ACTION in
+  start)
+    logger -t $NAME "Adjusting /proc tunables..."
+    start
+    logger -t $NAME "Finished adjusting tunables"
+    ;;
+  stop|check|reconfigure|kill)
+    # no-ops
+    ;;
+  *)
+    echo "Usage: $0 start"
+    exit 1
+    ;;
+esac
