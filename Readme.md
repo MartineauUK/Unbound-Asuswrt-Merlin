@@ -21,7 +21,7 @@ Enable SSH on router, then use your preferred SSH Client e.g. Xshell6,MobaXterm,
 +======================================================================+
 |  Welcome to the unbound Manager/Installation script (Asuswrt-Merlin) |
 |                                                                      |
-|                      Version 3.23 by Martineau                       |
+|                      Version 3.24 by Martineau                       |
 |                                                                      |
 | Requirements: USB drive with Entware installed                       |
 |                                                                      |
@@ -65,7 +65,7 @@ e  = Exit Script
 
 A:Option ==> ?
 
-	Version: v3.22
+	Version: v3.24
 	Local						md5=6b4a500c071bcbb3f4a6e9596a178d43
 	Github						md5=6b4a500c071bcbb3f4a6e9596a178d43
 	/jffs/addons/unbound/unbound_manager.md5	md5=6b4a500c071bcbb3f4a6e9596a178d43
