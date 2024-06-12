@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.23"
-#============================================================================================ © 2019-2023 Martineau v3.23
+VERSION="3.24"
+#============================================================================================ © 2019-2024 Martineau v3.24
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['stop'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,13 +58,13 @@ VERSION="3.23"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 18-Jul-2023
+# Last Updated Date: 12-Jun-2024
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister,francovilar,PeterR,AlexanderPavlenko  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister,francovilar,PeterR,AlexanderPavlenko,novusB  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -3943,13 +3943,15 @@ install_unbound() {
         Install_Entware_opkg "bind-dig"                         # v2.09
 
         # v386.2 installs '/usr/sbin/jitterentropy-rngd'        # v3.23
-        # he doesn't have the decency to personally inform devs despite the fact he's implemented the change!
         # http://www.snbforums.com/threads/jitterentropy-rngd-high-cpu-use.72340/post-687202
         if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ];then       # v2.10 v1.26 As per dave14305 http://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/post-542767
-            if [ -z "$(which jitterentropy-rngd)" ];then        # v3.23
-                Install_Entware_opkg "haveged"
-                S02haveged_update
-            fi
+            # RMerlin now defaults to 'haveged' rather than 'jitterentropy-rngd' so don't install Entware 'haveged'
+			if [ ! -f /usr/sbin/haveged ];then					# v3.24
+				if [ -z "$(which jitterentropy-rngd)" ];then    # v3.23
+					Install_Entware_opkg "haveged"
+					S02haveged_update
+				fi
+			fi
         fi
 
         Check_dnsmasq_postconf
@@ -4192,14 +4194,36 @@ Check_GUI_NVRAM() {
             # Check Swap file
             [ $(Check_SWAP) -eq 0 ] && echo -e $cBRED"\t[✖] Warning SWAP file is not configured $cRESET - use amtm to create one!" 2>&1 || echo -e $cBGRE"\t[✔] Swapfile="$(grep "SwapTotal" /proc/meminfo | awk '{print $2" "$3}')$cRESET  2>&1    # v1.04
 
-            #   DNSFilter: ON - mode Router
+            #  Check GUI 'DNS Director' (388.1 replaced 'DNS Filter')		# v3.24 - @novusB reported 404 error
             if [ $(nvram get dnsfilter_enable_x) -eq 0 ];then
-                echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp LAN->DNSFilter Enable DNS-based Filtering" 2>&1
-                ERROR_CNT=$((ERROR_CNT + 1))
+				#if [ $FIRMWARE -ge 38801 ] && [ -f /www/DNSDirector.asp ];then
+				if [ -f /www/DNSDirector.asp ];then
+					echo -e $cBRED"\a\t[✖] ***ERROR DNS Director is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSDirector.asp LAN->DNS Director" 2>&1
+                else
+					echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp LAN->DNS Filter" 2>&1
+				fi
+				ERROR_CNT=$((ERROR_CNT + 1))
             else
-                echo -e $cBGRE"\t[✔] DNS Filter=ON" 2>&1
-                #   DNSFilter: ON - Mode Router ?
-                [ $(nvram get dnsfilter_mode) != "11" ] && { echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET \t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp ->LAN->DNSFilter"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] DNS Filter=ROUTER" 2>&1
+				if [ -f /www/DNSDirector.asp ];then
+					echo -e $cBGRE"\t[✔] DNS Director=ON" 2>&1
+				else
+					echo -e $cBGRE"\t[✔] DNS Filter=ON" 2>&1
+				fi
+                #   DNS Director / DNS Filter: ON - Mode Router ?
+                if [ $(nvram get dnsfilter_mode) != "11" ];then
+					if [ -f /www/DNSDirector.asp ];then
+						echo -e $cBRED"\a\t[✖] ***ERROR DNS Director is NOT = 'Router' $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSDirector.asp ->LAN->DNS Director"$cRESET 2>&1
+					else
+						echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp ->LAN->DNS Filter"$cRESET 2>&1
+					fi
+					ERROR_CNT=$((ERROR_CNT + 1))
+				else
+					if [ -f /www/DNSDirector.asp ];then
+						echo -e $cBGRE"\t[✔] DNS Director=ROUTER" 2>&1
+					else
+						echo -e $cBGRE"\t[✔] DNS Filter=ROUTER" 2>&1
+					fi
+				fi
             fi
 
             if [ "$(/bin/uname -o)" == "ASUSWRT-Merlin-LTS" ];then               # v1.26 HotFix @dave14305
