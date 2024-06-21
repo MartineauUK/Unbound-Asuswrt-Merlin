@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.24"
-#============================================================================================ © 2019-2024 Martineau v3.24
+VERSION="3.25"
+#============================================================================================ © 2019-2024 Martineau v3.25
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['stop'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,13 +58,13 @@ VERSION="3.24"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 12-Jun-2024
+# Last Updated Date: 21-Jun-2024
 #
 # Description:
 #
 # Acknowledgement:
 #  Test team: rngldo
-#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister,francovilar,PeterR,AlexanderPavlenko,novusB  (Xentrk for this script template and thelonelycoder for amtm)
+#  Contributors: rgnldo,dave14305,SomeWhereOverTheRainbow,Camm,Max33Verstappen,toazd,Chris0815,ugandy,Safemode,tomsk,joe scian,juched,sfatula,mister,francovilar,PeterR,AlexanderPavlenko,novusB,visortgw  (Xentrk for this script template and thelonelycoder for amtm)
 
 #
 #   https://medium.com/nlnetlabs
@@ -3307,9 +3307,11 @@ Optimise_Performance() {
 
             sh $Tuning_script start
         else
-             if [ -f $Tuning_script ] || [ -n "$(grep -F "unbound_manager" $FN)" ];then
+            if [ -f $Tuning_script ];then
                 echo -e $cBCYA"Deleting Performance/Memory tweaks '$Tuning_script'"
                 [ -f $Tuning_script ] && rm $Tuning_script
+			fi
+			if [ -f $FN ] && [ -n "$(grep -F "unbound_manager" $FN)" ];then	# v2.25
                 sed -i '/#.*unbound_/d' $FN                 # v1.23
              fi
         fi
@@ -3710,46 +3712,57 @@ remove_existing_installation() {
         done
 
         # InterNIC Root DNS Servers cron job                            # v1.18
-        if grep -qF "root_servers" /jffs/scripts/services-start; then
-            echo -e $cBCYA"Removing InterNIC Root DNS Servers cron job"$cRESET
-            sed -i '/root_servers/d' /jffs/scripts/services-start
-        fi
-        cru d root_servers 2>/dev/null
+		if [ -f /jffs/scripts/services-start ];then						# v3.25
+			if grep -qF "root_servers" /jffs/scripts/services-start; then
+				echo -e $cBCYA"Removing InterNIC Root DNS Servers cron job"$cRESET
+				sed -i '/root_servers/d' /jffs/scripts/services-start
+			fi
 
-        # Remove Ad and Tracker cron job /jffs/scripts/services-start   # v1.07
-        if grep -qF "gen_adblock" /jffs/scripts/services-start; then
-            echo -e $cBCYA"Removing Ad and Tracker Update cron job"$cRESET
-            sed -i '/gen_adblock/d' /jffs/scripts/services-start
-        fi
-        cru d adblock 2>/dev/null
-
-        # Remove @juched's DNS Firewall
-        if grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then
-            echo -e $cBCYA"@juched's"$cRESET  $(DNS_Firewall "disable") # v3.02
-        fi
-
+			# Remove Ad and Tracker cron job /jffs/scripts/services-start   # v1.07
+			if grep -qF "gen_adblock" /jffs/scripts/services-start; then
+				echo -e $cBCYA"Removing Ad and Tracker Update cron job"$cRESET
+				sed -i '/gen_adblock/d' /jffs/scripts/services-start
+			fi
+        
+			# Remove @juched's DNS Firewall
+			if grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then
+				echo -e $cBCYA"@juched's"$cRESET  $(DNS_Firewall "disable") # v3.02
+			fi
+			
+			# Remove YouTube Video Ad cron job /jffs/scripts/services-start # v3.14
+			if grep -qF "gen_ytadblock" /jffs/scripts/services-start; then  # v3.14
+				echo -e $cBCYA"Removing YouTube Video Ad Blocker Update cron job"$cRESET
+				sed -i '/gen_ytadblock/d' /jffs/scripts/services-start      # v3.14
+			fi
+		fi
+		
         # Remove @juched's Graphical Statistics GUI TAB                 # v3.00 HotFix
         if [ -f /tmp/menuTree.js ] && [ -n "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
             echo -e $cBCYA"@juched's"$cRESET $(GUI_Stats_TAB "uninstall") # v3.00 HotFix
         fi
 
-        # Remove YouTube Video Ad cron job /jffs/scripts/services-start # v3.14
-        if grep -qF "gen_ytadblock" /jffs/scripts/services-start; then  # v3.14
-            echo -e $cBCYA"Removing YouTube Video Ad Blocker Update cron job"$cRESET
-            sed -i '/gen_ytadblock/d' /jffs/scripts/services-start      # v3.14
-        fi
+		cru d adblock 2>/dev/null
+		
+		cru d root_servers 2>/dev/null
 
         cru d ytadblock 2>/dev/null                                     # v3.11
 
         # Remove 3rd Party scripts
-        sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start            # v2.18 HotFix
-        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/services-start   # v3.23 Strip trailing blank lines
-        sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event             # v2.18 HotFix
-        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/service-event    # v3.23 Strip trailing blank lines
+		if [ -f /jffs/scripts/services-start ];then						# v3.25
+			sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start        # v2.18 HotFix
+			sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/services-start   # v3.23 Strip trailing blank lines
+		fi
+		
+		if [ -f /jffs/scripts/service-event ];then						# v3.25
+			sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event         # v2.18 HotFix
+			sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/service-event    # v3.23 Strip trailing blank lines
+		fi
 
-        # Remove new-style Unbound start-up triggered by service diskmon    # v3.23 @dave14305
-        sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event-end        # v3.23
-        sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/service-event-end    # v3.23 Strip trailing blank lines
+        # Remove new-style Unbound start-up triggered by service diskmon	# v3.23 @dave14305
+		if [ -f /jffs/scripts/service-event-end ];then						# v3.25
+			sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event-end			# v3.23
+			sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/service-event-end    # v3.23 Strip trailing blank lines
+		fi
 
         echo -en $cRESET
 
@@ -4198,9 +4211,9 @@ Check_GUI_NVRAM() {
             if [ $(nvram get dnsfilter_enable_x) -eq 0 ];then
 				#if [ $FIRMWARE -ge 38801 ] && [ -f /www/DNSDirector.asp ];then
 				if [ -f /www/DNSDirector.asp ];then
-					echo -e $cBRED"\a\t[✖] ***ERROR DNS Director is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSDirector.asp LAN->DNS Director" 2>&1
+					echo -e $cBRED"\a\t[✖] Warning DNS Director is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSDirector.asp LAN->DNS Director" 2>&1
                 else
-					echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp LAN->DNS Filter" 2>&1
+					echo -e $cBRED"\a\t[✖] Warning DNS Filter is OFF! $cRESET \t\t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp LAN->DNS Filter" 2>&1
 				fi
 				ERROR_CNT=$((ERROR_CNT + 1))
             else
@@ -4212,9 +4225,9 @@ Check_GUI_NVRAM() {
                 #   DNS Director / DNS Filter: ON - Mode Router ?
                 if [ $(nvram get dnsfilter_mode) != "11" ];then
 					if [ -f /www/DNSDirector.asp ];then
-						echo -e $cBRED"\a\t[✖] ***ERROR DNS Director is NOT = 'Router' $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSDirector.asp ->LAN->DNS Director"$cRESET 2>&1
+						echo -e $cBRED"\a\t[✖] Warning DNS Director is NOT = 'Router' $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSDirector.asp ->LAN->DNS Director"$cRESET 2>&1
 					else
-						echo -e $cBRED"\a\t[✖] ***ERROR DNS Filter is NOT = 'Router' $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp ->LAN->DNS Filter"$cRESET 2>&1
+						echo -e $cBRED"\a\t[✖] Warning DNS Filter is NOT = 'Router' $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/DNSFilter.asp ->LAN->DNS Filter"$cRESET 2>&1
 					fi
 					ERROR_CNT=$((ERROR_CNT + 1))
 				else
@@ -4227,12 +4240,15 @@ Check_GUI_NVRAM() {
             fi
 
             if [ "$(/bin/uname -o)" == "ASUSWRT-Merlin-LTS" ];then               # v1.26 HotFix @dave14305
-                    [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+                    [ $(nvram get ntpd_server) == "0" ] && { echo -e $cBRED"\a\t[✖] Warning Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
            else
                 if [ $FIRMWARE -ne 38406 ] && [ "$HARDWARE_MODEL" != "RT-AC56U" ] ;then     # v2.10
                     #   Tools/Other WAN DNS local cache: NO # for the FW Merlin development team, it is desirable and safer by this mode.
-                    [ $(nvram get dns_local_cache) != "0" ] && { echo -e $cBYEL"\a\t[✖] Warning WAN: Use local caching DNS server as system resolver=YES $cRESET \t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO" 2>&1
-                fi
+					#   June 2024 'local DNS caching' freature will be deprecated
+						if [ "x" != x"$(nvram get dns_local_cache)" ];then		# v3.25 - @visortgw ASUS GT-BE98 Pro
+							[ $(nvram get dns_local_cache) != "0" ] && { echo -e $cBYEL"\a\t[✖] Warning WAN: Use local caching DNS server as system resolver=YES $cRESET \t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Tools_OtherSettings.asp ->Advanced Tweaks and Hacks"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] WAN: Use local caching DNS server as system resolver=NO" 2>&1
+						fi
+				fi
 
                 # Originally, a check was made to ensure the native RMerlin NTP server is configured.
                 # v3.20 v2.07, some wish to use ntpd/chronyd by @JackYaz
@@ -4245,7 +4261,7 @@ Check_GUI_NVRAM() {
                     fi
                 else
                     if [ "$HARDWARE_MODEL" != "RT-AC56U" ] && [ $FIRMWARE -ne 38406 ];then  # v2.10
-                        [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] ***ERROR Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
+                        [ $(nvram get ntpd_enable) == "0" ] && { echo -e $cBRED"\a\t[✖] Warning Enable local NTP server=NO $cRESET \t\t\t\t\tsee $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_System_Content.asp ->Basic Config"$cRESET 2>&1; ERROR_CNT=$((ERROR_CNT + 1)); } || echo -e $cBGRE"\t[✔] Enable local NTP server=YES" 2>&1
                     else
                         if [ ! -f /opt/etc/init.d/S77ntpd ];then                                # v2.10
                             echo -e $cBRED"\a\t[✖] Warning Entware NTP server not installed"$cRESET
