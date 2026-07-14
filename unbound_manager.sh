@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.26"
-#============================================================================================ © 2019-2024 Martineau v3.25
+VERSION="3.27"
+#============================================================================================ © 2019-2026 Martineau v3.27
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['stop'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.26"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 06-Nov-2025
+# Last Updated Date: 14-Jul-2026
 #
 # Description:
 #
@@ -100,6 +100,26 @@ READLINE="ReadLine"                                # Emulate 'readline' for 'rea
 CMDLINE=                                           # Command line INPUT v3.18
 CMD1=;CMD2=;CMD3=;CMD4=;CMD5=                      # Command recall push stack v3.18
 DEBUGMODE=
+
+# To support automatic script updates from AMTM #
+doScriptUpdateFromAMTM=false						# v3.27
+
+##-------------------------------------##
+## As per AMTM requirements v3.27      ##
+##-------------------------------------##
+ScriptUpdateFromAMTM()								# v3.27
+{
+    if ! "$doScriptUpdateFromAMTM"
+    then
+        printf "Automatic script updates via AMTM are currently disabled.\n\n"
+        return 1
+    fi
+    if [ $# -gt 0 ] && [ "$1" = "check" ]
+		then return 0
+    fi
+    Update_Version
+    return "$?"
+}
 
 # Uncomment the line below for debugging
 #set -x
@@ -1036,6 +1056,7 @@ welcome_message() {
                     "") ;;
                     easy|adv*) ;;
                     e*) ;;
+					amtmupdate*) ;;						# v3.27
                     *) printf '\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cRESET" "$menu1" "$cBRED"
                        continue
                        ;;
@@ -1810,6 +1831,11 @@ EOF
                     echo -e $cBCYA"\n\tAbout ${cRESET}unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ , ${cBCYA}Manual$cBYEL https://nlnetlabs.nl/documentation/unbound/unbound.conf/${cRESET}"
                     #echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
 
+					if "$doScriptUpdateFromAMTM";then																		# v3.27
+						echo -e $cBGRE"\n\t[✔] ${cRESET}Allow AMTM to auto-update Unbound Manager ENABLED\n"$cRESET				# v3.27
+					else
+						echo -e $cRED"\n\t[✖]${cBGRE} ${cRESET}Allow AMTM to auto-update Unbound Manager ${cBRED}DISABLED\n"	# v3.27
+					fi
                 ;;
                 adblock*)                                           # v3.20 v3.10 v2.18   [ youtube | track | update | uninstall | country[3] ]
                     local ARG=
@@ -2343,6 +2369,25 @@ EOF
                         echo -e $cBRED"\a\n\tEntware's tcpdump NOT installed!"$cRESET       # v3.05
                     fi
                 ;;
+				amtmupdate" "*|amtmupdate)                          # v3.27         amtmupdate { [allow|on] | [deny|off] }
+
+					local ACTION="$(echo "$menu1"| awk '{print $2}')"
+
+					case "$ACTION" in
+
+						allow|on)
+							doScriptUpdateFromAMTM=true
+							echo -e $cBGRE"\n\t[✔] Allow AMTM to auto-update WG_Manager ENABLED\n"$cRESET
+						;;
+						deny|off)
+							doScriptUpdateFromAMTM=false
+							echo -e $cRED"\n\t[✖]${cBGRE} Allow AMTM to auto-update WG_Manager ${cBRED}DISABLED\n"
+						;;
+						*)
+							echo -en $cRED"\a\n\t***ERROR: Invalid arg $cBWHT'"$ACTION"'$cBRED for 'AMTM auto-update - valid 'allow' or 'deny' only!\n"$cRESET
+						;;
+					esac
+				;;
                 *)
                     printf '\n\n\a\t%bInvalid Option%b "%s"%b Please enter a valid option\n' "$cBRED" "$cRESET" "$menu1" "$cBRED"
                 ;;
@@ -3723,26 +3768,26 @@ remove_existing_installation() {
 				echo -e $cBCYA"Removing Ad and Tracker Update cron job"$cRESET
 				sed -i '/gen_adblock/d' /jffs/scripts/services-start
 			fi
-        
+
 			# Remove @juched's DNS Firewall
 			if grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then
 				echo -e $cBCYA"@juched's"$cRESET  $(DNS_Firewall "disable") # v3.02
 			fi
-			
+
 			# Remove YouTube Video Ad cron job /jffs/scripts/services-start # v3.14
 			if grep -qF "gen_ytadblock" /jffs/scripts/services-start; then  # v3.14
 				echo -e $cBCYA"Removing YouTube Video Ad Blocker Update cron job"$cRESET
 				sed -i '/gen_ytadblock/d' /jffs/scripts/services-start      # v3.14
 			fi
 		fi
-		
+
         # Remove @juched's Graphical Statistics GUI TAB                 # v3.00 HotFix
         if [ -f /tmp/menuTree.js ] && [ -n "$(grep -i "Unbound" /tmp/menuTree.js)" ];then
             echo -e $cBCYA"@juched's"$cRESET $(GUI_Stats_TAB "uninstall") # v3.00 HotFix
         fi
 
 		cru d adblock 2>/dev/null
-		
+
 		cru d root_servers 2>/dev/null
 
         cru d ytadblock 2>/dev/null                                     # v3.11
@@ -3752,7 +3797,7 @@ remove_existing_installation() {
 			sed -i '/[Uu]nbound_/d' /jffs/scripts/services-start        # v2.18 HotFix
 			sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/services-start   # v3.23 Strip trailing blank lines
 		fi
-		
+
 		if [ -f /jffs/scripts/service-event ];then						# v3.25
 			sed -i '/[Uu]nbound_/d' /jffs/scripts/service-event         # v2.18 HotFix
 			sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' /jffs/scripts/service-event    # v3.23 Strip trailing blank lines
@@ -5470,6 +5515,12 @@ if [ "$1" == "-h" ] || [ "$1" == "help" ];then
     exit 0
 fi
 
+if [ "$1" == "amtmupdate" ];then							# v3.27
+	shift
+	ScriptUpdateFromAMTM "$@"
+	exit "$?"
+fi
+
 # If 'jitterentropy-rngd' installed in RMerlin firmware, then the 'haveged' package is redundant and should be removed  # v3.23
 if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ -n "$(which haveged)" ];then      # v3.23
     if [ -n "$(which jitterentropy-rngd)" ]; then
@@ -5681,7 +5732,7 @@ case "$1" in
                 echo -e $cRESET
                 exit_message
                 ;;
-        esac
+    esac
 esac
 
 clear
