@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.27"
-#============================================================================================ © 2019-2026 Martineau v3.27
+VERSION="3.28"
+#============================================================================================ © 2019-2026 Martineau v3.28
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
 # Usage:    unbound_manager    ['help'|'-h'] | [ [debug] ['nochk'] ['advanced'] ['install'] ['stop'] ['recovery' | 'restart' ['reload config='[config_file] ]] ]
@@ -58,7 +58,7 @@ VERSION="3.27"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 14-Jul-2026
+# Last Updated Date: 17-Jul-2026
 #
 # Description:
 #
@@ -101,24 +101,51 @@ CMDLINE=                                           # Command line INPUT v3.18
 CMD1=;CMD2=;CMD3=;CMD4=;CMD5=                      # Command recall push stack v3.18
 DEBUGMODE=
 
+##-------------------------------------##
+## As per AMTM requirements v4.19      ##
+##-------------------------------------##
 # To support automatic script updates from AMTM #
-doScriptUpdateFromAMTM=false						# v3.27
 
-##-------------------------------------##
-## As per AMTM requirements v3.27      ##
-##-------------------------------------##
-ScriptUpdateFromAMTM()								# v3.27
-{
-    if ! "$doScriptUpdateFromAMTM"
-    then
+AMTM_SILENT_DOWNLOAD=							# v3.28
+
+ScriptUpdateFromAMTM() {						# v4.19
+
+	local AMTM_RC=0								# v3.28
+	
+	if [ -f /jffs/addons/unbound/NO_AMTMUPDATE ];then					# v3.28 v3.27
         printf "Automatic script updates via AMTM are currently disabled.\n\n"
         return 1
     fi
     if [ $# -gt 0 ] && [ "$1" = "check" ]
 		then return 0
     fi
-    Update_Version
-    return "$?"
+	
+	local REMOTE_VERSION_NUMDOT="$(curl -${SILENT}fLN --retry 3 --connect-timeout 3 "${GITHUB_DIR}/unbound_manager.sh" | grep -E "^VERSION=" | tr -d '"' | sed 's/VER.*\=//')" || REMOTE_VERSION_NUMDOT="?.??"   # v3.23
+
+	SayT "AMTM update requested to version "$REMOTE_VERSION_NUMDOT		# v3.28
+	                              
+	# Protect against curl download failures i.e. Github DOWN
+	[ -f $0.uamtm ] && rm $0.uamtm										# v3.28
+	cp $0 $0.uamtm
+	
+	AMTM_SILENT_DOWNLOAD=Y												# v3.28
+	
+	download_file /jffs/addons/unbound unbound_manager.sh martineau		# v3.28
+	AMTM_RC=$?															# v3.28
+	
+	localmd5="$(md5sum "$0" | awk '{print $1}')"						# v3.28
+    echo $localmd5 > /jffs/addons/unbound/unbound_manager.md5			# v3.28
+	
+	if [ "$AMTM_SILENT_DOWNLOAD" == "Y" ] && [ $AMTM_RC -eq 0 ];then																# v3.28
+		echo -e $cBCYA"\tAMTM requested Unbound® Manager update to version $REMOTE_VERSION_NUMDOT was SUCCESSFULL"$cRESET 2>&1		# v3.28
+		SayT "AMTM requested Unbound® Manager update to version $REMOTE_VERSION_NUMDOT was SUCCESSFULL"								# v3.28
+	fi
+	
+	[ -f $0.uamtm ] && rm $0.uamtm										# v3.28
+	
+	AMTM_SILENT_DOWNLOAD=												# v3.28
+	
+    return "$AMTM_RC"													# v3.28
 }
 
 # Uncomment the line below for debugging
@@ -128,6 +155,20 @@ ShowHelp() {
     echo -en $cBWHT >&2
     awk '/^#==/{f=1} f{print; if (!NF) exit}' $0
     echo -en $cRESET >&2
+}
+Parse() {
+    #
+    #   Parse       "Word1,Word2|Word3" ",|" VAR1 VAR2 REST
+    #               (Effectivley executes VAR1="Word1";VAR2="Word2";REST="Word3")
+
+local TEXT IFS
+
+    TEXT="$1"
+    IFS="$2"
+    shift 2
+    read -r -- "$@" <<EOF
+$TEXT
+EOF
 }
 
 Say(){
@@ -413,7 +454,7 @@ Show_Advanced_Menu() {
     printf "%s\t\t\t\t\t%s\n"       "$MENU_SD" "$MENU_S"
     #[ -n "$MENU_FM" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"             "$MENU_FM"      # v3.00 its the default v2.15
     [ -n "$MENUW_ADBLOCK" ] && printf "\t\t\t\t\t\t\t\t\t%s\n"       "$MENUW_ADBLOCK"      # v3.03
-    printf "%s\t\t\t%s\n"                          "$MENUW_FFDOH"     "$MENUW_YOUTUBE"   #  v3.16 3.11
+    printf "%s\t\t\t%s\n"                          "$MENUW_FFDOH"     "$MENUW_YOUTUBE"   # v3.16 3.11
     printf "%s\t\t\t\t\t%s\n"                      "$MENUW_STUBBY"    "$MENUW_DOT"    # v3.00
     printf "%s\t\t\t\t\t\t\t\t\t%s\n"              ""                 "$MENUW_RPZ"    # v3.00
     printf "%s\t\t%s\n"                            "$MENUW_BIND"      "$MENUW_VPN"    # v3.07
@@ -688,7 +729,7 @@ welcome_message() {
               MENUW_VPN="$(printf '%bvpn%b = BIND unbound to VPN {vpnid [debug]} | [disable | debug show] e.g. vpn 1\n' "${cBYEL}" "${cRESET}")"  # v3.07
               MENUW_BIND="$(printf '%bbind%b = BIND unbound to WAN [debug | disable | debug show]\n' "${cBYEL}" "${cRESET}")"  # v3.07
               MENUW_ADBLOCK="$(printf '%badblock%b = Install Ad Block [uninstall | update | track]\n' "${cBYEL}" "${cRESET}")"  # v3.12 v3.03
-              MENUW_YOUTUBE="$(printf '%byoutube%b = Install YouTube Ad Block [uninstall | update]\n' "${cBYEL}" "${cRESET}")"  # v3.11
+              MENUW_YOUTUBE="$(printf '%byoutube%b = Uninstall YouTube Ad Block {uninstall} #Feature is obsolete 2026;NO INSTALL available\n' "${cRESET}" "${cGRA}")"  # v3.28 v3.11
               MENUW_DNSSEC="$(printf '%bdnssec%b = {url} Show DNSSEC Validation Chain e.g. dnssec www.snbforums.com\n' "${cBYEL}" "${cRESET}")"  # v1.28
               MENUW_DNSINFO="$(printf '%bdnsinfo%b = {dns} Show DNS Server e.g. dnsinfo \n' "${cBYEL}" "${cRESET}")"  # v1.28
               MENUW_LINKS="$(printf '%blinks%b = Show list of external URL links\n' "${cBYEL}" "${cRESET}")"  # v1.28
@@ -754,8 +795,8 @@ welcome_message() {
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o5. Disable Firefox DNS-over-HTTPS (DoH) (USA users)   %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o6. Install Graphical Statistics GUI (Add-ons) TAB     %b    %b |\n' "$YES_NO" "$cRESET"
                 [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o7. Integrate with DoT (%bAdvanced Users%b)                %b    %b |\n' "$cBRED" "$cRESET" "$YES_NO" "$cRESET"
-                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o8. Enable DNS Firewall                                %b    %b |\n' "$YES_NO" "$cRESET"
-                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o9. Install YouTube Ad Blocking                        %b    %b |\n' "$YES_NO" "$cRESET"   # v3.11
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o8. Enable  DNS Firewall                                %b    %b |\n' "$YES_NO" "$cRESET"
+                [ "$EASYMENU" == "Y" ] && local YES_NO="${cGRA}   ";    printf '|       o9. N/A YouTube Ad Blocking                        %b    %b |\n' "$YES_NO" "$cRESET"   # v3.11
                 printf '|                                                                      |\n'
 
                 if [ "$EASYMENU" == "N" ];then                  # v2.07
@@ -945,15 +986,16 @@ welcome_message() {
                             fi
 
                             if ! grep -qF "Unbound_RPZ" /jffs/scripts/services-start; then                  # v3.02 Hotfix
-                                MENUW_RPZ="$(printf '%b7 %b = %bEnable%b    DNS Firewall' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"   # v3.15 v3.02 Hotfix
+                                MENUW_RPZ="$(printf '%b7 %b = %bEnable%b  DNS Firewall' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"   # v3.15 v3.02 Hotfix
                             else
                                 MENUW_RPZ="$(printf '%b7 %b = %bDisable  %b DNS Firewall [?]' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"  # v3.15 v3.02 Hotfix
                             fi
 
                             if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then                    # v3.11 HotFix
-                               MENUW_YOUTUBE="$(printf '%b8 %b = %bUninstall%b YouTube Ad blocker' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"   # v3.15
+                               MENUW_YOUTUBE="$(printf '%b8 %b = %bUninstall%b YouTube Ad blocker' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"  # v3.15
                             else
-                               MENUW_YOUTUBE="$(printf '%b8 %b = %bInstall%b YouTube Ad blocker' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"  # v3.15
+                               #MENUW_YOUTUBE="$(printf '%b8 %b = %bInstall%b YouTube Ad blocker' "${cBYEL}" "${cRESET}" "$cBGRE" "$cRESET")"  	# v3.15
+							   MENUW_YOUTUBE="$(printf '%b8 %b = %bN/A%b     YouTube Ad blocker' "${cBYEL}" "${cRESET}" "${aDIM}" "$cGRA")"  	# v3.28 v3.15
                             fi
                             if [ -n "$(grep "^include.*unbound\.conf\.safesearch" ${CONFIG_DIR}unbound.conf)" ];then                    # v3.22
                                MENUW_SAFESEARCH="$(printf '%b9 %b = %bUninstall%b Safe Search' "${cBYEL}" "${cRESET}" "$cBRED" "$cRESET")"   # v3.22
@@ -969,7 +1011,7 @@ welcome_message() {
                             MENU_ST="$(printf '%b4 %b = n/a Show unbound statistics' "${cBYEL}" "${cRESET}$cGRA")"
                             MENU_T="$(printf '%b6 %b = n/a Install Graphical Statistics GUI Add-on TAB' "${cBYEL}" "${cRESET}$cGRA")"
                             MENUW_RPZ="$(printf '%b7 %b = n/a Enable DNS Firewall' "${cBYEL}" "${cRESET}$cGRA")"   # v3.02 Hotfix
-                            MENUW_YOUTUBE="$(printf '%b8 %b = n/a Install YouTube Ad blocker' "${cBYEL}" "${cRESET}$cGRA")"   # v3.14
+                            MENUW_YOUTUBE="$(printf '%b8 %b = n/a Install YouTube Ad blocker' "${cBYEL}" "$cGRA")"   # v3.14
                             MENUW_SAFESEARCH="$(printf '%b8 %b = n/a Install Safe Search' "${cBYEL}" "${cRESET}$cGRA")"   # v3.22
                         fi
                         if [ -f ${CONFIG_DIR}unbound.conf ] && [ -n "$(grep -E "^[\s]*include:.*adblock/adservers" ${CONFIG_DIR}unbound.conf)" ];then
@@ -1037,7 +1079,8 @@ welcome_message() {
                                      [ -n "$(echo "$menu1" | grep -E "7.*\?")" ] && menu1="firewall ?"                  # v3.03
                                   fi
                     ;;
-                    8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;   #v3.11
+					#8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;  # v3.11
+                    8*|youtube*) [ -n "$(echo "$MENUW_YOUTUBE" | grep "Uninstall" )" ] && menu1="youtube uninstall" || menu1="youtube";;   # v3.28 v3.11
                     safesearchv|safesearchx) ;;         # v3.22
                     9*)                                                             #v3.22
                                   if [ -n "$(echo "$MENUW_SAFESEARCH" | grep "Uninstall" )" ];then
@@ -1831,10 +1874,10 @@ EOF
                     echo -e $cBCYA"\n\tAbout ${cRESET}unbound: ${cBYEL}https://nlnetlabs.nl/projects/unbound/about/ , ${cBCYA}Manual$cBYEL https://nlnetlabs.nl/documentation/unbound/unbound.conf/${cRESET}"
                     #echo -e $cBCYA"\n\tSNB Forums ${cRESET}unbound ${cBCYA}support: ${cBYEL}https://www.snbforums.com/threads/unbound-authoritative-recursive-caching-dns-server.58967/ ${cRESET}"
 
-					if "$doScriptUpdateFromAMTM";then																		# v3.27
-						echo -e $cBGRE"\n\t[✔] ${cRESET}Allow AMTM to auto-update Unbound Manager ENABLED\n"$cRESET				# v3.27
+					if [ -f /jffs/addons/unbound/NO_AMTMUPDATE ];then															# v3.28 v3.27
+						echo -e $cRED"\n\t[✖] ${cRESET}Allow AMTM to auto-update Unbound® Manager ${cBRED}DISABLED\n"			# v3.27
 					else
-						echo -e $cRED"\n\t[✖]${cBGRE} ${cRESET}Allow AMTM to auto-update Unbound Manager ${cBRED}DISABLED\n"	# v3.27
+						echo -e $cBGRE"\n\t[✔] ${cRESET}Allow AMTM to auto-update Unbound® Manager ${cBGRE}ENABLED\n"$cRESET	# v3.27
 					fi
                 ;;
                 adblock*)                                           # v3.20 v3.10 v2.18   [ youtube | track | update | uninstall | country[3] ]
@@ -1879,28 +1922,30 @@ EOF
                     else
                         if [ "$(Unbound_Installed)" == "Y" ];then                                  # v3.12
                             if [ "$ARG" != "uninstall" ];then
-                                if [ "$ARG" != "newip" ];then                                     # v3.13
-                                    AUTO_REPLY12="?"
-                                    echo
-                                    if [ "$ARG" != "update" ];then
-                                        Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG"
-                                        local RC=$?
-                                    else
-                                        if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then    # v3.23
-                                            YouTube_Adblock "update"    # v3.11
-                                        else
-                                            echo -e $cBRED"\a\n\tYouTube Adblock NOT installed!?"$cRESET        # v3.23
-                                            local RC=1
-                                        fi
-                                    fi
-                                else
-                                    if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then    # v3.23
-                                        ${CONFIG_DIR}/adblock/gen_ytadblock.sh "force_newip"           # v3.13
-                                    else
-                                        echo -e $cBRED"\a\n\tYouTube Adblock NOT installed!?"$cRESET        # v3.23
-                                        local RC=1
-                                    fi
-                                fi
+                                #if [ "$ARG" != "newip" ];then                                     # v3.13
+                                    #AUTO_REPLY12="?"
+                                    #echo
+                                    #if [ "$ARG" != "update" ];then
+                                        #Option_YouTube_Adblock "$AUTO_REPLY12" "$ARG"
+                                        #local RC=$?
+                                    #else
+                                        #if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then    # v3.23
+                                            #YouTube_Adblock "update"    # v3.11
+                                        #else
+                                            #echo -e $cBRED"\a\n\tYouTube Adblock NOT installed!?"$cRESET        # v3.23
+                                            #local RC=1
+                                        #fi
+                                    #fi
+                                #else
+                                    #if [ -f /opt/var/lib/unbound/adblock/gen_ytadblock.sh ];then    # v3.23
+                                        #${CONFIG_DIR}/adblock/gen_ytadblock.sh "force_newip"           # v3.13
+                                    #else
+                                        #echo -e $cBRED"\a\n\tYouTube Adblock NOT installed!?"$cRESET        # v3.23
+                                        #local RC=1
+                                    #fi
+                                #fi
+								echo -e $cBRED${aBLINK}"\a\n\tYouTube Adblock is no longer available!!!!"$cRESET	# v3.28
+								local RC=1																# v3.28
                             else
                                 YouTube_Adblock "uninstall"
                                 local RC=0
@@ -2376,12 +2421,12 @@ EOF
 					case "$ACTION" in
 
 						allow|on)
-							doScriptUpdateFromAMTM=true
-							echo -e $cBGRE"\n\t[✔] Allow AMTM to auto-update WG_Manager ENABLED\n"$cRESET
+							[ -f /jffs/addons/unbound/NO_AMTMUPDATE ] && rm /jffs/addons/unbound/NO_AMTMUPDATE		# v3.28
+							echo -e $cBGRE"\n\t[✔] Allow AMTM to auto-update Unbound® Manager ENABLED\n"$cRESET
 						;;
 						deny|off)
-							doScriptUpdateFromAMTM=false
-							echo -e $cRED"\n\t[✖]${cBGRE} Allow AMTM to auto-update WG_Manager ${cBRED}DISABLED\n"
+							echo "AMTM requested updates NOT allowed" > /jffs/addons/unbound/NO_AMTMUPDATE			# v3.28
+							echo -e $cRED"\n\t[✖]${cBGRE} Allow AMTM to auto-update Unbound® Manager ${cBRED}DISABLED\n"
 						;;
 						*)
 							echo -en $cRED"\a\n\t***ERROR: Invalid arg $cBWHT'"$ACTION"'$cBRED for 'AMTM auto-update - valid 'allow' or 'deny' only!\n"$cRESET
@@ -2555,7 +2600,7 @@ download_file() {
         local GITHUB="$3"                                       # v2.06
         local GITHUB_BRANCH="$4"                                # v2.06
 
-        case $GITHUB in                                        # v1.08
+        case $GITHUB in                                        	# v1.08
             martineau)
                 [ "$GITHUB_BRANCH" != "dev" ] && GITHUB_DIR=$GITHUB_MARTINEAU || GITHUB_DIR=$GITHUB_MARTINEAU_DEV
             ;;
@@ -2572,8 +2617,8 @@ download_file() {
         STATUS="$(curl --retry 3 -L${SILENT} -w '%{http_code}' "$GITHUB_DIR/$FILE" -o "$DIR/$FILE")"    # v1.08
         if [ "$STATUS" -eq "200" ]; then
             [ -n "$(echo "$@" | grep -F "dos2unix")" ] && dos2unix $DIR/$FILE      # v2.17
-            printf '\t%b%s%b downloaded successfully %b\n' "$cBGRE" "$FILE" "$cRESET" "$DEVTXT"
-
+            [ "$AMTM_SILENT_DOWNLOAD" != "Y" ] && printf '\t%b%s%b downloaded successfully %b\n' "$cBGRE" "$FILE" "$cRESET" "$DEVTXT"		# v3.28
+			return 0				# v3.28
         else
             printf '\n%b%s%b download FAILED with curl error %s\n\n' "\n\t\a$cBMAG" "'$FILE'" "$cBRED" "$STATUS"
             printf '\tRerun %bunbound_manager nochk%b and select the %bRemove unbound/unbound_manager%b option\n\n' "$cBGRE" "$cRESET" "$cBGRE" "$cRESET"   # v1.17
@@ -3731,7 +3776,7 @@ update_installer() {
 
             download_file /jffs/addons/unbound unbound_manager.sh martineau "$DEV"            # v3.00 v2.00
 
-            printf '\n%bunbound Manager UPDATE Complete! %s\n' "$cBGRE" "$remotemd5" 2>&1
+            printf '\n%bUnbound® Manager UPDATE Complete! %s\n' "$cBGRE" "$remotemd5" 2>&1
             localmd5="$(md5sum "$0" | awk '{print $1}')"
             echo $localmd5 > /jffs/addons/unbound/unbound_manager.md5        # v2.00 v1.18
             UPDATED=0
@@ -3739,7 +3784,7 @@ update_installer() {
             echo -e $cRED_"\a\nScript update download DISABLED pending Push request to Github"$cRESET >&2
         fi
     else
-        printf '\n%bunbound_manager.sh is already the latest version. %s\n' "$cBMAG" "$localmd5"
+        printf '\n%bUnbound® Manager is already the latest version. %s\n' "$cBMAG" "$localmd5"
     fi
 
     echo -e $cRESET 2>&1
