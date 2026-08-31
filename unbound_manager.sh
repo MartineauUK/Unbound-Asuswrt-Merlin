@@ -4852,9 +4852,9 @@ _quote() {
                                         sed -i '/AiMesh Guest SSID VLAN TAG/d' ${CONFIG_DIR}unbound.conf
                                         local I=$((I+1))
                                     fi
-                                    [ -z "$(grep -F "dhcp-option=$BR,6,$ROUTER" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$ROUTER      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22
+				    local VLAN_IPADDR=$(ifconfig $BR | grep inet  | tr ":" " " | awk ' {print $3}')
+                                    [ -z "$(grep -F "dhcp-option=$BR,6,$VLAN_IPADDR" /jffs/configs/dnsmasq.conf.add)" ] && echo -e "dhcp-option=$BR,6,$VLAN_IPADDR      # unbound_manager" >> /jffs/configs/dnsmasq.conf.add  # v3.22
             # http://www.snbforums.com/threads/unbound_manager-manager-installer-utility-for-unbound-recursive-dns-server-general-questions-discussion-thread-2.67968/post-645861
-                                    local VLAN_IPADDR=$(ifconfig $BR | grep inet  | tr ":" " " | awk ' {print $3}')
                                     [ -z "$(grep -F "interface: $VLAN_IPADDR" ${CONFIG_DIR}unbound.conf)" ] && sed -i "${POS}ainterface: $VLAN_IPADDR@53\t\t# v1.12 AiMesh Guest SSID VLAN TAG (dnsmasq disabled) @juched" ${CONFIG_DIR}unbound.conf  # v3.22 @juched
                                 done
                     fi
