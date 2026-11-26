@@ -4500,8 +4500,9 @@ Check_GUI_NVRAM() {
             fi
 
             # AUTO_REPLY 2
-            if [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" ${CONFIG_DIR}unbound.conf)" != "?" ];then      # v2.18
-                echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 2"    #v2.18
+            if [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" "${CONFIG_DIR}unbound.conf")" != "?" ] ||
+               [ "$(Get_unbound_config_option "forward-addr: 127.0.1.1@53" "${CONFIG_DIR}unbound.conf")" != "?" ]; then      # v3.23 **Pull Request @ExtremeFiretop**
+               [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1 || ENABLED_OPTIONS="${ENABLED_OPTIONS} 2"    # v3.23 **Pull Request @ExtremeFiretop**
             fi
 
             # AUTO_REPLY 3
