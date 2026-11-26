@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.28"
+VERSION="3.29"
 #============================================================================================ © 2019-2026 Martineau v3.28
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
@@ -58,7 +58,7 @@ VERSION="3.28"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 17-Jul-2026
+# Last Updated Date: 26-Nov-2026
 #
 # Description:
 #
@@ -2677,39 +2677,140 @@ Option_Stubby_Integration() {
      fi
      [ "$ANS" == "y"  ] && Stubby_Integration
 }
+Activate_Stubby_Forwarder() {
+    local CONF="${CONFIG_DIR%/}/unbound.conf"
+    local TARGET="$1"
+    local TMP="${CONF}.stubby.$$"
+
+    if [ ! -f "$CONF" ] || [ -L "$CONF" ]; then
+        echo "ERROR: Unbound configuration missing or unsafe."
+        return 1
+    fi
+
+    # Refuse conflicting configurations; permit exact repeat calls.
+    if grep -Eq '^[[:space:]]*forward-zone:' "$CONF"; then
+        if awk -v target="$TARGET" '
+            /^[[:space:]]*forward-zone:/ {
+                active++
+                in_zone=($0 == "forward-zone:#Stubby")
+                next
+            }
+            in_zone && /^name:/ {
+                if ($0 == "name: \".\"") names++
+                else bad++
+            }
+            in_zone && /^forward-addr:/ {
+                if ($0 == "forward-addr: " target) good++
+                else bad++
+            }
+            END { exit !(active == 1 && names == 1 && good == 1 && bad == 0) }
+        ' "$CONF"; then
+            echo "Stubby forwarding already configured."
+            return 0
+        fi
+
+        echo "ERROR: Active forwarding configuration needs review."
+        return 1
+    fi
+
+    if [ -e "$TMP" ] || [ -L "$TMP" ]; then
+        echo "ERROR: Temporary configuration path already exists."
+        return 1
+    fi
+
+    if ! cp -p "$CONF" "$TMP"; then
+        rm -f "$TMP"
+        return 1
+    fi
+
+    # Modify only the expected Stubby template.
+    if ! awk -v target="$TARGET" '
+        /^#forward-zone:#Stubby([[:space:]]|$)/ {
+            count++
+            in_zone=1
+            print "forward-zone:#Stubby"
+            next
+        }
+        in_zone && /^#forward-zone:/ {
+            bad=1
+            in_zone=0
+        }
+        in_zone && /^#name:[[:space:]]*"\."([[:space:]]|$)/ {
+            names++
+            sub(/^#/, "")
+            print
+            next
+        }
+        in_zone && /^#forward-addr:[[:space:]]*127\.0\.[01]\.1@5453([[:space:]]|$)/ {
+            addresses++
+            print "forward-addr: " target
+            in_zone=0
+            next
+        }
+        { print }
+        END {
+            if (bad || count != 1 || names != 1 || addresses != 1)
+                exit 1
+        }
+    ' "$CONF" > "$TMP"; then
+        rm -f "$TMP"
+        echo "ERROR: Incomplete or ambiguous Stubby template."
+        return 1
+    fi
+
+    # Validate before modifying the live configuration.
+    if ! /opt/sbin/unbound-checkconf "$TMP"; then
+        rm -f "$TMP"
+        echo "ERROR: Unbound configuration validation failed."
+        return 1
+    fi
+
+    if ! mv "$TMP" "$CONF"; then
+        rm -f "$TMP"
+        return 1
+    fi
+
+    echo "Stubby forwarding configuration updated."
+}
 Stubby_Integration() {
 
     echo -e $cBCYA"Integrating Stubby with unbound....."$cBGRA
 
     # Check for firmware support of Stubby (Merlin "dnspriv" or John's fork "stubby")       # v2.08 **Pull Request @dave14305**
-    if nvram get rc_support | tr ' ' '\n' | grep -qE "dnspriv|stubby"; then
+    if nvram get rc_support | tr ' ' '\n' | grep -qE '^(dnspriv|stubby)$'; then
         # router supports stubby natively
-        if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ] && [ $FIRMWARE -ge 38406 ];then        # v2.10
+        if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ] && nvram get rc_support | tr ' ' '\n' | grep -qx 'dnspriv'; then        # v3.29 **Pull Request @ExtremeFiretop**
             # Merlin firmware
-            if [ "$(nvram get dnspriv_enable)" -eq "1" ]; then
+            if [ "$(nvram get dnspriv_enable)" = "1" ]; then
                 # set Unbound forward address to 127.0.1.1:53
                 echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-                if [ -n "$(grep -E "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
-                    #sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Bug prompted to review by @toazd
-                    local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
-                    [ -n "$POS" ] && sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@5453/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
-                    sed -i 's/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.1\.1\@53/' ${CONFIG_DIR}unbound.conf
-                    [ "$(nvram get ipv6_service)" != "disabled" ] && sed -i '/forward\-addr: 0::1@5453/ s/^#//' ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
-                fi
+                Activate_Stubby_Forwarder "127.0.1.1@53" || return 1
             else
                 echo -e $cBRED"\a\n\tERROR: DNS Privacy (DoT) not enabled in GUI. see $HTTP_TYPE://$(nvram get lan_ipaddr):$HTTP_PORT/Advanced_WAN_Content.asp WAN->DNS Privacy Protocol\n"$cRESET 2>&1       # v 2.13 v2.08 Martineau add message attributes
+                return 1            
             fi
-        elif [ "$(nvram get stubby_proxy)" -eq "1" ]; then
+        elif [ "$(nvram get stubby_proxy)" = "1" ]; then
             # John's fork
             # set Unbound forward address to 127.0.0.1 and port determined in nvram stubby_port
             echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-            if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
-                local POS=$(grep -nE "^#forward-zone:" ${CONFIG_DIR}unbound.conf | grep -v DNS | cut -d':' -f1)   # v2.18 Hotfix
-                sed -i "$POS,/forward\-addr: 127\.0\.[01]\.1\@53/s/^#//" ${CONFIG_DIR}unbound.conf   # v2.18 Hotfix
-                sed -i "s/forward\-addr: 127\.0\.[01]\.1\@[0-9]\{1,5\}/forward\-addr: 127\.0\.0\.1\@$(nvram get stubby_port)/" ${CONFIG_DIR}unbound.conf
+            local STUBBY_PORT
+            STUBBY_PORT="$(nvram get stubby_port)"
+            case "$STUBBY_PORT" in
+                ''|*[!0-9]*)
+                    echo "ERROR: Invalid Stubby port."
+                    return 1
+                    ;;
+            esac
+            if [ "${#STUBBY_PORT}" -gt 5 ] ||
+               [ "$STUBBY_PORT" -lt 1 ] ||
+               [ "$STUBBY_PORT" -gt 65535 ]; then
+                echo "ERROR: Stubby port outside valid range."
+                return 1
             fi
+            Activate_Stubby_Forwarder "127.0.0.1@$STUBBY_PORT" || return 1
         else
             echo -e $cBRED"\a\n\tERROR: Stubby not enabled in GUI.\n"$cRESET                # v2.08 Martineau add message attributes
+            return 1
         fi                                                                                  # v2.08 **Pull Request @dave14305**
     else
         # Firmware may already contain stubby i.e. which stubby --> /usr/sbin/stubby '0.2.9' aka spoof 100002009
@@ -2756,10 +2857,7 @@ Stubby_Integration() {
         /opt/etc/init.d/S62stubby restart                       # v1.11
 
         echo -e $cBCYA"Adding Stubby 'forward-zone:'"$cRESET
-        if [ -n "$(grep -F "#forward-zone:" ${CONFIG_DIR}unbound.conf)" ];then
-            #sed -i '/forward\-zone:/,/forward\-first: yes/s/^#//' ${CONFIG_DIR}unbound.conf     # v1.04
-            sed -i '/forward\-zone:/,/forward\-addr: 127\.0\.0\.1\@5453/s/^#//' ${CONFIG_DIR}unbound.conf     # v2.00
-        fi
+        Activate_Stubby_Forwarder "127.0.0.1@5453" || return 1
 
         if [ "$(nvram get ipv6_service)" != "disabled" ];then                       # v1.10
             echo -e $cBCYA"Customising unbound IPv6 Stubby configuration....."$cRESET
@@ -4402,8 +4500,9 @@ Check_GUI_NVRAM() {
             fi
 
             # AUTO_REPLY 2
-            if [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" ${CONFIG_DIR}unbound.conf)" != "?" ];then      # v2.18
-                echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1 || ENABLED_OPTIONS=$ENABLED_OPTIONS" 2"    #v2.18
+            if [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" "${CONFIG_DIR}unbound.conf")" != "?" ] ||
+               [ "$(Get_unbound_config_option "forward-addr: 127.0.1.1@53" "${CONFIG_DIR}unbound.conf")" != "?" ]; then      # v3.29 **Pull Request @ExtremeFiretop**
+               [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1 || ENABLED_OPTIONS="${ENABLED_OPTIONS} 2"    # v3.29 **Pull Request @ExtremeFiretop**
             fi
 
             # AUTO_REPLY 3
