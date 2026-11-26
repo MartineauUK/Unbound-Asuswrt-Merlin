@@ -1,6 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC2086,SC2068,SC1087,SC2039,SC2155,SC2124,SC2027,SC2046
-VERSION="3.28"
+VERSION="3.29"
 #============================================================================================ © 2019-2026 Martineau v3.28
 #  Install 'unbound - Recursive,validating and caching DNS resolver' package from Entware on Asuswrt-Merlin firmware.
 #
@@ -58,7 +58,7 @@ VERSION="3.28"
 #  See SNBForums thread https://tinyurl.com/s89z3mm for helpful user tips on unbound usage/configuration.
 
 # Maintainer: Martineau
-# Last Updated Date: 17-Jul-2026
+# Last Updated Date: 26-Nov-2026
 #
 # Description:
 #
@@ -2779,7 +2779,7 @@ Stubby_Integration() {
     # Check for firmware support of Stubby (Merlin "dnspriv" or John's fork "stubby")       # v2.08 **Pull Request @dave14305**
     if nvram get rc_support | tr ' ' '\n' | grep -qE '^(dnspriv|stubby)$'; then
         # router supports stubby natively
-        if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ] && nvram get rc_support | tr ' ' '\n' | grep -qx 'dnspriv'; then        # v3.23 **Pull Request @ExtremeFiretop**
+        if [ "$(/bin/uname -o)" != "ASUSWRT-Merlin-LTS" ] && nvram get rc_support | tr ' ' '\n' | grep -qx 'dnspriv'; then        # v3.29 **Pull Request @ExtremeFiretop**
             # Merlin firmware
             if [ "$(nvram get dnspriv_enable)" = "1" ]; then
                 # set Unbound forward address to 127.0.1.1:53
@@ -4501,8 +4501,8 @@ Check_GUI_NVRAM() {
 
             # AUTO_REPLY 2
             if [ "$(Get_unbound_config_option "forward-addr: 127.0.0.1@5453" "${CONFIG_DIR}unbound.conf")" != "?" ] ||
-               [ "$(Get_unbound_config_option "forward-addr: 127.0.1.1@53" "${CONFIG_DIR}unbound.conf")" != "?" ]; then      # v3.23 **Pull Request @ExtremeFiretop**
-               [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1 || ENABLED_OPTIONS="${ENABLED_OPTIONS} 2"    # v3.23 **Pull Request @ExtremeFiretop**
+               [ "$(Get_unbound_config_option "forward-addr: 127.0.1.1@53" "${CONFIG_DIR}unbound.conf")" != "?" ]; then      # v3.29 **Pull Request @ExtremeFiretop**
+               [ -z "$STATUSONLY" ] && echo -e $cBGRE"\t[✔] Stubby Integration" 2>&1 || ENABLED_OPTIONS="${ENABLED_OPTIONS} 2"    # v3.29 **Pull Request @ExtremeFiretop**
             fi
 
             # AUTO_REPLY 3
