@@ -1,0 +1,5 @@
+# Router shell scripts must use Unix LF line endings.
+# CRLF can cause BusyBox /bin/sh syntax errors on Asuswrt-Merlin.
+*.sh text eol=lf
+/S02haveged text eol=lf
+/S61unbound text eol=lf
